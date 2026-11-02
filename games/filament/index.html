@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Filament</title>
+<link rel="stylesheet" href="../../common/base.css">
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Setup.</b> Play on a patch of the Cairo pentagonal tiling where every cell has either 3 or 5 neighbors. Two cells are neighbors only if they share an edge; cells that touch only at a corner are not neighbors. The board starts empty, and Black moves first.</p>
+  <p><b>Place.</b> On your turn place a stone of your color on an empty cell.</p>
+  <p><b>Fill.</b> After a placement, determine if any neighboring empty cells have a <i>majority</i> where more than half of all its neighbors hold stones of one color: at least 3 of 5 for inner cells, or at least 2 of 3 for edge cells. Fill each such cell with a stone of the <i>opposite</i> color of the majority. Fills can create new majorities. Continue filling until none remain. Then your turn ends.</p>
+  <p><b>Game end.</b> The game ends when the board is full. The player with fewer groups wins.</p>
+  <p><b>Groups.</b> Two of your stones are in the same group if you can trace a path between them that steps only from neighbor to neighbor through your own stones. A stone with no neighbors of its color is a group by itself.</p>
+  <p><b>Ties.</b> If you tie on group count, each player lists their group sizes from largest to smallest. Compare the two lists one position at a time: first the largest groups, then the second-largest, and so on. At the first position where the sizes differ, the player with the smaller group wins. If every size matches, the game is a draw.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
