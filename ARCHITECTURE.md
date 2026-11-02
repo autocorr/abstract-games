@@ -88,7 +88,9 @@ export default {
   outcome(state),                   // null while ongoing, else { winner: 0 | player }
 
   // optional hooks
-  piecesOf(state),                  // -> [{ id, player }]; default reads state.cells
+  defaultPlayers,                   // e.g. { 1: "human", 2: "ai" } (the default)
+  moveLabels,                       // button labels for string moves, e.g. { pass: "Pass" }
+  piecesOf(state),                  // -> [{ id, player, label? }]; default reads state.cells
   markers(state, move, info),       // -> [{ id, kind: "ring" | "dot" }] for the last move
   scoreSummary(state, player),      // -> { main, sub, title } for the turn panel
   outcomeLines(state, outcome),     // -> HTML lines shown under the game-over verdict
@@ -97,7 +99,9 @@ export default {
 ```
 
 `applyMove` mutates in place and `clone` copies: search code clones once per
-tree node and then mutates freely, which keeps playouts fast.
+tree node and then mutates freely, which keeps playouts fast. Option values
+in `choices` may be plain values or `{ value, label }` objects. Rules must be
+deterministic: the same options and moves always give the same position.
 
 ### Moves
 
@@ -113,7 +117,9 @@ A move is either an **array of cell ids** or a **string**:
 The shell turns clicks into moves without game-specific code. It keeps the
 cells clicked so far, filters `legalMoves()` by that prefix, highlights the
 valid next cells and plays the move once the selection matches a complete
-move. Legal string moves are shown as buttons. `moveKey()` in
+move. Clicking the last selected cell again steps the selection back (or
+commits it, if it is a complete move that is also a prefix of longer moves).
+Legal string moves are shown as buttons. `moveKey()` in
 `common/engine.js` gives each move a canonical string (`"17-23"`, `"pass"`)
 for comparison and for the URL hash.
 
@@ -127,9 +133,13 @@ for comparison and for the URL hash.
 - the Options dialog: player types (human/AI), AI think time, the game's own
   options and colour schemes, saved to `localStorage`;
 - move input and highlighting as described above, plus last-move markers;
-- the move history, which drives Undo and the URL hash
-  (`#size=48&moves=17.23.4`), so any position can be shared as a link;
+- the move history, which drives Undo (back to the last human turn) and the
+  URL hash (`#size=48&moves=17.23.4`), so any position can be shared as a
+  link; an illegal move in a hand-edited hash truncates the history there;
 - responsive board sizing that keeps the board within the viewport.
+
+`mount()` returns a small handle (`state`, `moves`, `play`, `undo`, `reset`);
+game pages expose it as `window.app` for the console.
 
 Because rules are deterministic, a position is fully described by the
 options plus the move list. The shell, the AI worker and the tests all rebuild
@@ -146,11 +156,18 @@ can speed up rollouts by providing `playout(state, rng)`.
 
 ## Testing
 
-`npm test` runs `node --test test/*.test.js`. Because games are plain modules, tests import
-them directly. `test/conformance.test.js` runs every game in `games.js`
-through contract checks (seeded random playouts terminate, `legalMoves` is
-empty exactly when the game is over, `clone` is independent, MCTS returns a
-legal move, adjacency is symmetric). Each game adds its own rule tests.
+`npm test` runs `node --test test/*.test.js`. Because games are plain
+modules, tests import them directly. `test/conformance.test.js` runs every
+game in `games.js`, for every combination of option values, through contract
+checks: seeded random playouts terminate, `legalMoves` is empty exactly when
+the game is over, moves are well formed and round-trip through `moveKey`,
+`clone` is independent, replay reproduces the final position, MCTS returns a
+legal move, and boards are well formed. A tic-tac-toe fixture in
+`test/fixtures/` exercises the suite and the MCTS tests. Each game adds its
+own rule tests.
+
+The page shell is not covered by `npm test`; check it in a browser with
+`npm run serve`.
 
 ## Adding a game
 
