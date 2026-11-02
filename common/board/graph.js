@@ -4,11 +4,13 @@
 // that one renderer, one input handler and one set of graph helpers serve all
 // games. See ARCHITECTURE.md for the Board shape.
 
-const KEY_DIGITS = 4;
+const KEY_SCALE = 1e4;
 
+// Round to 1e-4 so float noise in shared vertices coincides; adding 0 turns
+// the -0 produced by rounding tiny negatives into +0.
 function pointKey([x, y]) {
-  // Normalise -0 so that "-0.0000" and "0.0000" coincide.
-  return (x + 0).toFixed(KEY_DIGITS) + "," + (y + 0).toFixed(KEY_DIGITS);
+  const r = (v) => Math.round(v * KEY_SCALE) / KEY_SCALE + 0;
+  return r(x) + "," + r(y);
 }
 
 function edgeKey(a, b) {
