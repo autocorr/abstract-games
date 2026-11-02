@@ -38,18 +38,18 @@ export function resolveOptions(game, given = {}) {
   return out;
 }
 
-// Build the starting position for a set of options.
-export function newGame(game, options = {}) {
+// Build the starting position for a set of options. Pass `board` to reuse a
+// board already built for the same options.
+export function newGame(game, options = {}, board = null) {
   const opts = resolveOptions(game, options);
-  const board = game.createBoard(opts);
-  return game.initialState(board, opts);
+  return game.initialState(board || game.createBoard(opts), opts);
 }
 
 // Rebuild a position by replaying moves from the start. Throws if a move is
 // illegal; `strict: false` stops at the first illegal move instead and
-// returns the moves that were applied.
-export function replay(game, options, moves, { strict = true } = {}) {
-  const state = newGame(game, options);
+// returns the moves that were applied. `board` reuses an existing board.
+export function replay(game, options, moves, { strict = true, board = null } = {}) {
+  const state = newGame(game, options, board);
   const applied = [];
   let lastInfo = null;
   for (const move of moves) {

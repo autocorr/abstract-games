@@ -1,0 +1,325 @@
+/* Shared styles for the landing page and every game page. */
+
+:root {
+  --bg: #14161a;
+  --panel: #1d2026;
+  --panel-2: #23272f;
+  --panel-hover: #2c313b;
+  --text: #e8e6e0;
+  --text-dim: #9aa0ab;
+  --line: #343943;
+  --accent: #ffd54f;
+  --gutter: clamp(8px, 2.2vw, 16px);
+  --gap: clamp(10px, 2vh, 16px);
+  --pad-top: max(clamp(12px, 2.5vw, 24px), env(safe-area-inset-top));
+  --pad-bottom: clamp(16px, 4vw, 40px);
+  --pad-left: max(var(--gutter), env(safe-area-inset-left));
+  --pad-right: max(var(--gutter), env(safe-area-inset-right));
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: radial-gradient(1200px 700px at 50% -10%, #20242b 0%, var(--bg) 60%);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: var(--pad-top) var(--pad-right) var(--pad-bottom) var(--pad-left);
+}
+
+a { color: var(--accent); }
+
+/* ---- buttons and form controls -------------------------------------- */
+
+.btn {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.btn:hover { background: var(--panel-hover); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn:disabled:hover { background: var(--panel-2); }
+select.btn { padding: 6px 10px; }
+
+/* ---- game page layout ------------------------------------------------ */
+
+body.game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap);
+  width: 100%;
+}
+
+.board-wrap {
+  --wrap-pad: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: var(--wrap-pad);
+  max-width: 720px;
+  width: min(100%, calc(var(--board-max, 100vw) + 2 * var(--wrap-pad) + 2px));
+  margin-inline: auto;
+  position: relative;
+}
+svg.board { width: 100%; height: auto; display: block; }
+
+.board-header {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  right: 27px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 2;
+}
+.board-title {
+  font-size: clamp(14px, 4.5vw, 20px);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.cell { cursor: pointer; transition: filter 0.12s ease; }
+.cell:hover { filter: brightness(1.15); }
+.board.locked .cell { cursor: default; }
+.board.locked .cell:hover { filter: none; }
+
+/* AI "thinking" indicator: a static ellipsis over the board corner. */
+.thinking {
+  position: absolute;
+  right: calc(var(--wrap-pad) + 4px);
+  bottom: calc(var(--wrap-pad) + 4px);
+  display: none;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+.thinking.on { display: flex; }
+.thinking span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text);
+  opacity: 0.6;
+}
+
+.move-actions { display: flex; gap: 10px; justify-content: center; }
+.move-actions:empty { display: none; }
+
+.status {
+  font-size: clamp(14px, 3.6vw, 17px);
+  line-height: 1.5;
+  color: var(--text-dim);
+  text-align: center;
+  min-height: 18px;
+}
+.status b { color: var(--text); font-weight: 600; }
+.status .verdict { font-size: clamp(17px, 5vw, 24px); color: var(--text); letter-spacing: 0.02em; }
+.status .scoreline { font-size: clamp(12px, 3vw, 14px); margin-top: 6px; color: var(--text-dim); }
+
+/* ---- turn panel ------------------------------------------------------ */
+
+.turn-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(20, 22, 26, 0.78);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.turn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+.turn-row.active { opacity: 1; }
+.turn-stone {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.35);
+  flex: none;
+}
+.turn-row.active .turn-stone {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 213, 79, 0.25), inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+}
+.turn-main {
+  font-size: 15px;
+  font-weight: 700;
+  min-width: 12px;
+  text-align: right;
+}
+.turn-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ---- dialogs --------------------------------------------------------- */
+
+.dialog {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px 24px;
+  max-width: 520px;
+  width: calc(100% - 32px);
+  line-height: 1.6;
+  font-size: 12px;
+}
+.dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+.dialog h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dialog h3 {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.dialog p { margin: 0 0 12px; }
+.dialog .option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.dialog .option-row .label {
+  flex: 1;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+.dialog .dialog-close { margin: 6px 0 0; display: block; width: 100%; }
+
+/* ---- responsive game layout ------------------------------------------ */
+
+/* Narrow or short screens: the overlaid title/scoreboard would cover
+   playable cells, so flow them above the board instead. */
+@media (max-width: 640px), (orientation: landscape) and (max-height: 500px) {
+  .board-wrap { --wrap-pad: 10px; }
+  .board-header { position: static; margin-bottom: 8px; }
+  .turn-panel {
+    flex-direction: row;
+    gap: 12px;
+    padding: 4px 8px;
+    background: none;
+    border: none;
+  }
+}
+
+/* Landscape phones are height-starved, so move the controls into a left
+   sidebar to give the board the full height. The title/scoreboard are pinned
+   to the top of that sidebar (shell.js offsets the controls below it). */
+@media (orientation: landscape) and (max-height: 500px) {
+  body.game { --pad-top: 6px; --pad-bottom: 6px; flex-direction: row; align-items: flex-start; }
+  .board-wrap { --wrap-pad: 6px; }
+  .board-header {
+    position: fixed;
+    top: var(--pad-top);
+    left: var(--pad-left);
+    right: auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 0;
+  }
+  .board-header .board-title { order: -1; }
+  .turn-panel { flex-direction: column; gap: 4px; }
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+    align-self: flex-start;
+    margin-top: var(--aside-top, 0);
+    padding: 8px;
+  }
+  .controls .btn { text-align: center; }
+  .stage { flex: 1 1 auto; width: auto; min-width: 0; gap: 6px; }
+  .status { min-height: 0; }
+}
+
+/* ---- landing page ---------------------------------------------------- */
+
+.landing {
+  max-width: 960px;
+  margin: 0 auto;
+}
+.landing header { margin: 12px 0 28px; }
+.landing h1 {
+  margin: 0 0 6px;
+  font-size: clamp(24px, 6vw, 34px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.landing header p { margin: 0; color: var(--text-dim); }
+.game-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.game-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.game-card:hover { background: var(--panel-2); border-color: #4a505c; }
+.game-card svg { width: 100%; aspect-ratio: 1; display: block; margin-bottom: 12px; }
+.game-card svg .cell { cursor: inherit; }
+.game-card h2 { margin: 0 0 4px; font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; }
+.game-card .board-kind { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+.game-card p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-dim); }
+.landing footer { margin-top: 32px; font-size: 13px; color: var(--text-dim); }
