@@ -146,7 +146,7 @@ can speed up rollouts by providing `playout(state, rng)`.
 
 ## Testing
 
-`npm test` runs `node --test`. Because games are plain modules, tests import
+`npm test` runs `node --test test/*.test.js`. Because games are plain modules, tests import
 them directly. `test/conformance.test.js` runs every game in `games.js`
 through contract checks (seeded random playouts terminate, `legalMoves` is
 empty exactly when the game is over, `clone` is independent, MCTS returns a

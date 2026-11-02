@@ -25,7 +25,7 @@ The rules engines are pure modules with no DOM access and are tested with
 Node's built-in test runner (Node 20+, no dependencies):
 
 ```sh
-npm test        # or: node --test
+npm test        # or: node --test test/*.test.js
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for how the code is organised and how
