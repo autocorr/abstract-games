@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Abstract Games</title>
+<meta name="description" content="Playable original abstract strategy board games.">
+<link rel="stylesheet" href="common/base.css">
+</head>
+<body>
+<div class="landing">
+  <header>
+    <h1>Abstract Games</h1>
+    <p>Original abstract strategy board games, playable in the browser against a friend or the computer.</p>
+  </header>
+  <main>
+    <ul id="games" class="game-list"></ul>
+  </main>
+  <footer>
+    <a href="https://github.com/autocorr/abstract-games">Source on GitHub</a> · MIT License
+  </footer>
+</div>
+
+<script type="module">
+  import { games } from "./games.js";
+  import { createRenderer } from "./common/render.js";
+  import { newGame, piecesOf } from "./common/engine.js";
+  import { seededRng } from "./common/rng.js";
+
+  const list = document.getElementById("games");
+
+  // A thumbnail of each game: its default board after a few seeded random
+  // moves, drawn with the same renderer the game page uses.
+  async function thumbnail(entry, svg) {
+    const game = (await import(`./${entry.module}`)).default;
+    const state = newGame(game);
+    const rng = seededRng(7);
+    const plies = Math.round(state.board.size / 4);
+    for (let i = 0; i < plies && !game.outcome(state); i++) {
+      const moves = game.legalMoves(state);
+      game.applyMove(state, moves[Math.floor(rng() * moves.length)]);
+    }
+    const scheme = game.colorSchemes && Object.values(game.colorSchemes)[0];
+    const renderer = createRenderer(svg);
+    renderer.setBoard(state.board, scheme && scheme.cellFill);
+    renderer.draw({ pieces: piecesOf(game, state), players: game.players });
+  }
+
+  for (const entry of games) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("aria-hidden", "true");
+    const card = document.createElement("a");
+    card.className = "game-card";
+    card.href = entry.path;
+    const title = document.createElement("h2");
+    title.textContent = entry.title;
+    const kind = document.createElement("div");
+    kind.className = "board-kind";
+    kind.textContent = entry.board;
+    const blurb = document.createElement("p");
+    blurb.textContent = entry.blurb;
+    card.append(svg, title, kind, blurb);
+    const item = document.createElement("li");
+    item.append(card);
+    list.append(item);
+    thumbnail(entry, svg).catch((err) => console.error(`thumbnail for ${entry.id}:`, err));
+  }
+</script>
+</body>
+</html>

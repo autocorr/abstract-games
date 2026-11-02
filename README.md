@@ -5,8 +5,9 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 
 ## Games
 
-- [Filament](games/filament/): a territory-splitting placement game on the
-  Cairo pentagonal tiling.
+- [Filament](games/filament/): a placement game on the Cairo pentagonal
+  tiling where majorities fill empty cells and the player with fewer groups
+  wins.
 
 ## Running locally
 

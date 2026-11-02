@@ -323,3 +323,4 @@ svg.board { width: 100%; height: auto; display: block; }
 .game-card .board-kind { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
 .game-card p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-dim); }
 .landing footer { margin-top: 32px; font-size: 13px; color: var(--text-dim); }
+.game-card svg .cell:hover { filter: none; }
