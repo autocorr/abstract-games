@@ -5,8 +5,9 @@
 // until the bag is empty, then all go back in. If the drawn region is full,
 // the player must pass. Black connects the N and S edges of the rhombus, White
 // the W and E edges. The board is drawn as a diamond with its long diagonal
-// horizontal (or vertical, when the shell rotates it for a portrait screen),
-// and each player's edges are marked in their colour.
+// horizontal; on a portrait screen the shell turns it into an upright
+// parallelogram with Black's edges vertical and parallel (see `rotatable`).
+// Each player's edges are marked in their colour.
 
 import { rhombusBoard, rhombusSides } from "../../common/board/hex.js";
 import { makeBag, cloneBag, drawOutcomes, drawMarble, lastDrawn, isEmpty, returnDrawn } from "../../common/bag.js";
@@ -87,7 +88,11 @@ export default {
   title: "Depletion",
   url: import.meta.url,
   players: PLAYERS,
-  rotatable: true,   // the shell may turn the diamond upright on portrait screens
+  // On portrait screens the shell may turn the diamond by -60 degrees: the
+  // rhombus then stands as a parallelogram with Black's N and S edges
+  // vertical (N on the left) and White's W and E edges slanting top and
+  // bottom.
+  rotatable: -60,
   marbles: Object.fromEntries(COLOURS.map((c) => [c.key, { name: c.name, fill: c.fill }])),
   options: {
     size: { label: "Board size", choices: SIZES, default: 11 },

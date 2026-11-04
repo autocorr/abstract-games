@@ -140,7 +140,8 @@ export default {
   turnHint(state, scheme),          // status line text while the game is on (scheme: the
                                     //   active colour scheme object, or null)
   boardDecor(board),                // -> lines over the cells, e.g. goal edges
-  rotatable,                        // true: the shell may turn the board 90 degrees
+  rotatable,                        // true: the shell may turn the board 90 degrees;
+                                    //   a number: by that angle (clockwise, degrees)
   piecesOf(state),                  // -> [{ id, player, label?, image? }]; default reads state.cells;
                                     //   image: URL drawn instead of a disc (e.g. a chess piece)
   markers(state, move, info),       // -> [{ id, kind, color? }] for the last move. Over pieces:
@@ -244,8 +245,10 @@ sections are open is saved site-wide. Settings are saved per game in
 
 The board is sized to its column and capped by the viewport height (on one
 column it leaves room below for the top of the turn card). A `rotatable`
-game's board is turned 90 degrees (display only) when that draws it clearly
-larger, e.g. a wide board on a portrait phone.
+game's board is turned (display only; 90 degrees, or the game's angle) when
+that draws it clearly larger, e.g. a wide board on a portrait phone.
+Depletion turns its diamond by -60 degrees so that Black's edges stand
+vertical.
 
 ### Play
 

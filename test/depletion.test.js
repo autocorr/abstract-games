@@ -5,6 +5,7 @@ import { LAYOUTS, makeRegions } from "../games/depletion/regions.js";
 import { rhombusBoard } from "../common/board/hex.js";
 import { components } from "../common/board/graph.js";
 import { newGame, replay, CHANCE } from "../common/engine.js";
+import { rotatedViewBox } from "../common/render.js";
 
 const opts = (o = {}) => ({ size: 7, colours: 3, layout: "bands", ...o });
 
@@ -100,4 +101,26 @@ test("goal edges are drawn for both players", () => {
   const decor = game.boardDecor(game.createBoard(opts()));
   assert.equal(decor.length, 2);
   for (const d of decor) assert.equal(d.segments.length, 28);
+});
+
+test("turned for portrait, Black's edges stand vertical and parallel", () => {
+  const board = game.createBoard(opts({ size: 11 }));
+  const a = (game.rotatable * Math.PI) / 180;
+  const x = (c) => c.x * Math.cos(a) - c.y * Math.sin(a);
+  const xs = (side) => board.cells.filter((c) => c.tags.edges.includes(side)).map(x);
+  for (const side of ["N", "S"]) {
+    const v = xs(side);
+    assert.ok(Math.max(...v) - Math.min(...v) < 1e-9, `${side} edge is not vertical`);
+  }
+  assert.ok(xs("N")[0] < xs("S")[0], "N edge should be on the left");
+  // The turned board is taller than wide, and its viewBox hugs the cells
+  // (well inside the bounding box of the turned diamond's viewBox).
+  const [, , w, h] = rotatedViewBox(board, game.rotatable).split(" ").map(Number);
+  assert.ok(h > w);
+  const [vx, vy, vw, vh] = board.viewBox.split(" ").map(Number);
+  const corners = [[vx, vy], [vx + vw, vy], [vx, vy + vh], [vx + vw, vy + vh]];
+  const span = (f) => Math.max(...corners.map(f)) - Math.min(...corners.map(f));
+  const boxW = span(([px, py]) => px * Math.cos(a) - py * Math.sin(a));
+  const boxH = span(([px, py]) => px * Math.sin(a) + py * Math.cos(a));
+  assert.ok(w * h < 0.5 * boxW * boxH, "rotated viewBox is not tight");
 });

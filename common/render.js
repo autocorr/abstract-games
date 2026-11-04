@@ -7,7 +7,7 @@
 // (board.dots); the cells stay as invisible-edged click targets.
 //
 // setBoard() can turn the whole drawing by a display rotation (e.g. 90
-// degrees to fit a wide board on a portrait screen). Rules never see it; piece
+// degrees to fit a wide board on a portrait screen, or any angle a game asks for). Rules never see it; piece
 // shadows and labels stay upright.
 
 const NS = "http://www.w3.org/2000/svg";
@@ -27,16 +27,26 @@ const MARKER_DOT = "#969ca6";
 
 let filterSeq = 0;
 
-// Bounding box "x y w h" of a viewBox string rotated by `deg` about the origin.
-export function rotateViewBox(viewBox, deg) {
-  if (!deg) return viewBox;
-  const [x, y, w, h] = viewBox.split(" ").map(Number);
+// The viewBox "x y w h" of `board` drawn turned by `deg` (clockwise on
+// screen) about the origin: the bounds of the rotated cells, with the same
+// margin as the board's own viewBox. Exact at any angle, not just 90 degrees.
+export function rotatedViewBox(board, deg) {
+  if (!deg) return board.viewBox;
+  const [vx] = board.viewBox.split(" ").map(Number);
+  const pad = board.bounds.minX - vx;
   const a = (deg * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
-  const pts = [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([px, py]) => [px * c - py * s, px * s + py * c]);
-  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const cell of board.cells) {
+    for (const [x, y] of cell.poly) {
+      const rx = x * c - y * s, ry = x * s + y * c;
+      if (rx < minX) minX = rx;
+      if (ry < minY) minY = ry;
+      if (rx > maxX) maxX = rx;
+      if (ry > maxY) maxY = ry;
+    }
+  }
   const f = (v) => +v.toFixed(4);
-  const minX = Math.min(...xs), minY = Math.min(...ys);
-  return [minX, minY, Math.max(...xs) - minX, Math.max(...ys) - minY].map(f).join(" ");
+  return [minX - pad, minY - pad, maxX - minX + 2 * pad, maxY - minY + 2 * pad].map(f).join(" ");
 }
 
 // Width / height of a viewBox string.
@@ -73,7 +83,7 @@ export function createRenderer(svg) {
     rotation = rotate;
     if (fill) cellFill = fill;
     const u = board.unit;
-    svg.setAttribute("viewBox", rotateViewBox(board.viewBox, rotate));
+    svg.setAttribute("viewBox", rotatedViewBox(board, rotate));
     svg.replaceChildren();
 
     // The shadow offset is in the rotated frame: turn it back so shadows

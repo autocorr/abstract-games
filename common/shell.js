@@ -3,7 +3,7 @@
 // (board plus a gutter of sections), rendering, move input, AI players,
 // history, undo and the URL hash.
 
-import { createRenderer, rotateViewBox, viewBoxAspect } from "./render.js";
+import { createRenderer, rotatedViewBox, viewBoxAspect } from "./render.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
 import { h, escapeHtml, capitalise, section } from "./ui/dom.js";
@@ -530,8 +530,9 @@ export function mount(game, { root = document.body } = {}) {
   // height: on two-column layouts it fits the viewport; on one column it
   // leaves NARROW_RESERVE_PX below it for the top of the turn card.
 
-  // Games with `rotatable: true` may be turned 90 degrees when that draws the
-  // board noticeably larger (a wide board on a portrait phone, say).
+  // A `rotatable` game's board may be turned (by 90 degrees for `true`, or
+  // by the angle given) when that draws it noticeably larger (a wide board
+  // on a portrait phone, say).
   const ROTATE_GAIN = 1.15;
   let lastBoardMax = -1;
 
@@ -559,10 +560,11 @@ export function mount(game, { root = document.body } = {}) {
     // Turn a rotatable board if that makes it clearly bigger in the space available.
     if (game.rotatable) {
       const scale = (r) => {
-        const [, , w, h] = rotateViewBox(board.viewBox, r).split(" ").map(Number);
+        const [, , w, h] = rotatedViewBox(board, r).split(" ").map(Number);
         return Math.min(availW / w, availH / h);
       };
-      const other = renderer.rotation ? 0 : 90;
+      const turn = typeof game.rotatable === "number" ? game.rotatable : 90;
+      const other = renderer.rotation ? 0 : turn;
       if (scale(other) > ROTATE_GAIN * scale(renderer.rotation)) {
         showBoard(other);
         render();   // redraws pieces and refits; the hysteresis stops it flipping back
@@ -570,7 +572,7 @@ export function mount(game, { root = document.body } = {}) {
       }
     }
 
-    const aspect = viewBoxAspect(rotateViewBox(board.viewBox, renderer.rotation));
+    const aspect = viewBoxAspect(rotatedViewBox(board, renderer.rotation));
     const width = Math.floor(Math.min(availW, availH * aspect)) + chromeX;
     if (width === lastBoardMax) return;
     lastBoardMax = width;
