@@ -4,6 +4,7 @@ import game, { internals } from "../games/liquefaction/game.js";
 import { newGame, replay, moveKey, CHANCE } from "../common/engine.js";
 import { bagSize } from "../common/bag.js";
 import { seededRng } from "../common/rng.js";
+import { describeMove } from "../common/log.js";
 
 const { make, P, N, B, R, K, WHITE, BLACK } = internals;
 const TYPES = { P, N, B, R, K };
@@ -233,4 +234,22 @@ test("the drawn colour's squares are hatched until the move is made", () => {
   assert.deepEqual(shaded(), Array(9).fill("A"));   // a quarter of 36 squares
   game.applyMove(s, [sq(s.board, "a3"), sq(s.board, "b5")]);
   assert.deepEqual(shaded(), []);
+});
+
+test("log text uses algebraic notation", () => {
+  const s = position(8, {
+    e1: "wK", a1: "wR", h1: "wR", b1: "wN", f3: "wN", h3: "wN", h5: "wN", e4: "wP", e8: "bK", d5: "bP",
+  }, { colour: "D", castling: 15 });
+  const text = (move) => describeMove(game, s, move.split("-").map((n) => sq(s.board, n)), null);
+  assert.equal(text("e1-g1"), "O-O");
+  assert.equal(text("e1-c1"), "O-O-O");
+  assert.equal(text("e4-d5"), "exd5");
+  assert.equal(text("e4-e5"), "e5");
+  assert.equal(text("b1-d2"), "Nbd2");     // the f3 Knight could also go to d2
+  assert.equal(text("h3-f4"), "N3f4");     // so could the h5 Knight, on the same file
+  assert.equal(text("a1-a8"), "Ra8+");
+  assert.equal(describeMove(game, s, "promote:R", null), "=R");
+  const scheme = Object.values(game.colorSchemes)[0];
+  assert.equal(describeMove(game, s, "fill:A", null, scheme), `added ${scheme.marbles.A.name.toLowerCase()}`);
+  assert.equal(describeMove(game, s, "draw:A", null, scheme), `drew ${scheme.marbles.A.name.toLowerCase()}`);
 });

@@ -455,6 +455,15 @@ export default withSwap({
     if (!s.over) for (const [id] of claimMoves(s, a)) out.push({ id, kind: "target" });
     return out;
   },
+  // Log text: a placement ("d4"), with its pull ("d4, pull b2–c3"), or a
+  // claim of a tied cluster ("claim c3", naming a stone of the claimer's).
+  moveText(s, move) {
+    if (!Array.isArray(move)) return null;
+    const name = (id) => s.board.cells[id].tags.name;
+    if (move.length === 1 && s.cells[move[0]]) return `claim ${name(move[0])}`;
+    return move.length === 3 ? `${name(move[0])}, pull ${name(move[1])}–${name(move[2])}` : null;
+  },
+
   turnHint(s) {
     if (s.over) return "";
     const seen = new Uint8Array(s.cells.length);

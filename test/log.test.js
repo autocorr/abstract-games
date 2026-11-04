@@ -56,3 +56,11 @@ test("groupTurns: one ply per turn when players alternate", () => {
   assert.deepEqual(turns.map((t) => [t.player, t.plies.length]), [[1, 1], [2, 1], [1, 1]]);
   assert.deepEqual(groupTurns([]), []);
 });
+
+test("groupTurns: plies of no player get their own unnumbered turn", () => {
+  const turns = groupTurns([
+    { player: null, text: "a" }, { player: null, text: "b" },
+    { player: 1, text: "c" }, { player: 2, text: "d" },
+  ]);
+  assert.deepEqual(turns.map((t) => [t.number, t.player, t.plies.length]), [[null, null, 2], [1, 1, 1], [2, 2, 1]]);
+});

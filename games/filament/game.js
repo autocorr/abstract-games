@@ -160,6 +160,12 @@ export default {
     return out;
   },
 
+  // Log text: the placement, and how many cells it filled.
+  moveText(state, [id], info) {
+    const n = info ? info.fills.length : 0;
+    return n ? `${state.board.cells[id].tags.name} (${n} filled)` : null;
+  },
+
   scoreSummary(state, player) {
     const { count, sizes } = groupStats(state, player);
     const name = this.players[player].name;

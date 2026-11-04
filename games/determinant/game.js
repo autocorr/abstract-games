@@ -161,6 +161,11 @@ export default withSwap({
   currentPlayer(s) {
     return s.turn;
   },
+  // Log text: resolving a cross-cut names who takes which stone.
+  moveText(s, move) {
+    if (s.phase !== "resolve") return null;
+    return `${PLAYERS[s.resolver].name} takes ${s.board.cells[move[0]].tags.name}`;
+  },
   chances(s) {
     return drawOutcomes(s.bag);
   },

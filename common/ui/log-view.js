@@ -54,7 +54,7 @@ export function createLogView({ onJump, onCopy }) {
           plies.push(plyButton(p.index + 1, p.text));
         });
         list.append(h("li", { class: "log-turn" },
-          h("span", { class: "turn-no" }, `${turn.number}.`),
+          h("span", { class: "turn-no" }, turn.number == null ? "" : `${turn.number}.`),
           spec ? h("span", { class: "turn-stone", title: spec.name, style: `background:${spec.fill}` }) : null,
           h("span", { class: "plies" }, plies)));
       }

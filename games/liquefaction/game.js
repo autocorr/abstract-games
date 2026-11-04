@@ -293,6 +293,14 @@ function material(s, player) {
 }
 
 // After the draw: list the moves, or end the game if there are none.
+// "+" if `move` from `s` leaves the opponent in check (not until a pending
+// promotion is chosen).
+function checkMark(game, s, move) {
+  const after = game.clone(s);
+  game.applyMove(after, move);
+  return after.phase !== "promote" && after.winner === null && inCheck(after, after.turn) ? "+" : "";
+}
+
 function startMovePhase(s) {
   s.moves = generateMoves(s, s.turn, s.colour);
   if (s.moves.length) return;
@@ -437,8 +445,9 @@ const game = {
   toMove(s) {
     return s.phase === "setup" || s.phase === "draw" ? CHANCE : s.turn;
   },
+  // The random-bag setup belongs to no player (its own line in the log).
   currentPlayer(s) {
-    return s.turn;
+    return s.phase === "setup" ? null : s.turn;
   },
 
   chances(s) {
@@ -537,6 +546,41 @@ const game = {
           (s.winner === other(p) && s.reason === "checkmate")) out.push({ id: kingSquare(s, p), kind: "check" });
     }
     return out;
+  },
+
+  // Log text in algebraic notation ("e4", "Nf3", "Bxc4", "exd5", "O-O",
+  // "=R"), with "+" for check. Setup draws read "added orange"; draws use
+  // the default ("drew orange").
+  moveText(s, move, info, scheme) {
+    if (typeof move === "string") {
+      if (move.startsWith(FILL)) {
+        const marbles = (scheme && scheme.marbles) || DEFAULT_SCHEME.marbles;
+        return `added ${marbles[move.slice(FILL.length)].name.toLowerCase()}`;
+      }
+      if (!move.startsWith(PROMOTE)) return null;
+      return "=" + move.slice(PROMOTE.length) + checkMark(this, s, move);
+    }
+    const [from, to] = move;
+    const geo = s.board.chess;
+    const name = (id) => s.board.cells[id].tags.name;
+    const type = s.cells[from] & TYPE;
+    if (isCastle(s, from, to)) return (to > from ? "O-O" : "O-O-O") + checkMark(this, s, move);
+    const capture = s.cells[to] !== 0 || isEnPassant(s, from, to);
+    let text;
+    if (type === P) {
+      text = (capture ? name(from)[0] + "x" : "") + name(to);
+    } else {
+      // Name the file, rank or square of origin if a like piece could also go there.
+      const rivals = (s.moves || []).filter(([f, t]) => t === to && f !== from && (s.cells[f] & TYPE) === type);
+      let origin = "";
+      if (rivals.length) {
+        if (!rivals.some(([f]) => geo.col[f] === geo.col[from])) origin = name(from)[0];
+        else if (!rivals.some(([f]) => geo.row[f] === geo.row[from])) origin = name(from).slice(1);
+        else origin = name(from);
+      }
+      text = LETTER[type] + origin + (capture ? "x" : "") + name(to);
+    }
+    return text + checkMark(this, s, move);
   },
 
   chanceView(s) {

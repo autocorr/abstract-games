@@ -51,13 +51,16 @@ export function logEntries(game, options, moves, { board = null, scheme = null }
 }
 
 // Group entries into turns: [{ number, player, plies: [{ index, text }] }],
-// where index is the ply's position in the move list.
+// where index is the ply's position in the move list. Only players' turns
+// are numbered: plies that belong to no player (e.g. setting up a bag) get
+// number null.
 export function groupTurns(entries) {
   const turns = [];
   let turn = null;
+  let number = 0;
   entries.forEach(({ player, text }, index) => {
     if (!turn || turn.player !== player) {
-      turn = { number: turns.length + 1, player, plies: [] };
+      turn = { number: player == null ? null : ++number, player, plies: [] };
       turns.push(turn);
     }
     turn.plies.push({ index, text });
