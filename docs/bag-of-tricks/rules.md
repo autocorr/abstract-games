@@ -446,11 +446,31 @@ parity). In Figure 8.1, which shows 6×6:
 - odd ranks alternate dark purple and light pink, starting with purple at a1;
 - even ranks alternate light cyan and teal, starting with cyan at a2.
 
+Two classes are dark and two are light, so the board still reads as an
+ordinary checkerboard. The implementation names the classes by letter and
+colours them with a theme (a game option). In each theme, the two dark
+colours have the same OKLCH lightness (0.66), and so do the two light
+colours (0.88). The colours within a pair differ only in hue, and the
+light/dark contrast stays obvious.
+
+| Class | Squares                    | Shade | Booklet | Classic (default) | Cyan/magenta | Colour-blind safe |
+| ----- | -------------------------- | ----- | ------- | ----------------- | ------------ | ----------------- |
+| A     | odd file, odd rank (a1)    | dark  | purple  | red `#db6c66`     | purple `#b576c3` | vermilion `#d77343` |
+| B     | even file, odd rank (b1)   | light | pink    | yellow `#f9d460`  | pink `#ffc4de`   | yellow `#f9d460`    |
+| C     | odd file, even rank (a2)   | light | cyan    | green `#8ef29e`   | cyan `#8ce9f4`   | sky `#aedffd`       |
+| D     | even file, even rank (b2)  | dark  | teal    | blue `#5d94da`    | teal `#31a5a5`   | blue `#6293db`      |
+
+The colour-blind theme uses an orange/blue contrast within each pair. In
+simulated protanopia, deuteranopia and tritanopia (Machado 2009, full
+severity), every pair of its colours stays at least 14 ΔE_OK × 100 apart.
+In the classic theme, yellow and green are only 7 apart under red-green
+colour blindness. Marbles use the same fills as their squares.
+
 ### Rules
 
 - **Bag.** The supply has 20 marbles, 5 in each colour. The bag holds 5
   marbles drawn from them at random. Figure 8.1 shows 1 cyan, 1 teal, 1
-  pink, 2 purple.
+  pink, 2 purple (see *Decisions* for the starting bag used).
 - **Colour-check.** At the start of your turn, draw a marble. Squares of that
   colour count as **threatened** for your King this turn:
   - if your King stands on that colour, it must leave the square or you
@@ -487,24 +507,45 @@ parity). In Figure 8.1, which shows 6×6:
 - Optional: if one side gets down to a single piece besides the King, add
   Xiangqi's **flying King** rule, to make mate easier with little material.
 
-### Open questions
+### Decisions
 
-- **Initial bag.** Is it a random 5 of the 20, or the fixed set in the
-  figure? *Provisional default:* fixed, as in Figure 8.1, with a "random
-  bag" option. A random start needs a chance move before White's first turn.
-- **Running out of a colour.** What if the supply of a colour runs out
-  (5 per colour, with 5 in the bag plus the discards)? *Provisional default:*
-  discards return to the supply at once, so the supply never runs out.
-- **Normal check and colour-check together.** Presumably both apply: a move
-  must escape a normal check *and* leave the colour-checked squares. If no
-  move does both, does the player lose by "colour-mate"? *Provisional
-  default:* yes.
-- **Which move sets the replacement colour** for castling and promotion.
-  *Provisional default:* the King's destination square for castling, the
-  promotion square for promotion.
-- **Flying King rule.** *Provisional default:* off, available as an option.
-- **Draw rules.** Repetition, 50-move rule and insufficient material are not
-  mentioned. *Provisional default:* a move cap that ends the game as a draw.
+The open questions in the booklet are settled as follows for the
+implementation.
+
+- **Starting bag (option).** The default is a fixed bag that gives each
+  King's starting colour the same count:
+  - 6×6: Figure 8.1's bag, 2 A, 1 B, 1 C, 1 D. The Kings start on d1 (B)
+    and d6 (D).
+  - 8×8: 1 A, 2 B, 1 C, 1 D. The Kings start on e1 (A) and e8 (C). Figure
+    8.1's bag would colour-check White's King 2 times in 5 but Black's only
+    1 in 5. As on 6×6, the doubled colour is the one beside White's King on
+    its home rank.
+  - Option **random bag:** the bag starts as 5 marbles drawn at random from
+    the 20, as 5 chance plies before White's first turn.
+- **Supply.** Drawn marbles go back to the supply at once. A colour can
+  then never run out: after a draw the bag holds 4 marbles, so at least 1 of
+  every colour is outside it.
+- **Legality and losing.** Colour-check is an extra legality condition. A
+  move is legal only if, afterwards, your King is not attacked and does not
+  stand on a colour-checked square. If you have no legal move after your
+  draw, you lose. This covers checkmate, "colour-mate" (no move can both
+  escape check and leave the colour) and stalemate alike.
+- **Castling (8×8).** You may not castle while colour-checked (your King
+  stands on the drawn colour), and the King may not land on the drawn colour.
+  It **may** pass through a colour-checked square. As in chess, it may not
+  castle out of, through or into a normal check.
+- **Replacement colour.** The marble added to the bag matches the moving
+  piece's landing square. For castling that is the King's destination. For
+  promotion and en passant it is the pawn's destination.
+- **Draw rule.** The 50-move rule: the game is a draw after 100 consecutive
+  plies by the players (chance plies don't count) with no capture and no
+  pawn move. There is no threefold-repetition rule and no
+  insufficient-material rule, since a bare King can still win by
+  stalemating the opponent.
+- **Flying King.** Left out of the first implementation.
+- **Colour theme (option).** Classic (default), cyan/magenta, or
+  colour-blind safe, as in the table under *Board and colours*. This only
+  changes the display.
 
 ---
 
