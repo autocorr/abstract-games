@@ -8,7 +8,9 @@
 //      drawn: ["B", "G"],       // drawn marbles in order (last = newest)
 //      active: true }]          // optional: the bag being drawn from now
 //
-// game.marbles names and colours each marble: { W: { name, fill } }.
+// game.marbles names and colours each marble: { W: { name, fill } }. A colour
+// scheme may override them with its own `marbles` (same shape), so marbles
+// can match recoloured cells.
 
 const MAX_DRAWN = 14;
 
@@ -19,15 +21,15 @@ function h(tag, cls, ...children) {
   return node;
 }
 
-function marble(game, colour, cls = "") {
-  const spec = (game.marbles && game.marbles[colour]) || { name: colour, fill: "#888" };
+function marble(marbles, colour, cls = "") {
+  const spec = (marbles && marbles[colour]) || { name: colour, fill: "#888" };
   const node = h("span", "marble" + (cls ? " " + cls : ""));
   node.style.background = spec.fill;
   node.title = spec.name;
   return node;
 }
 
-export function renderChance(container, game, state) {
+export function renderChance(container, game, state, marbles = game.marbles) {
   const panels = game.chanceView ? game.chanceView(state) : [];
   container.replaceChildren();
   container.hidden = !panels.length;
@@ -40,14 +42,14 @@ export function renderChance(container, game, state) {
 
     const contents = h("div", "bag-contents");
     for (const [colour, n] of Object.entries(panel.counts || {})) {
-      contents.append(h("span", "bag-count" + (n ? "" : " zero"), marble(game, colour), String(n)));
+      contents.append(h("span", "bag-count" + (n ? "" : " zero"), marble(marbles, colour), String(n)));
     }
 
     const drawn = panel.drawn || [];
     const shown = drawn.slice(-MAX_DRAWN);
     const drawnRow = h("div", "bag-drawn",
       drawn.length > shown.length ? h("span", "bag-more", `+${drawn.length - shown.length}`) : null,
-      ...shown.map((c, i) => marble(game, c, i === shown.length - 1 ? "small newest" : "small")));
+      ...shown.map((c, i) => marble(marbles, c, i === shown.length - 1 ? "small newest" : "small")));
 
     container.append(h("div", "bag" + (panel.active ? " active" : ""), head, contents, drawn.length ? drawnRow : null));
   }

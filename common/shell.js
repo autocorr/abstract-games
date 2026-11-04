@@ -191,13 +191,16 @@ export function mount(game, { root = document.body } = {}) {
         settings.scheme = v;
         persist();
         renderer.setCellFill(cellFill());
+        render();   // marbles and hints may follow the scheme
       }));
     }
     return frag;
   }
 
+  const currentScheme = () => (game.colorSchemes && game.colorSchemes[settings.scheme]) || null;
+
   function cellFill() {
-    const scheme = game.colorSchemes && game.colorSchemes[settings.scheme];
+    const scheme = currentScheme();
     return scheme ? scheme.cellFill : undefined;
   }
 
@@ -387,7 +390,7 @@ export function mount(game, { root = document.body } = {}) {
     renderer.draw({
       pieces: piecesOf(game, state),
       players: game.players,
-      markers: lastMove === undefined ? [] : game.markers ? game.markers(state, lastMove, lastInfo) : defaultMarkers(),
+      markers: lastMove === undefined ? [] : game.markers ? game.markers(state, lastMove, lastInfo, currentScheme()) : defaultMarkers(),
       selected: selection,
       targets,
     });
@@ -407,7 +410,7 @@ export function mount(game, { root = document.body } = {}) {
     ui.undo.disabled = !moves.length || !humans;
 
     renderTurnPanel(over);
-    renderChance(ui.chance, game, state);
+    renderChance(ui.chance, game, state, (currentScheme() || {}).marbles);
     renderStatus();
     fitBoard();
   }
@@ -442,7 +445,7 @@ export function mount(game, { root = document.body } = {}) {
         `<div class="verdict"><b>Game over</b> &nbsp;·&nbsp; ${verdict}</div>` +
         (lines.length ? `<div class="scoreline">${lines.join("<br>")}</div>` : "");
     } else {
-      const hint = game.turnHint ? game.turnHint(state) : "";
+      const hint = game.turnHint ? game.turnHint(state, currentScheme()) : "";
       ui.status.innerHTML = hint ? escapeHtml(hint) : "";
     }
   }

@@ -24,6 +24,7 @@ common/
     cairo.js                Cairo pentagonal tiling patches
   render.js                 SVG renderer: cell, highlight, piece and marker layers
   chance-view.js            bag panels shown under the board
+  pieces/cburnett/          chess piece images (Cburnett, BSD; see its README)
   shell.js                  mount(game): builds the page UI around a Game
   ai/
     mcts.js                 generic UCT Monte Carlo tree search over the Game contract
@@ -98,6 +99,7 @@ export default {
   },
   colorSchemes: {                   // optional; first entry is the default
     sand: { name: "Sand", cellFill: (cell) => "#ffd890" },
+    // optional marbles: { W: { name, fill } } recolours the bag panels
   },
 
   createBoard(opts),                // -> Board
@@ -122,11 +124,16 @@ export default {
   defaultPlayers,                   // e.g. { 1: "human", 2: "ai" } (the default)
   moveLabels,                       // button labels for string moves, e.g. { pass: "Pass" }
   moveLabel(state, move),           // the same, computed (takes precedence)
-  turnHint(state),                  // status line text while the game is on
+  turnHint(state, scheme),          // status line text while the game is on (scheme: the
+                                    //   active colour scheme object, or null)
   boardDecor(board),                // -> lines over the cells, e.g. goal edges
   rotatable,                        // true: the shell may turn the board 90 degrees
-  piecesOf(state),                  // -> [{ id, player, label? }]; default reads state.cells
-  markers(state, move, info),       // -> [{ id, kind: "ring" | "dot" | "target" }] for the last move
+  piecesOf(state),                  // -> [{ id, player, label?, image? }]; default reads state.cells;
+                                    //   image: URL drawn instead of a disc (e.g. a chess piece)
+  markers(state, move, info, scheme), // -> [{ id, kind, color? }] for the last move (scheme as
+                                    //   for turnHint). Over pieces:
+                                    //   "ring" | "dot" | "target"; under pieces: "shade" (hatched
+                                    //   cell), "square" (cell outline), "check" (red glow)
   scoreSummary(state, player),      // -> { main, sub, title } for the turn panel
   outcomeLines(state, outcome),     // -> HTML lines shown under the game-over verdict
   playout(state, rng),              // faster rollout for MCTS; returns a winner

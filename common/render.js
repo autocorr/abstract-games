@@ -52,7 +52,10 @@ export function createRenderer(svg) {
   let layers = null;
   let clickHandler = null;
   let rotation = 0;
-  const shadowId = `pieceShadow${++filterSeq}`;
+  const seq = ++filterSeq;
+  const shadowId = `pieceShadow${seq}`;
+  const hatchId = `cellHatch${seq}`;
+  const glowId = `checkGlow${seq}`;
 
   svg.addEventListener("click", (e) => {
     const target = e.target instanceof Element ? e.target.closest(".cell") : null;
@@ -83,6 +86,19 @@ export function createRenderer(svg) {
       stdDeviation: 0.1 * u, "flood-color": "#000", "flood-opacity": 0.5,
     }));
     defs.appendChild(filter);
+    // Diagonal hatching for "shade" markers, and a red glow for "check".
+    const hatch = svgEl("pattern", {
+      id: hatchId, patternUnits: "userSpaceOnUse", width: 0.2 * u, height: 0.2 * u,
+      patternTransform: "rotate(45)",
+    });
+    hatch.appendChild(svgEl("rect", { x: 0, y: 0, width: 0.07 * u, height: 0.2 * u, fill: "rgba(14, 15, 19, 0.3)" }));
+    defs.appendChild(hatch);
+    const glow = svgEl("radialGradient", { id: glowId });
+    glow.append(
+      svgEl("stop", { offset: "0%", "stop-color": "#ff1a1a", "stop-opacity": 0.95 }),
+      svgEl("stop", { offset: "45%", "stop-color": "#e41a1a", "stop-opacity": 0.75 }),
+      svgEl("stop", { offset: "100%", "stop-color": "#a90000", "stop-opacity": 0 }));
+    defs.appendChild(glow);
     svg.appendChild(defs);
     const root = svgEl("g", rotate ? { transform: `rotate(${rotate})` } : {});
     svg.appendChild(root);
@@ -131,9 +147,10 @@ export function createRenderer(svg) {
     layers = {
       highlights: svgEl("g", { "pointer-events": "none" }),
       pieces: svgEl("g", { filter: `url(#${shadowId})`, "pointer-events": "none" }),
+      images: svgEl("g", { "pointer-events": "none" }),   // image pieces: no shadow
       markers: svgEl("g", { "pointer-events": "none" }),
     };
-    root.append(layers.highlights, layers.pieces, layers.markers);
+    root.append(layers.highlights, layers.pieces, layers.images, layers.markers);
   }
 
   function setCellFill(fill) {
@@ -146,10 +163,14 @@ export function createRenderer(svg) {
     });
   }
 
-  // pieces:   [{ id, player, label? }]
+  // pieces:   [{ id, player, label?, image? }]; image is a URL drawn in
+  //           place of the disc (e.g. a chess piece), without a drop shadow
   // players:  game.players ({ [player]: { fill, mark } })
-  // markers:  [{ id, kind: "ring" | "dot" | "target" }] (ring colour follows
-  //           the piece; "target" is the highlight dot of a selectable cell)
+  // markers:  [{ id, kind, color? }]. Over the pieces: "ring" (colour follows
+  //           the piece), "dot", and "target" (the highlight dot of a
+  //           selectable cell). Under the pieces: "shade" (hatched cell),
+  //           "square" (cell outline, default highlight colour) and "check"
+  //           (red glow, e.g. under a King in check).
   // selected: cell ids in the current partial move
   // targets:  cell ids that would extend the partial move
   function draw({ pieces = [], players = {}, markers = [], selected = [], targets = [] }) {
@@ -157,6 +178,21 @@ export function createRenderer(svg) {
     const owner = new Map(pieces.map((p) => [p.id, p.player]));
 
     layers.highlights.replaceChildren();
+    for (const m of markers) {
+      const c = board.cells[m.id];
+      if (!c) continue;
+      if (m.kind === "shade") {
+        layers.highlights.appendChild(svgEl("polygon", { points: pointsAttr(c.poly), fill: `url(#${hatchId})` }));
+      } else if (m.kind === "square") {
+        const inset = c.poly.map(([x, y]) => [c.x + (x - c.x) * 0.94, c.y + (y - c.y) * 0.94]);
+        layers.highlights.appendChild(svgEl("polygon", {
+          points: pointsAttr(inset), fill: "none", stroke: m.color || HIGHLIGHT,
+          "stroke-width": 0.06 * u, "stroke-linejoin": "round",
+        }));
+      } else if (m.kind === "check") {
+        layers.highlights.appendChild(svgEl("circle", { cx: c.x, cy: c.y, r: 0.5 * u, fill: `url(#${glowId})` }));
+      }
+    }
     for (const id of selected) {
       layers.highlights.appendChild(svgEl("polygon", {
         points: pointsAttr(board.cells[id].poly),
@@ -168,9 +204,18 @@ export function createRenderer(svg) {
     }
 
     layers.pieces.replaceChildren();
+    layers.images.replaceChildren();
     for (const p of pieces) {
       const c = board.cells[p.id];
       const spec = players[p.player] || {};
+      if (p.image) {
+        const s = 0.92 * u;
+        layers.images.appendChild(svgEl("image", {
+          href: p.image, x: c.x - s / 2, y: c.y - s / 2, width: s, height: s,
+          ...(rotation ? { transform: `rotate(${-rotation} ${c.x} ${c.y})` } : {}),
+        }));
+        continue;
+      }
       layers.pieces.appendChild(svgEl("circle", {
         cx: c.x, cy: c.y, r: 0.42 * u,
         fill: spec.fill || "#888", stroke: "#0e0f13", "stroke-width": 0.03 * u,
