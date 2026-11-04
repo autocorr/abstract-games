@@ -8,6 +8,9 @@
 //
 // A patch is described by the list of its pentagon centres (snub-square
 // vertices); see games/filament/boards.js for examples.
+//
+// Tags: tone (pentagon orientation), colour (if given with the centre), and
+// name ("1".."n" in reading order, for the move log).
 
 import { makeBoard, rotatePoint } from "./graph.js";
 
@@ -129,5 +132,10 @@ export function cairoBoard(centres, { rotate = 0, pad } = {}) {
     if (colour !== undefined) tags.colour = colour;
     return { x: rx, y: ry, poly, tags };
   });
+  // Names for the move log: numbers in reading order of the drawn board
+  // (top to bottom, then left to right).
+  const key = (v) => Math.round(v * 1e3);
+  const order = cells.map((c, i) => i).sort((a, b) => key(cells[a].y) - key(cells[b].y) || cells[a].x - cells[b].x);
+  order.forEach((i, k) => { cells[i].tags.name = String(k + 1); });
   return makeBoard(cells, { pad });
 }

@@ -24,6 +24,10 @@ for (const { size, degrees, colours } of cases) {
     assert.deepEqual(tally(b.neighbours.map((ns) => ns.length)), degrees);
     assert.deepEqual(tally(b.cells.map((c) => c.tags.colour)), colours);
     assert.ok(Math.abs(b.unit - 1) < 1e-9, `unit ${b.unit}`);
+    // Names number the cells 1..n in reading order.
+    const byName = [...b.cells].sort((p, q) => Number(p.tags.name) - Number(q.tags.name));
+    assert.deepEqual(byName.map((c) => c.tags.name), b.cells.map((c, i) => String(i + 1)));
+    for (let i = 1; i < byName.length; i++) assert.ok(byName[i].y >= byName[i - 1].y - 1e-3);
   });
 
   test(`Cairo-${size}: shared-edge adjacency equals unit centre distance`, () => {

@@ -7,7 +7,7 @@
 //   edges: the board sides the cell lies on (corners lie on two)
 //          rhombus: "N" (r = 0), "S" (r = n-1), "W" (q = 0), "E" (q = n-1)
 //          hex-hex: side index d (0-5) between directions d and d+1
-//   name:  rhombus only, Hex-style "a1": column letter from q, row from r
+//   name:  "a1"-style: column letter from q, row number from r (top row 1)
 //
 // The board also gets dirs/at/step (see graph.js). dirs are the 6 neighbour
 // steps going round from east, so opposite(board, d) = (d + 3) % 6:
@@ -77,7 +77,7 @@ export function hexHexBoard(side, { rotate = 0 } = {}) {
       const off = DIRS6.map(([dq, dr]) => !inside(q + dq, r + dr));
       const edges = [];
       for (let d = 0; d < 6; d++) if (off[d] && off[(d + 1) % 6]) edges.push(d);
-      specs.push(hexCell(q, r, { edges }));
+      specs.push(hexCell(q, r, { edges, name: FILES[q + m] + (r + m + 1) }));
     }
   }
   const board = finish(specs, rotate);

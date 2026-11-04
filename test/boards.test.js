@@ -109,3 +109,11 @@ test("hex-hex: size, sides and corners", () => {
   for (const c of b.cells) for (const n of b.neighbours[c.id]) assert.notEqual(b.cells[n].tags.tri, c.tags.tri);
   assert.equal(b.neighbours[b.at(0, 0)].length, 6);
 });
+
+test("hex-hex: a1-style names from the top-left", () => {
+  const b = hexHexBoard(3);
+  assert.equal(b.cells[b.at(0, -2)].tags.name, "c1");   // top row starts at column c
+  assert.equal(b.cells[b.at(-2, 0)].tags.name, "a3");   // west corner
+  assert.equal(b.cells[b.at(0, 0)].tags.name, "c3");    // centre
+  assert.equal(new Set(b.cells.map((c) => c.tags.name)).size, b.size);
+});

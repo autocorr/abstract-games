@@ -9,6 +9,7 @@ import { validateBoard } from "../common/board/graph.js";
 import {
   newGame, replay, moveKey, parseMoveKey, piecesOf, resolveOptions, optionAllowed, sampleChance, currentPlayer, CHANCE,
 } from "../common/engine.js";
+import { describeMove } from "../common/log.js";
 import { mcts } from "../common/ai/mcts.js";
 import { seededRng } from "../common/rng.js";
 import tictactoe from "./fixtures/tictactoe.js";
@@ -118,6 +119,8 @@ for (const { entry, game } of entries) {
       const board = game.createBoard(resolveOptions(game, options));
       assert.deepEqual(validateBoard(board), []);
       assert.ok(board.size > 0 && board.unit > 0 && board.viewBox);
+      const names = board.cells.map((c) => c.tags.name).filter((n) => n !== undefined);
+      assert.equal(new Set(names).size, names.length, "cell names are not unique");
       for (const scheme of Object.values(game.colorSchemes || {})) {
         for (const cell of board.cells) assert.equal(typeof scheme.cellFill(cell), "string");
       }
@@ -175,6 +178,10 @@ for (const { entry, game } of entries) {
           const move = mover === CHANCE ? sampleChance(game, state, rng) : legal[Math.floor(rng() * legal.length)];
           lastInfo = game.applyMove(state, move);
           assert.equal(snapshot(copy), before, "applyMove on the original changed a clone");
+          for (const scheme of [null, ...Object.values(game.colorSchemes || {})]) {
+            const text = describeMove(game, copy, move, lastInfo, scheme);
+            assert.ok(typeof text === "string" && text.length, `no log text for ${moveKey(move)}`);
+          }
           moves.push(move);
           if (game.markers) {
             for (const m of game.markers(state, move, lastInfo)) assert.ok(m.id >= 0 && m.id < state.board.size);
