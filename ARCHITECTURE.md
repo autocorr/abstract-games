@@ -130,8 +130,7 @@ export default {
   rotatable,                        // true: the shell may turn the board 90 degrees
   piecesOf(state),                  // -> [{ id, player, label?, image? }]; default reads state.cells;
                                     //   image: URL drawn instead of a disc (e.g. a chess piece)
-  markers(state, move, info, scheme), // -> [{ id, kind, color? }] for the last move (scheme as
-                                    //   for turnHint). Over pieces:
+  markers(state, move, info),       // -> [{ id, kind, color? }] for the last move. Over pieces:
                                     //   "ring" | "dot" | "target"; under pieces: "shade" (hatched
                                     //   cell), "square" (cell outline), "check" (red glow)
   scoreSummary(state, player),      // -> { main, sub, title } for the turn panel

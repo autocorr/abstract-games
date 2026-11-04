@@ -453,7 +453,7 @@ colours have the same OKLCH lightness (0.66), and so do the two light
 colours (0.88). The colours within a pair differ only in hue, and the
 light/dark contrast stays obvious.
 
-| Class | Squares                    | Shade | Booklet | Classic (default) | Cyan/magenta | Colour-blind safe |
+| Class | Squares                    | Shade | Booklet | Classic | Cyan/magenta | Colour-blind safe (default) |
 | ----- | -------------------------- | ----- | ------- | ----------------- | ------------ | ----------------- |
 | A     | odd file, odd rank (a1)    | dark  | purple  | red `#db6c66`     | purple `#b576c3` | vermilion `#d77343` |
 | B     | even file, odd rank (b1)   | light | pink    | yellow `#f9d460`  | pink `#ffc4de`   | yellow `#f9d460`    |
@@ -543,8 +543,8 @@ implementation.
   insufficient-material rule, since a bare King can still win by
   stalemating the opponent.
 - **Flying King.** Left out of the first implementation.
-- **Colour theme (option).** Classic (default), cyan/magenta, or
-  colour-blind safe, as in the table under *Board and colours*. This only
+- **Colour theme (option).** Colour-blind safe (default), classic, or
+  cyan/magenta, as in the table under *Board and colours*. This only
   changes the display.
 
 ---

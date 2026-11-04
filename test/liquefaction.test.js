@@ -227,11 +227,10 @@ test("moves round-trip through replay, including promotion choices", () => {
   assert.deepEqual(Array.from(r.state.cells), Array.from(s.cells));
 });
 
-test("only the colour-blind scheme hatches the drawn colour", () => {
-  const s = position(6, { d1: "wK", f6: "bK" }, { colour: "A" });
-  const shaded = (scheme) => game.markers(s, null, null, scheme).filter((m) => m.kind === "shade").length;
-  assert.equal(shaded(game.colorSchemes.colorblind), 9);   // a quarter of 36 squares
-  assert.equal(shaded(game.colorSchemes.classic), 0);
-  assert.equal(shaded(game.colorSchemes.booklet), 0);
-  assert.equal(shaded(undefined), 0);
+test("the drawn colour's squares are hatched until the move is made", () => {
+  const s = position(6, { d1: "wK", a3: "wN", f6: "bK" }, { colour: "A" });
+  const shaded = () => game.markers(s).filter((m) => m.kind === "shade").map((m) => s.board.chess.cls[m.id]);
+  assert.deepEqual(shaded(), Array(9).fill("A"));   // a quarter of 36 squares
+  game.applyMove(s, [sq(s.board, "a3"), sq(s.board, "b5")]);
+  assert.deepEqual(shaded(), []);
 });

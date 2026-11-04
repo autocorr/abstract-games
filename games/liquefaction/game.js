@@ -53,10 +53,14 @@ const BAG_SIZE = 5;
 const FIFTY_MOVE_PLIES = 100;
 const DRAWN_SHOWN = 12;   // drawn history kept for display
 
-// Colour schemes. Within each, the dark pair (A, D) shares one OKLCH
+// Colour schemes; the first (colour-blind safe) is the default. Within each, the dark pair (A, D) shares one OKLCH
 // lightness (0.66) and the light pair (B, C) another (0.88), so the board
 // reads as a checkerboard.
 const SCHEMES = {
+  colorblind: {
+    name: "Color-blind safe",
+    colours: { A: ["Orange", "#d77343"], B: ["Yellow", "#f9d460"], C: ["Sky", "#aedffd"], D: ["Blue", "#6293db"] },
+  },
   classic: {
     name: "Classic",
     colours: { A: ["Red", "#db6c66"], B: ["Yellow", "#f9d460"], C: ["Green", "#8ef29e"], D: ["Blue", "#5d94da"] },
@@ -65,19 +69,13 @@ const SCHEMES = {
     name: "Cyan and magenta",
     colours: { A: ["Purple", "#b576c3"], B: ["Pink", "#ffc4de"], C: ["Cyan", "#8ce9f4"], D: ["Teal", "#31a5a5"] },
   },
-  colorblind: {
-    name: "Color-blind safe",
-    hatch: true,   // also hatch the drawn colour's squares, so it doesn't rely on hue
-    colours: { A: ["Orange", "#d77343"], B: ["Yellow", "#f9d460"], C: ["Sky", "#aedffd"], D: ["Blue", "#6293db"] },
-  },
 };
-const colorSchemes = Object.fromEntries(Object.entries(SCHEMES).map(([key, { name, colours, hatch = false }]) => [key, {
+const colorSchemes = Object.fromEntries(Object.entries(SCHEMES).map(([key, { name, colours }]) => [key, {
   name,
-  hatch,
   cellFill: (cell) => colours[CLASSES[cell.tags.quad]][1],
   marbles: Object.fromEntries(CLASSES.map((c) => [c, { name: colours[c][0], fill: colours[c][1] }])),
 }]));
-const DEFAULT_SCHEME = colorSchemes.classic;
+const DEFAULT_SCHEME = colorSchemes.colorblind;
 
 // Fixed starting bags: each King's starting colour appears once.
 const FIXED_BAGS = {
@@ -530,12 +528,12 @@ const game = {
     return out;
   },
 
-  // The last move's squares, a King in check and, in schemes that ask for
-  // it (the colour-blind one), hatching on the drawn colour's squares.
-  markers(s, move, info, scheme) {
+  // The last move's squares, the drawn colour's squares (hatched) and a
+  // King in check.
+  markers(s) {
     const out = [];
     if (s.last) for (const id of s.last) out.push({ id, kind: "square", color: LAST_MOVE });
-    if (scheme && scheme.hatch && s.winner === null && (s.phase === "move" || s.phase === "promote")) {
+    if (s.winner === null && (s.phase === "move" || s.phase === "promote")) {
       const geo = s.board.chess;
       for (let id = 0; id < s.cells.length; id++) if (geo.cls[id] === s.colour) out.push({ id, kind: "shade" });
     }

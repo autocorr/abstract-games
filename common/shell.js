@@ -390,7 +390,7 @@ export function mount(game, { root = document.body } = {}) {
     renderer.draw({
       pieces: piecesOf(game, state),
       players: game.players,
-      markers: lastMove === undefined ? [] : game.markers ? game.markers(state, lastMove, lastInfo, currentScheme()) : defaultMarkers(),
+      markers: lastMove === undefined ? [] : game.markers ? game.markers(state, lastMove, lastInfo) : defaultMarkers(),
       selected: selection,
       targets,
     });
