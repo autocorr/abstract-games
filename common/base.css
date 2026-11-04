@@ -442,8 +442,10 @@ svg.board { width: 100%; height: auto; display: block; }
 .chance[hidden] { display: none; }
 .bag {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 6px 12px;
+  max-width: 100%;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -452,7 +454,7 @@ svg.board { width: 100%; height: auto; display: block; }
 }
 .bag.active { border-color: var(--accent); }
 .bag-title { display: flex; align-items: center; gap: 6px; color: var(--text-dim); }
-.bag-contents, .bag-drawn { display: flex; align-items: center; gap: 8px; }
+.bag-contents, .bag-drawn { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .bag-drawn { gap: 3px; padding-left: 10px; border-left: 1px solid var(--line); }
 .bag-count { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .bag-count.zero { opacity: 0.35; }
