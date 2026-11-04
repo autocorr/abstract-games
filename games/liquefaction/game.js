@@ -98,16 +98,11 @@ const ORTH = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 const DIAG = [[1, 1], [-1, 1], [-1, -1], [1, -1]];
 
 const boards = new Map();
-const HEADER_ROOM = 0.7;   // in squares
 const LAST_MOVE = "rgba(14, 15, 19, 0.75)";
 
 function buildBoard(size) {
   const board = squareBoard({ cols: size });
   const n = size;
-  // Leave room above the board for the turn panel and title, which the shell
-  // overlays on the top corners (where the back rank would be).
-  const [x, y, w, h] = board.viewBox.split(" ").map(Number);
-  board.viewBox = [x, y - HEADER_ROOM, w, h + HEADER_ROOM].map((v) => +v.toFixed(4)).join(" ");
   const id = (c, r) => (c >= 0 && c < n && r >= 0 && r < n ? r * n + c : -1);
   const leaps = (deltas) => board.cells.map(({ coord: { col, row } }) =>
     deltas.map(([dc, dr]) => id(col + dc, row + dr)).filter((x) => x >= 0));

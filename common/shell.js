@@ -1,10 +1,14 @@
 // Game page shell: mount(game) builds the whole page UI around a Game (see
-// ARCHITECTURE.md). Games provide rules; this module provides controls,
-// dialogs, rendering, move input, AI players, history, undo and the URL hash.
+// ARCHITECTURE.md). Games provide rules; this module provides the layout
+// (board plus a gutter of sections), rendering, move input, AI players,
+// history, undo and the URL hash.
 
 import { createRenderer, rotateViewBox, viewBoxAspect } from "./render.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
+import { h, escapeHtml, capitalise, section } from "./ui/dom.js";
+import { buildSetup, AI_TIMES } from "./ui/setup.js";
+import { games as registry } from "../games.js";
 import {
   replay, resolveOptions, optionAllowed, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
 } from "./engine.js";
@@ -12,24 +16,16 @@ import {
 // Pause before a chance ply (a marble draw) is played, so it can be seen.
 const CHANCE_DELAY_MS = 450;
 
-const AI_TIMES = ["0.025", "0.05", "0.1", "0.25", "0.5", "1", "2", "5", "10", "30"];
 const DEFAULT_AI_TIME = "1";
 
-function h(tag, attrs = {}, ...children) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === "class") node.className = v;
-    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
-    else node.setAttribute(k, v);
-  }
-  node.append(...children.filter((c) => c !== null && c !== undefined));
-  return node;
-}
+// Two columns (board left, gutter right) on landscape screens and wide
+// windows; one column (head, board, then the sections) otherwise. Keep in
+// step with the media queries in base.css.
+const WIDE_QUERY = "(orientation: landscape) and (min-width: 560px), (min-width: 1000px)";
 
-const escapeHtml = (s) =>
-  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-
-const capitalise = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+// On one-column layouts the board leaves this much of the viewport below it,
+// so the top of the turn card stays in view.
+const NARROW_RESERVE_PX = 110;
 
 // The declared choice value of option `key` matching a <select> string.
 function parseOption(game, key, text) {
@@ -108,94 +104,75 @@ export function mount(game, { root = document.body } = {}) {
   const ai = new AIPlayer(game);
 
   // ---- DOM ----
+  // root (body.game)
+  //   .page
+  //     .board-col > .board-wrap > svg.board
+  //     aside.gutter
+  //       header.page-head        title, blurb, link back to the games
+  //       .card.turn-card         players, status, bags, move buttons, Undo
+  //       details Setup / Rules   collapsible sections
+  // On one-column layouts the gutter's children flow under the board, and
+  // the head moves above it (CSS).
   root.classList.add("game");
   const ui = {};
-  const rulesTemplate = document.getElementById("rules");
+  const entry = registry.find((g) => g.id === game.id);
+  const blurb = entry ? entry.blurb : "";
+  const gamesHref = new URL("../../", location.href).pathname;
+  const wideQuery = window.matchMedia(WIDE_QUERY);
 
-  ui.undo = h("button", { class: "btn", onclick: undo }, "Undo");
-  ui.controls = h("nav", { class: "controls" },
-    h("a", { class: "btn", href: new URL("../../", location.href).pathname }, "Games"),
-    rulesTemplate ? h("button", { class: "btn", onclick: () => ui.rulesDialog.showModal() }, "Rules") : null,
-    h("button", { class: "btn", onclick: () => ui.optionsDialog.showModal() }, "Options"),
-    ui.undo,
-    h("button", { class: "btn", onclick: reset }, "Reset"),
-  );
+  ui.head = h("header", { class: "page-head" },
+    h("a", { class: "back", href: gamesHref }, "← Games"),
+    h("h1", { class: "title" }, game.title),
+    blurb ? h("p", { class: "blurb" }, blurb) : null);
 
-  ui.turnPanel = h("div", { class: "turn-panel" });
-  ui.boardHeader = h("div", { class: "board-header" },
-    ui.turnPanel,
-    h("div", { class: "board-title" }, game.title),
-  );
   ui.board = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   ui.board.setAttribute("class", "board");
   ui.board.setAttribute("role", "img");
   ui.board.setAttribute("aria-label", `${game.title} board`);
-  ui.thinking = h("div", { class: "thinking", "aria-hidden": "true" }, h("span"), h("span"), h("span"));
-  ui.boardWrap = h("div", { class: "board-wrap" }, ui.boardHeader, ui.board, ui.thinking);
+  ui.boardWrap = h("div", { class: "board-wrap" }, ui.board);
+  ui.boardCol = h("main", { class: "board-col" }, ui.boardWrap);
+
+  ui.players = h("div", { class: "players" });
+  ui.status = h("div", { class: "status", "aria-live": "polite" });
   ui.chance = h("div", { class: "chance" });
   ui.actions = h("div", { class: "move-actions" });
-  ui.status = h("div", { class: "status", "aria-live": "polite" });
-  ui.stage = h("main", { class: "stage" }, ui.boardWrap, ui.chance, ui.actions, ui.status);
+  ui.undo = h("button", { class: "btn", onclick: undo }, "Undo");
+  ui.turnCard = h("section", { class: "card turn-card", "aria-label": "Turn" },
+    ui.players, ui.status, ui.chance, ui.actions,
+    h("div", { class: "turn-buttons" }, ui.undo, h("button", { class: "btn", onclick: reset }, "New game")));
 
-  ui.rulesDialog = rulesTemplate ? buildDialog("Rules", rulesTemplate.content.cloneNode(true)) : null;
-  ui.optionsDialog = buildDialog("Options", buildOptions());
+  const setup = buildSetup(game, settings, {
+    onPlayer(p, v) { settings.players[p] = v; persist(); onPlayersChanged(); },
+    onAiTime(v) { settings.aiTime = v; persist(); },
+    onOption(key, v) {
+      settings.options = resolveOptions(game, { ...settings.options, [key]: v });
+      persist();
+      start(settings.options, []);
+    },
+    onScheme(v) {
+      settings.scheme = v;
+      persist();
+      renderer.setCellFill(cellFill());
+      render();   // marbles and hints may follow the scheme
+    },
+  });
+  ui.optionSelects = setup.optionSelects;
+  ui.setup = section("setup", "Setup", setup.node, { open: wideQuery.matches });
 
-  root.append(ui.controls, ui.stage, ...[ui.rulesDialog, ui.optionsDialog].filter(Boolean));
+  const rulesTemplate = document.getElementById("rules");
+  ui.rules = rulesTemplate || blurb
+    ? section("rules", "Rules", [
+        blurb ? h("p", { class: "rules-blurb" }, blurb) : null,
+        rulesTemplate ? h("div", { class: "rules" }, rulesTemplate.content.cloneNode(true)) : null,
+      ])
+    : null;
+
+  ui.gutter = h("aside", { class: "gutter" }, ui.head, ui.turnCard, ui.setup, ui.rules);
+  ui.page = h("div", { class: "page" }, ui.boardCol, ui.gutter);
+  root.append(ui.page);
 
   const renderer = createRenderer(ui.board);
   renderer.onCellClick(onCellClick);
-
-  function buildDialog(title, content) {
-    const dialog = h("dialog", { class: "dialog" }, h("h2", {}, title), content);
-    dialog.append(h("button", { class: "btn dialog-close", onclick: () => dialog.close() }, "Close"));
-    dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });
-    return dialog;
-  }
-
-  function optionRow(label, choices, value, onChange) {
-    const select = h("select", { class: "btn", onchange: (e) => onChange(e.target.value) });
-    for (const c of choices) {
-      const v = typeof c === "object" ? c.value : c;
-      const opt = h("option", { value: String(v) }, typeof c === "object" ? c.label : String(c));
-      if (String(v) === String(value)) opt.selected = true;
-      select.append(opt);
-    }
-    return h("label", { class: "option-row" }, h("span", { class: "label" }, label), select);
-  }
-
-  function buildOptions() {
-    const frag = document.createDocumentFragment();
-    ui.optionSelects = {};
-    for (const p of playerIds) {
-      // With the swap rule a setting follows the seat, whatever colour it ends up playing.
-      const row = optionRow(game.swap ? `${game.players[p].name} at start` : game.players[p].name,
-        [{ value: "human", label: "Human" }, { value: "ai", label: "AI" }],
-        settings.players[p],
-        (v) => { settings.players[p] = v; persist(); onPlayersChanged(); });
-      frag.append(row);
-    }
-    frag.append(optionRow("AI think", AI_TIMES.map((t) => ({ value: t, label: `${t}s` })), settings.aiTime,
-      (v) => { settings.aiTime = v; persist(); }));
-    for (const [key, spec] of Object.entries(game.options || {})) {
-      const row = optionRow(spec.label, spec.choices, settings.options[key], (v) => {
-        settings.options = resolveOptions(game, { ...settings.options, [key]: v });
-        persist();
-        start(settings.options, []);
-      });
-      ui.optionSelects[key] = row.querySelector("select");
-      frag.append(row);
-    }
-    if (game.colorSchemes) {
-      const choices = Object.entries(game.colorSchemes).map(([value, s]) => ({ value, label: s.name }));
-      frag.append(optionRow("Colors", choices, settings.scheme, (v) => {
-        settings.scheme = v;
-        persist();
-        renderer.setCellFill(cellFill());
-        render();   // marbles and hints may follow the scheme
-      }));
-    }
-    return frag;
-  }
 
   const currentScheme = () => (game.colorSchemes && game.colorSchemes[settings.scheme]) || null;
 
@@ -280,7 +257,7 @@ export function mount(game, { root = document.body } = {}) {
 
   function setThinking(on) {
     thinking = on;
-    ui.thinking.classList.toggle("on", on);
+    renderPlayers();
   }
 
   function cancelAI() {
@@ -409,27 +386,36 @@ export function mount(game, { root = document.body } = {}) {
     const humans = playerIds.some((p) => settings.players[p] !== "ai");
     ui.undo.disabled = !moves.length || !humans;
 
-    renderTurnPanel(over);
+    renderPlayers();
     renderChance(ui.chance, game, state, (currentScheme() || {}).marbles);
     renderStatus();
     fitBoard();
   }
 
-  function renderTurnPanel(over) {
-    ui.turnPanel.replaceChildren();
+  // One row per player: stone, name, AI tag and score; the player to move
+  // is highlighted, with the thinking dots while the AI searches.
+  function renderPlayers() {
+    if (!state) return;
+    ui.players.replaceChildren();
     const toMove = currentPlayer(game, state);
     for (const p of playerIds) {
       const spec = game.players[p];
       const summary = game.scoreSummary ? game.scoreSummary(state, p) : {};
-      const row = h("div", {
-        class: "turn-row" + (p === toMove ? " active" : ""),
-        title: summary.title || `${spec.name}${controller(state, p) === "ai" ? " (AI)" : ""}`,
+      const isAI = controller(state, p) === "ai";
+      const active = p === toMove;
+      const sub = summary.sub !== undefined && String(summary.sub) !== spec.name ? String(summary.sub) : null;
+      ui.players.append(h("div", {
+        class: "player-row" + (active ? " active" : ""),
+        title: summary.title || `${spec.name}${isAI ? " (AI)" : ""}`,
       },
         h("span", { class: "turn-stone", style: `background:${spec.fill}` }),
-        summary.main !== undefined ? h("span", { class: "turn-main" }, String(summary.main)) : null,
-        h("span", { class: "turn-sub" }, summary.sub !== undefined ? String(summary.sub) : spec.name),
-      );
-      ui.turnPanel.append(row);
+        h("span", { class: "player-name" }, spec.name),
+        isAI ? h("span", { class: "player-tag" }, "AI") : null,
+        active && thinking ? h("span", { class: "thinking", "aria-label": "thinking" }, h("span"), h("span"), h("span")) : null,
+        h("span", { class: "player-score" },
+          sub ? h("span", { class: "score-sub" }, sub) : null,
+          summary.main !== undefined ? h("span", { class: "score-main" }, String(summary.main)) : null),
+      ));
     }
   }
 
@@ -451,63 +437,61 @@ export function mount(game, { root = document.body } = {}) {
   }
 
   // ---- responsive sizing ----
-  // Size the board to the smaller of the available width and height so it
-  // never overflows a short viewport or wastes vertical space.
+  // The board takes the width of its column and is capped by the viewport
+  // height: on two-column layouts it fits the viewport; on one column it
+  // leaves NARROW_RESERVE_PX below it for the top of the turn card.
 
   // Games with `rotatable: true` may be turned 90 degrees when that draws the
   // board noticeably larger (a wide board on a portrait phone, say).
   const ROTATE_GAIN = 1.15;
   let lastBoardMax = -1;
-  const landscapeQuery = window.matchMedia("(orientation: landscape) and (max-height: 500px)");
+
+  const px = (style, ...props) => props.reduce((sum, p) => sum + (parseFloat(style[p]) || 0), 0);
 
   function fitBoard() {
-    if (landscapeQuery.matches) {
-      const headerH = ui.boardHeader.getBoundingClientRect().height;
-      root.style.setProperty("--aside-top", Math.round(headerH + 10) + "px");
-    }
-    const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
-    const bottomPad = parseFloat(getComputedStyle(root).paddingBottom) || 0;
-    const gap = parseFloat(getComputedStyle(ui.stage).rowGap) || 0;
-    const wrapStyle = getComputedStyle(ui.boardWrap);
-    const wrapBottom = (parseFloat(wrapStyle.paddingBottom) || 0) + (parseFloat(wrapStyle.borderBottomWidth) || 0);
-    // Everything stacked below the board (move buttons, status) plus gaps.
-    let below = 0;
-    for (const el of [ui.chance, ui.actions, ui.status]) {
-      const hgt = el.getBoundingClientRect().height;
-      if (hgt > 0 || el === ui.status) below += hgt + gap;
-    }
-    const boardTop = ui.board.getBoundingClientRect().top - root.getBoundingClientRect().top;
-    const max = Math.max(0, Math.floor(vh - boardTop - wrapBottom - below - bottomPad));
     if (!board) return;
+    const wide = wideQuery.matches;
+    const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    const wrapStyle = getComputedStyle(ui.boardWrap);
+    const chromeX = px(wrapStyle, "paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth");
+    const chromeY = px(wrapStyle, "paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth");
 
-    // Turn a rotatable board if that makes it clearly bigger in the space
-    // available (width capped by the wrap's max-width, height by `max`).
+    // Width: the page minus the gutter on two columns.
+    let availW = ui.page.clientWidth;
+    if (wide) availW -= ui.gutter.getBoundingClientRect().width + px(getComputedStyle(ui.page), "columnGap");
+    availW -= chromeX;
+    // Height: from the board's top (in document coordinates) to the bottom
+    // of the viewport, less the page's bottom padding or the reserve.
+    const top = ui.boardWrap.getBoundingClientRect().top - document.documentElement.getBoundingClientRect().top;
+    const below = wide ? px(getComputedStyle(root), "paddingBottom") : NARROW_RESERVE_PX;
+    const availH = Math.floor(vh - top - chromeY - below);
+    if (availW <= 0 || availH <= 0) return;
+
+    // Turn a rotatable board if that makes it clearly bigger in the space available.
     if (game.rotatable) {
-      const padX = (parseFloat(wrapStyle.paddingLeft) || 0) + (parseFloat(wrapStyle.paddingRight) || 0) +
-        (parseFloat(wrapStyle.borderLeftWidth) || 0) + (parseFloat(wrapStyle.borderRightWidth) || 0);
-      const availW = Math.min(ui.stage.clientWidth, parseFloat(wrapStyle.maxWidth) || Infinity) - padX;
       const scale = (r) => {
         const [, , w, h] = rotateViewBox(board.viewBox, r).split(" ").map(Number);
-        return Math.min(availW / w, max / h);
+        return Math.min(availW / w, availH / h);
       };
       const other = renderer.rotation ? 0 : 90;
-      if (availW > 0 && max > 0 && scale(other) > ROTATE_GAIN * scale(renderer.rotation)) {
+      if (scale(other) > ROTATE_GAIN * scale(renderer.rotation)) {
         showBoard(other);
         render();   // redraws pieces and refits; the hysteresis stops it flipping back
         return;
       }
     }
 
-    // The board's width follows from the height budget and its aspect ratio.
-    const width = Math.floor(max * viewBoxAspect(rotateViewBox(board.viewBox, renderer.rotation)));
+    const aspect = viewBoxAspect(rotateViewBox(board.viewBox, renderer.rotation));
+    const width = Math.floor(Math.min(availW, availH * aspect)) + chromeX;
     if (width === lastBoardMax) return;
     lastBoardMax = width;
-    ui.boardWrap.style.setProperty("--board-max", width + "px");
+    ui.boardWrap.style.setProperty("--board-w", width + "px");
   }
 
   window.addEventListener("resize", fitBoard);
   window.addEventListener("orientationchange", fitBoard);
   if (window.visualViewport) window.visualViewport.addEventListener("resize", fitBoard);
+  wideQuery.addEventListener("change", fitBoard);
   if (typeof ResizeObserver !== "undefined") new ResizeObserver(fitBoard).observe(root);
 
   // A pasted link to a different position in the same tab.

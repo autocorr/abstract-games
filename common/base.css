@@ -9,6 +9,7 @@
   --text-dim: #9aa0ab;
   --line: #343943;
   --accent: #ffd54f;
+  --accent-soft: rgba(255, 213, 79, 0.25);
   --gutter: clamp(8px, 2.2vw, 16px);
   --gap: clamp(10px, 2vh, 16px);
   --pad-top: max(clamp(12px, 2.5vw, 24px), env(safe-area-inset-top));
@@ -52,123 +53,138 @@ a { color: var(--accent); }
 select.btn { padding: 6px 10px; }
 
 /* ---- game page layout ------------------------------------------------ */
+/* One column (narrow screens): head, board, then the gutter's cards, with
+   the gutter's children flowing straight into the page. Two columns (see
+   WIDE_QUERY in shell.js): the board on the left, a sticky gutter on the
+   right that scrolls on its own. */
 
 body.game {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--gap);
+  --gutter-w: clamp(260px, 30vw, 360px);
+  --card-gap: 10px;
 }
 
-.controls {
+.page {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: var(--card-gap);
+  max-width: 720px;
+  margin-inline: auto;
+}
+.board-col { display: flex; justify-content: center; }
+.gutter { display: contents; }
+.page-head { order: -1; }
+
+.card {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px 14px;
 }
 
-.stage {
+.page-head {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--gap);
-  width: 100%;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0 2px;
 }
-
-.board-wrap {
-  --wrap-pad: 14px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: var(--wrap-pad);
-  max-width: 720px;
-  width: min(100%, calc(var(--board-max, 100vw) + 2 * var(--wrap-pad) + 2px));
-  margin-inline: auto;
-  position: relative;
+.page-head .back {
+  font-size: 14px;
+  color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
 }
-svg.board { width: 100%; height: auto; display: block; }
-
-.board-header {
-  position: absolute;
-  top: 22px;
-  left: 22px;
-  right: 27px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  pointer-events: none;
-  z-index: 2;
-}
-.board-title {
-  font-size: clamp(14px, 4.5vw, 20px);
+.page-head .back:hover { color: var(--text); }
+.page-head .title {
+  margin: 0 0 0 auto;
+  font-size: clamp(16px, 4.5vw, 22px);
   letter-spacing: 0.08em;
   font-weight: 700;
   text-transform: uppercase;
 }
+.page-head .blurb { display: none; }
+
+@media (orientation: landscape) and (min-width: 560px), (min-width: 1000px) {
+  .page {
+    display: grid;
+    grid-template-columns: auto var(--gutter-w);
+    justify-content: center;
+    align-items: start;
+    column-gap: var(--gap);
+    max-width: none;
+  }
+  .gutter {
+    display: flex;
+    flex-direction: column;
+    gap: var(--card-gap);
+    position: sticky;
+    top: var(--pad-top);
+    max-height: calc(100vh - var(--pad-top) - var(--pad-bottom));
+    max-height: calc(100dvh - var(--pad-top) - var(--pad-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .page-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .page-head .title { margin: 0; }
+  .page-head .blurb { display: block; margin: 2px 0 0; font-size: 13px; line-height: 1.45; color: var(--text-dim); }
+  .rules-blurb { display: none; }
+}
+
+/* Landscape phones are height-starved: trim the padding and the blurb
+   (it is repeated at the top of Rules). */
+@media (orientation: landscape) and (max-height: 500px) {
+  body.game { --pad-top: 6px; --pad-bottom: 6px; --card-gap: 8px; }
+  .board-wrap { --wrap-pad: 6px; }
+  .page-head { flex-direction: row; align-items: baseline; gap: 12px; }
+  .page-head .blurb { display: none; }
+  .rules-blurb { display: block; }
+}
+
+.board-wrap {
+  --wrap-pad: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: var(--wrap-pad);
+  width: var(--board-w, min(100%, 720px));
+  max-width: 100%;
+}
+@media (max-width: 480px) {
+  .board-wrap { --wrap-pad: 8px; }
+}
+svg.board { width: 100%; height: auto; display: block; }
 
 .cell { cursor: pointer; transition: filter 0.12s ease; }
 .cell:hover { filter: brightness(1.15); }
 .board.locked .cell { cursor: default; }
 .board.locked .cell:hover { filter: none; }
 
-/* AI "thinking" indicator: a static ellipsis over the board corner. */
-.thinking {
-  position: absolute;
-  right: calc(var(--wrap-pad) + 4px);
-  bottom: calc(var(--wrap-pad) + 4px);
-  display: none;
-  align-items: center;
-  gap: 4px;
-  pointer-events: none;
-}
-.thinking.on { display: flex; }
-.thinking span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--text);
-  opacity: 0.6;
-}
+/* ---- turn card -------------------------------------------------------- */
 
-.move-actions { display: flex; gap: 10px; justify-content: center; }
-.move-actions:empty { display: none; }
+.turn-card { display: flex; flex-direction: column; gap: 10px; }
 
-.status {
-  font-size: clamp(14px, 3.6vw, 17px);
-  line-height: 1.5;
-  color: var(--text-dim);
-  text-align: center;
-  min-height: 18px;
-}
-.status b { color: var(--text); font-weight: 600; }
-.status .verdict { font-size: clamp(17px, 5vw, 24px); color: var(--text); letter-spacing: 0.02em; }
-.status .scoreline { font-size: clamp(12px, 3vw, 14px); margin-top: 6px; color: var(--text-dim); }
-
-/* ---- turn panel ------------------------------------------------------ */
-
-.turn-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px;
-  background: rgba(20, 22, 26, 0.78);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-}
-.turn-row {
+.players { display: flex; flex-direction: column; gap: 6px; }
+.player-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 24px;
   opacity: 0.55;
   transition: opacity 0.15s ease;
 }
-.turn-row.active { opacity: 1; }
+.player-row.active { opacity: 1; }
+.player-name { font-size: 15px; font-weight: 600; }
+.player-tag {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.player-score { margin-left: auto; display: flex; align-items: baseline; gap: 8px; }
+.score-main { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.score-sub { font-size: 12px; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
 .turn-stone {
   width: 16px;
   height: 16px;
@@ -177,110 +193,99 @@ svg.board { width: 100%; height: auto; display: block; }
   box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.35);
   flex: none;
 }
-.turn-row.active .turn-stone {
+.player-row.active .turn-stone {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(255, 213, 79, 0.25), inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 2px var(--accent-soft), inset 0 -2px 3px rgba(0, 0, 0, 0.4);
 }
-.turn-main {
-  font-size: 15px;
-  font-weight: 700;
-  min-width: 12px;
-  text-align: right;
+
+/* AI "thinking" indicator: an ellipsis on the active player's row. */
+.thinking { display: inline-flex; align-items: center; gap: 3px; }
+.thinking span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text);
+  opacity: 0.6;
+  animation: think 1.2s infinite ease-in-out;
 }
-.turn-sub {
-  font-size: 11px;
+.thinking span:nth-child(2) { animation-delay: 0.2s; }
+.thinking span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes think { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 0.9; } }
+@media (prefers-reduced-motion: reduce) { .thinking span { animation: none; } }
+
+.status {
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--text-dim);
-  white-space: nowrap;
 }
+.status:empty { display: none; }
+.status b { color: var(--text); font-weight: 600; }
+.status .verdict { font-size: 18px; color: var(--text); letter-spacing: 0.02em; }
+.status .scoreline { font-size: 13px; margin-top: 4px; }
 
-/* ---- dialogs --------------------------------------------------------- */
+.move-actions, .turn-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.move-actions:empty { display: none; }
 
-.dialog {
-  background: var(--panel);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 22px 24px;
-  max-width: 520px;
-  width: calc(100% - 32px);
-  line-height: 1.6;
-  font-size: 12px;
+/* ---- sections --------------------------------------------------------- */
+
+.section { padding: 0; }
+.section > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
 }
-.dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
-.dialog h2 {
-  margin: 0 0 12px;
-  font-size: 18px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.section > summary::-webkit-details-marker { display: none; }
+.section > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--text-dim);
+  border-bottom: 2px solid var(--text-dim);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  flex: none;
 }
-.dialog h3 {
-  margin: 18px 0 8px;
+.section[open] > summary::before { transform: rotate(45deg); }
+.section > summary h2 {
+  margin: 0;
   font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
-.dialog p { margin: 0 0 12px; }
-.dialog .option-row {
+.section > summary:hover h2 { color: var(--text); }
+.section-body { padding: 0 14px 12px; }
+
+.option-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
-.dialog .option-row .label {
+.option-row:last-child { margin-bottom: 0; }
+.option-row .label {
   flex: 1;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-dim);
 }
-.dialog .dialog-close { margin: 6px 0 0; display: block; width: 100%; }
 
-/* ---- responsive game layout ------------------------------------------ */
-
-/* Narrow or short screens: the overlaid title/scoreboard would cover
-   playable cells, so flow them above the board instead. */
-@media (max-width: 640px), (orientation: landscape) and (max-height: 500px) {
-  .board-wrap { --wrap-pad: 10px; }
-  .board-header { position: static; margin-bottom: 8px; }
-  .turn-panel {
-    flex-direction: row;
-    gap: 12px;
-    padding: 4px 8px;
-    background: none;
-    border: none;
-  }
+.section-rules .section-body { font-size: 13px; line-height: 1.6; }
+.section-rules p { margin: 0 0 10px; }
+.section-rules p:last-child { margin-bottom: 0; }
+.section-rules h3 {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
-
-/* Landscape phones are height-starved, so move the controls into a left
-   sidebar to give the board the full height. The title/scoreboard are pinned
-   to the top of that sidebar (shell.js offsets the controls below it). */
-@media (orientation: landscape) and (max-height: 500px) {
-  body.game { --pad-top: 6px; --pad-bottom: 6px; flex-direction: row; align-items: flex-start; }
-  .board-wrap { --wrap-pad: 6px; }
-  .board-header {
-    position: fixed;
-    top: var(--pad-top);
-    left: var(--pad-left);
-    right: auto;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    margin: 0;
-  }
-  .board-header .board-title { order: -1; }
-  .turn-panel { flex-direction: column; gap: 4px; }
-  .controls {
-    flex-direction: column;
-    align-items: stretch;
-    align-self: flex-start;
-    margin-top: var(--aside-top, 0);
-    padding: 8px;
-  }
-  .controls .btn { text-align: center; }
-  .stage { flex: 1 1 auto; width: auto; min-width: 0; gap: 6px; }
-  .status { min-height: 0; }
-}
+.rules-blurb { color: var(--text-dim); font-style: italic; }
 
 /* ---- landing page ---------------------------------------------------- */
 
@@ -330,15 +335,14 @@ svg.board { width: 100%; height: auto; display: block; }
 .chance {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
+  gap: 8px;
 }
 .chance[hidden] { display: none; }
 .bag {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--panel);
+  background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 6px 12px;
