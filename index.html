@@ -6,14 +6,18 @@
 <title>Abstract Games</title>
 <meta name="description" content="Playable original abstract strategy board games.">
 <meta name="color-scheme" content="dark light">
+<link rel="preload" href="common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="common/base.css">
 <script src="common/theme-init.js"></script>
 </head>
 <body>
 <div class="landing">
   <header>
-    <h1>Abstract Games</h1>
-    <p>Original abstract strategy board games, playable in the browser against a friend or the computer.</p>
+    <div>
+      <h1>Abstract Games</h1>
+      <p>Original abstract strategy board games, playable in the browser against a friend or the computer.</p>
+    </div>
+    <div class="theme-row" id="theme"><span>Theme</span></div>
   </header>
   <main>
     <ul id="games" class="game-list"></ul>
@@ -28,6 +32,10 @@
   import { createRenderer } from "./common/render.js";
   import { newGame, piecesOf } from "./common/engine.js";
   import { seededRng } from "./common/rng.js";
+  import { segmented } from "./common/ui/setup.js";
+  import { THEMES, loadTheme, setTheme } from "./common/theme.js";
+
+  document.getElementById("theme").append(segmented("Theme", THEMES, loadTheme(), setTheme).node);
 
   const list = document.getElementById("games");
 

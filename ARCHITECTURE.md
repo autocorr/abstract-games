@@ -11,7 +11,9 @@ log, tests) comes from `common/`.
 index.html                  landing page: one card per game from the registry
 games.js                    registry of games: { id, title, blurb, path, module }
 common/
-  base.css                  light/dark theme variables, buttons, game page layout, landing page
+  base.css                  tokens (light/dark colours, radii, spacing), controls, game page
+                            layout, landing page
+  fonts/                    Inter variable font (SIL OFL), subset by .tools/scripts/subset_inter.py
   theme.js                  the site-wide Theme setting (auto / light / dark)
   theme-init.js             classic script in each page head: applies the saved theme before paint
   engine.js                 helpers over the Game contract: move keys, replay, playouts, CHANCE
@@ -32,7 +34,8 @@ common/
   shell.js                  mount(game): builds the page UI around a Game
   ui/
     dom.js                  h(), collapsible sections with remembered open state
-    setup.js                the Setup section (players, AI time, options, colours)
+    setup.js                the Setup section (players, AI time, options, colours); segmented
+                            buttons for short choice lists, dropdowns for long ones
     log-view.js             the Log section (turns, navigation, Copy link)
   ai/
     mcts.js                 generic UCT Monte Carlo tree search over the Game contract
@@ -243,6 +246,11 @@ flow under the board, and the head becomes a slim bar above it. Which
 sections are open is saved site-wide. Settings are saved per game in
 `localStorage`; option changes start a new game at once.
 
+A board whose cells fill a rectangle (square grids) sits on a framing panel;
+other shapes (hexagons, diamonds, Cairo patches) are drawn straight on the
+page. Pieces that appear or change pop in briefly (not for big jumps through
+the log, nor with reduced motion).
+
 The board is sized to its column and capped by the viewport height (on one
 column it leaves room below for the top of the turn card). A `rotatable`
 game's board is turned (display only; 90 degrees, or the game's angle) when
@@ -294,8 +302,10 @@ after it; plies of no player get an unnumbered line.
 `base.css` has dark and light palettes in the same variables, chosen by
 `prefers-color-scheme`. The Theme setting (Auto / Light / Dark, saved
 site-wide by `theme.js`) overrides it with `data-theme` on `<html>`, and
-`theme-init.js` applies a saved choice before first paint. Board colours
-belong to the games and do not change with the theme.
+`theme-init.js` applies a saved choice before first paint. The landing page
+has the same control. Board colours belong to the games and do not change
+with the theme, though the dark theme dims boards slightly. Text is set in
+Inter, self-hosted and preloaded by each page.
 
 `mount()` returns a small handle (`state`, `moves` (the whole line),
 `cursor`, `play`, `jump`, `live`, `undo`, `reset`); game pages expose it as

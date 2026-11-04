@@ -4,16 +4,36 @@
 
 import { h } from "./dom.js";
 
+// Navigation icons as inline SVG (the ⏮ ◀ ▶ ⏭ characters render as colour
+// emoji on some platforms). Paths on a 16 x 16 grid, filled in currentColor.
+const ICONS = {
+  first: "M3 3h2v10H3zM13 3v10L6 8z",
+  prev: "M11 3v10L4 8z",
+  next: "M5 3v10l7-5z",
+  last: "M11 3h2v10h-2zM3 3v10l7-5z",
+};
+
+function icon(name) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", "icon");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", ICONS[name]);
+  svg.append(path);
+  return svg;
+}
+
 // onJump(n): show the position after n plies. onCopy(): copy the link and
 // resolve to true on success.
 export function createLogView({ onJump, onCopy }) {
   const list = h("ol", { class: "log-list" });
   const scroller = h("div", { class: "log-scroll" }, list);
   const nav = {
-    first: h("button", { class: "btn icon", title: "Start (Home)", "aria-label": "Start", onclick: () => onJump(0) }, "⏮"),
-    prev: h("button", { class: "btn icon", title: "Back (←)", "aria-label": "Back", onclick: () => onJump(cursor - 1) }, "◀"),
-    next: h("button", { class: "btn icon", title: "Forward (→)", "aria-label": "Forward", onclick: () => onJump(cursor + 1) }, "▶"),
-    last: h("button", { class: "btn icon", title: "Latest (End)", "aria-label": "Latest", onclick: () => onJump(length) }, "⏭"),
+    first: h("button", { class: "btn icon", title: "Start (Home)", "aria-label": "Start", onclick: () => onJump(0) }, icon("first")),
+    prev: h("button", { class: "btn icon", title: "Back (←)", "aria-label": "Back", onclick: () => onJump(cursor - 1) }, icon("prev")),
+    next: h("button", { class: "btn icon", title: "Forward (→)", "aria-label": "Forward", onclick: () => onJump(cursor + 1) }, icon("next")),
+    last: h("button", { class: "btn icon", title: "Latest (End)", "aria-label": "Latest", onclick: () => onJump(length) }, icon("last")),
   };
   const copy = h("button", { class: "btn copy-link", onclick: copyLink }, "Copy link");
   const node = h("div", { class: "log" }, scroller,

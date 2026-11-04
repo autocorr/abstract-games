@@ -7,7 +7,7 @@ import { createRenderer, rotatedViewBox, viewBoxAspect } from "./render.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
 import { h, escapeHtml, capitalise, section } from "./ui/dom.js";
-import { buildSetup, optionRow, AI_TIMES } from "./ui/setup.js";
+import { buildSetup, choiceRow, AI_TIMES } from "./ui/setup.js";
 import { THEMES, loadTheme, setTheme } from "./theme.js";
 import { createLogView } from "./ui/log-view.js";
 import { playAndDescribe, logEntries, groupTurns } from "./log.js";
@@ -31,7 +31,20 @@ const WIDE_QUERY = "(orientation: landscape) and (min-width: 560px), (min-width:
 // so the top of the turn card stays in view.
 const NARROW_RESERVE_PX = 110;
 
-// The declared choice value of option `key` matching a <select> string.
+// Does the board's cells' area fill its bounding box (a square grid)?
+function fillsRectangle(board) {
+  const { minX, minY, maxX, maxY } = board.bounds;
+  let area = 0;
+  for (const { poly } of board.cells) {
+    for (let i = 0; i < poly.length; i++) {
+      const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length];
+      area += x1 * y2 - x2 * y1;
+    }
+  }
+  return Math.abs(area) / 2 >= 0.98 * (maxX - minX) * (maxY - minY);
+}
+
+// The declared choice value of option `key` matching a control's string.
 function parseOption(game, key, text) {
   const c = game.options[key].choices.find((x) => String(typeof x === "object" ? x.value : x) === text);
   return typeof c === "object" ? c.value : c;
@@ -170,9 +183,9 @@ export function mount(game, { root = document.body } = {}) {
       describeLine();   // marble names in the log may follow the scheme
       render();         // and so may the bags and hints
     },
-    extraRows: [optionRow("Theme", THEMES, loadTheme(), setTheme)],
+    extraRows: [choiceRow("Theme", THEMES, loadTheme(), setTheme).node],
   });
-  ui.optionSelects = setup.optionSelects;
+  ui.optionControls = setup.optionControls;
   ui.log = createLogView({
     onJump: (n) => seek(n),
     onCopy: () => navigator.clipboard.writeText(location.href),
@@ -220,9 +233,9 @@ export function mount(game, { root = document.body } = {}) {
     cancelAI();
     const opts = resolveOptions(game, options);
     settings.options = opts;
-    for (const [k, sel] of Object.entries(ui.optionSelects)) {
-      sel.value = String(opts[k]);
-      for (const o of sel.options) o.disabled = !optionAllowed(game, k, parseOption(game, k, o.value), opts);
+    for (const [k, control] of Object.entries(ui.optionControls)) {
+      control.set(opts[k]);
+      control.disable((v) => !optionAllowed(game, k, parseOption(game, k, v), opts));
     }
     // Boards depend only on the options, so rebuild only when they change.
     const key = JSON.stringify(opts);
@@ -419,9 +432,12 @@ export function mount(game, { root = document.body } = {}) {
     return [];
   }
 
-  // (Re)draw the static board at a display rotation (see fitBoard).
+  // (Re)draw the static board at a display rotation (see fitBoard). Boards
+  // that do not fill a rectangle (hexagons, diamonds, Cairo patches) are
+  // drawn straight on the page; rectangular ones keep a framing panel.
   function showBoard(rotate) {
     renderer.setBoard(board, cellFill(), game.boardDecor ? game.boardDecor(board) : [], rotate);
+    ui.boardWrap.classList.toggle("frameless", !fillsRectangle(board));
     lastBoardMax = -1;
   }
 
@@ -448,7 +464,7 @@ export function mount(game, { root = document.body } = {}) {
       for (const m of legal.filter((x) => typeof x === "string")) {
         const label = (game.moveLabel && game.moveLabel(state, m)) ||
           (game.moveLabels && game.moveLabels[m]) || capitalise(m);
-        ui.actions.append(h("button", { class: "btn", onclick: () => playMove(m) }, label));
+        ui.actions.append(h("button", { class: "btn primary", onclick: () => playMove(m) }, label));
       }
     }
 

@@ -1,44 +1,94 @@
 // The Setup section of a game page: who plays each seat, AI think time, the
 // game's own options and colour schemes. Changes apply at once; the shell
 // decides what each one does through the callbacks.
+//
+// Short lists of choices are shown as segmented buttons, so every value is
+// in view; longer ones use a <select>. Both are wrapped as a control:
+// { node, set(value), disable(isDisabled) }.
 
 import { h } from "./dom.js";
 
 export const AI_TIMES = ["0.025", "0.05", "0.1", "0.25", "0.5", "1", "2", "5", "10", "30"];
 
-// A labelled <select>. Choices are plain values or { value, label }.
-export function optionRow(label, choices, value, onChange) {
-  const select = h("select", { class: "btn", onchange: (e) => onChange(e.target.value) });
-  for (const c of choices) {
-    const v = typeof c === "object" ? c.value : c;
-    const opt = h("option", { value: String(v) }, typeof c === "object" ? c.label : String(c));
-    if (String(v) === String(value)) opt.selected = true;
-    select.append(opt);
-  }
-  return h("label", { class: "option-row" }, h("span", { class: "label" }, label), select);
+const choiceValue = (c) => String(typeof c === "object" ? c.value : c);
+const choiceLabel = (c) => (typeof c === "object" ? c.label : String(c));
+
+// Segmented buttons fit when there are few choices with short labels.
+function fitsSegmented(choices) {
+  const labels = choices.map(choiceLabel);
+  return labels.length <= 5 && labels.every((l) => l.length <= 10) && labels.join("").length <= 22;
 }
 
-// Returns { node, optionSelects } where optionSelects maps each game option
-// key to its <select>, so the shell can keep them in step with the position.
+// A row of toggle buttons, one per choice; the chosen one is pressed.
+export function segmented(label, choices, value, onChange) {
+  let current = String(value);
+  const buttons = choices.map((c) => {
+    const v = choiceValue(c);
+    return h("button", {
+      type: "button", class: "seg", "data-value": v,
+      onclick: () => {
+        if (v === current) return;
+        set(v);
+        onChange(v);
+      },
+    }, choiceLabel(c));
+  });
+  const node = h("div", { class: "segmented", role: "group", "aria-label": label }, buttons);
+  function set(v) {
+    current = String(v);
+    for (const b of buttons) b.setAttribute("aria-pressed", String(b.dataset.value === current));
+  }
+  set(current);
+  return {
+    node,
+    set,
+    disable(isDisabled) { for (const b of buttons) b.disabled = isDisabled(b.dataset.value); },
+  };
+}
+
+// A <select> with the same interface.
+export function dropdown(label, choices, value, onChange) {
+  const node = h("select", { class: "btn", "aria-label": label, onchange: (e) => onChange(e.target.value) });
+  for (const c of choices) node.append(h("option", { value: choiceValue(c) }, choiceLabel(c)));
+  node.value = String(value);
+  return {
+    node,
+    set(v) { node.value = String(v); },
+    disable(isDisabled) { for (const o of node.options) o.disabled = isDisabled(o.value); },
+  };
+}
+
+// A labelled control row. Choices are plain values or { value, label }.
+// Returns { node, control }.
+export function choiceRow(label, choices, value, onChange) {
+  const control = (fitsSegmented(choices) ? segmented : dropdown)(label, choices, value, onChange);
+  const node = h("div", { class: "option-row" }, h("span", { class: "label" }, label), control.node);
+  return { node, control };
+}
+
+// Returns { node, optionControls } where optionControls maps each game
+// option key to its control, so the shell can keep them in step with the
+// position.
 export function buildSetup(game, settings, { onPlayer, onAiTime, onOption, onScheme, extraRows = [] }) {
   const node = h("div", { class: "setup" });
-  const optionSelects = {};
+  const optionControls = {};
   for (const p of Object.keys(game.players).map(Number)) {
     // With the swap rule a setting follows the seat, whatever colour it ends up playing.
-    node.append(optionRow(game.swap ? `${game.players[p].name} at start` : game.players[p].name,
+    node.append(choiceRow(game.swap ? `${game.players[p].name} at start` : game.players[p].name,
       [{ value: "human", label: "Human" }, { value: "ai", label: "AI" }],
-      settings.players[p], (v) => onPlayer(p, v)));
+      settings.players[p], (v) => onPlayer(p, v)).node);
   }
-  node.append(optionRow("AI think", AI_TIMES.map((t) => ({ value: t, label: `${t}s` })), settings.aiTime, onAiTime));
+  node.append(choiceRow("AI think time", AI_TIMES.map((t) => ({ value: t, label: `${t}s` })),
+    settings.aiTime, onAiTime).node);
   for (const [key, spec] of Object.entries(game.options || {})) {
-    const row = optionRow(spec.label, spec.choices, settings.options[key], (v) => onOption(key, v));
-    optionSelects[key] = row.querySelector("select");
-    node.append(row);
+    const row = choiceRow(spec.label, spec.choices, settings.options[key], (v) => onOption(key, v));
+    optionControls[key] = row.control;
+    node.append(row.node);
   }
   if (game.colorSchemes) {
     const choices = Object.entries(game.colorSchemes).map(([value, s]) => ({ value, label: s.name }));
-    node.append(optionRow("Colors", choices, settings.scheme, onScheme));
+    node.append(choiceRow("Colors", choices, settings.scheme, onScheme).node);
   }
   node.append(...extraRows);
-  return { node, optionSelects };
+  return { node, optionControls };
 }
