@@ -12,12 +12,17 @@ index.html                  landing page: one card per game from the registry
 games.js                    registry of games: { id, title, blurb, path, module }
 common/
   base.css                  theme variables, buttons, dialogs, board layout, landing page
-  engine.js                 helpers over the Game contract: move keys, replay, playouts
+  engine.js                 helpers over the Game contract: move keys, replay, playouts, CHANCE
   rng.js                    seedable RNG for reproducible playouts and tests
+  bag.js                    bags of coloured marbles: draws as chance plies, refills
   board/
-    graph.js                makeBoard(): polygons -> adjacency, bounds, viewBox; components()
+    graph.js                makeBoard(): polygons -> adjacency, bounds, viewBox; groups,
+                            liberties, directions (ray, lineLength)
+    square.js               square grids: chess/draughts boards and Go-style points boards
+    hex.js                  hex rhombus (Hex) and hex-hex boards
     cairo.js                Cairo pentagonal tiling patches
   render.js                 SVG renderer: cell, highlight, piece and marker layers
+  chance-view.js            bag panels shown under the board
   shell.js                  mount(game): builds the page UI around a Game
   ai/
     mcts.js                 generic UCT Monte Carlo tree search over the Game contract
@@ -55,9 +60,24 @@ built from a list of cells by `makeBoard()` in `common/board/graph.js`:
   only at a corner are not. A generator may pass an explicit `neighbours`
   array instead (e.g. a square board with diagonal adjacency).
 
-Tiling generators live in `common/board/`. Cairo exists today; square and hex
-generators (with edge tags and direction stepping for line-based rules) are
-planned next.
+Tiling generators live in `common/board/`:
+
+| Generator | Coord | Tags |
+| --------- | ----- | ---- |
+| `squareBoard({ cols, rows, adjacency, style, stars })` | `{ col, row }`, row 0 = rank 1 at the bottom | `name` ("a1"), `dark` (a1 dark), `quad` (Dabbaba sub-grid 0-3), `edges` ("N"/"S"/"E"/"W") |
+| `rhombusBoard(n)`, `hexHexBoard(side)` | axial `{ q, r }`, pointy-top | `tri` (3-colouring), `edges` (rhombus "N"/"S"/"E"/"W"; hex-hex side 0-5), `name` (rhombus) |
+| `cairoBoard(centres, { rotate })` | (none) | `tone` (pentagon orientation) |
+
+`squareBoard` adjacency is `"orth"` (default), `"diag"` or `"king"`. With
+`style: "points"` pieces sit on intersections as in Go: the renderer draws
+`board.lines` and star points (`board.dots`) over a continuous surface, and
+the cells stay as click targets.
+
+Grid boards also carry directions for line-based rules: `board.dirs` (8 king
+steps for squares, 6 for hexes, listed so that the opposite of `d` is
+`opposite(board, d)`), `board.at(...coord)` and `board.step(id, d)` (both -1
+off the board). `graph.js` builds on these with `ray()` and `lineLength()`,
+and on adjacency alone with `components()`, `groupAt()` and `liberties()`.
 
 ## The Game contract
 
@@ -82,14 +102,22 @@ export default {
   createBoard(opts),                // -> Board
   initialState(board, opts),        // -> state; state.board is the shared Board
   clone(state),                     // deep enough that applyMove on the copy is safe
-  toMove(state),                    // player number to move
+  toMove(state),                    // player number to move, or CHANCE (0)
   legalMoves(state),                // -> Move[]; empty iff the game is over
   applyMove(state, move),           // mutates state; returns info for display
   outcome(state),                   // null while ongoing, else { winner: 0 | player }
 
+  // chance (required if toMove can return CHANCE)
+  chances(state),                   // -> [{ move, p }] at a chance ply
+  currentPlayer(state),             // whose turn a chance ply belongs to, for display
+  marbles,                          // { W: { name, fill } } colours used by chanceView
+  chanceView(state),                // -> bag panels: [{ title, owner, counts, drawn, active }]
+
   // optional hooks
   defaultPlayers,                   // e.g. { 1: "human", 2: "ai" } (the default)
   moveLabels,                       // button labels for string moves, e.g. { pass: "Pass" }
+  moveLabel(state, move),           // the same, computed (takes precedence)
+  turnHint(state),                  // status line text while the game is on
   piecesOf(state),                  // -> [{ id, player, label? }]; default reads state.cells
   markers(state, move, info),       // -> [{ id, kind: "ring" | "dot" }] for the last move
   scoreSummary(state, player),      // -> { main, sub, title } for the turn panel
@@ -99,7 +127,9 @@ export default {
 ```
 
 `applyMove` mutates in place and `clone` copies: search code clones once per
-tree node and then mutates freely, which keeps playouts fast. Option values
+tree node and then mutates freely, which keeps playouts fast. A turn may span
+several plies: `toMove` can return the same player (or `CHANCE`) more than
+once in a row. Option values
 in `choices` may be plain values or `{ value, label }` objects. Rules must be
 deterministic: the same options and moves always give the same position.
 
@@ -123,6 +153,23 @@ Legal string moves are shown as buttons. `moveKey()` in
 `common/engine.js` gives each move a canonical string (`"17-23"`, `"pass"`)
 for comparison and for the URL hash.
 
+### Chance
+
+Random events (drawing a marble, later rolling dice) are **chance plies**:
+`toMove(state)` returns `CHANCE` (0, exported from `engine.js`),
+`chances(state)` lists the outcomes as `[{ move, p }]`, and `legalMoves`
+returns the same moves. Outcomes are string moves such as `"draw:W"`. They
+are applied and recorded like any other move, so a game with chance is still
+fully described by its options and move list, and replay, the URL hash, the
+AI worker and the tests work unchanged. Drawing several marbles is several
+chance plies, which lets a player decide between draws (push-your-luck).
+
+`common/bag.js` implements bags as plain objects
+(`{ counts: { W: 3, B: 3 }, drawn: [] }`): `drawOutcomes(bag)` gives a chance
+ply's outcomes, `drawMarble(bag, move)` applies one, and helpers add, remove,
+replace and return marbles. Bags are always public: `chanceView` shows their
+contents and the drawn marbles in order.
+
 ## The shell
 
 `mount(game)` in `common/shell.js` builds the whole page around a game:
@@ -132,8 +179,13 @@ for comparison and for the URL hash.
 - the Rules dialog from the page's `<template id="rules">`;
 - the Options dialog: player types (human/AI), AI think time, the game's own
   options and colour schemes, saved to `localStorage`;
-- move input and highlighting as described above, plus last-move markers;
-- the move history, which drives Undo (back to the last human turn) and the
+- move input and highlighting as described above, plus last-move markers
+  (by default a ring on the destination of the last cell move);
+- chance plies: after a short pause the shell samples an outcome and plays
+  it; `chanceView` panels appear under the board and `turnHint` in the
+  status line;
+- the move history, which drives Undo (back to the last human decision,
+  keeping the draws before it, so Undo cannot re-roll chance) and the
   URL hash (`#size=48&moves=17.23.4`), so any position can be shared as a
   link; an illegal move in a hand-edited hash truncates the history there;
 - responsive board sizing that keeps the board within the viewport.
@@ -148,7 +200,11 @@ serialising game state.
 
 ## AI
 
-`common/ai/mcts.js` is a generic UCT search over the Game contract. It runs in
+`common/ai/mcts.js` is a generic UCT search over the Game contract. At
+chance plies it samples an outcome by probability instead of applying UCT,
+so decision values are expectations over the randomness. The search is only
+asked at decision plies, and it never sees a real draw before the shell makes
+it. It runs in
 a module Web Worker (`common/ai/worker.js`) that imports the game from
 `game.url`, replays the move list and searches for the requested time. If a
 worker cannot be created the search runs on the main thread instead. A game
@@ -162,8 +218,12 @@ game in `games.js`, for every combination of option values, through contract
 checks: seeded random playouts terminate, `legalMoves` is empty exactly when
 the game is over, moves are well formed and round-trip through `moveKey`,
 `clone` is independent, replay reproduces the final position, MCTS returns a
-legal move, and boards are well formed. A tic-tac-toe fixture in
-`test/fixtures/` exercises the suite and the MCTS tests. Each game adds its
+legal move, and boards are well formed. At chance plies it also checks that
+`chances()` matches `legalMoves()` with probabilities summing to 1, that
+`chanceView` uses declared marble colours, and that MCTS never chooses for
+chance; playouts sample chance by probability. Two fixtures in
+`test/fixtures/` exercise the suite and the MCTS tests: tic-tac-toe, and bag
+tic-tac-toe (a marble draw picks the square colour to play on). Each game adds its
 own rule tests.
 
 The page shell is not covered by `npm test`; check it in a browser with

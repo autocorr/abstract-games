@@ -324,3 +324,41 @@ svg.board { width: 100%; height: auto; display: block; }
 .game-card p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-dim); }
 .landing footer { margin-top: 32px; font-size: 13px; color: var(--text-dim); }
 .game-card svg .cell:hover { filter: none; }
+
+/* ---- chance devices (bags of marbles) -------------------------------- */
+
+.chance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.chance[hidden] { display: none; }
+.bag {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+.bag.active { border-color: var(--accent); }
+.bag-title { display: flex; align-items: center; gap: 6px; color: var(--text-dim); }
+.bag-contents, .bag-drawn { display: flex; align-items: center; gap: 8px; }
+.bag-drawn { gap: 3px; padding-left: 10px; border-left: 1px solid var(--line); }
+.bag-count { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.bag-count.zero { opacity: 0.35; }
+.bag-more { color: var(--text-dim); font-size: 12px; margin-right: 2px; }
+.marble {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #0e0f13;
+  box-shadow: inset -2px -3px 4px rgba(0, 0, 0, 0.25), inset 2px 2px 3px rgba(255, 255, 255, 0.35);
+}
+.marble.small { width: 11px; height: 11px; }
+.marble.newest { width: 15px; height: 15px; outline: 2px solid var(--accent); outline-offset: 1px; }
+.bag .turn-stone { width: 12px; height: 12px; }

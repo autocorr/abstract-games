@@ -1,6 +1,10 @@
 // SVG board renderer. Draws any Board (see common/board/graph.js) as four
 // layers: cells, selection highlights, pieces and markers. All sizes scale
 // with board.unit so tilings of any geometry look alike.
+//
+// Boards with style "points" (Go-style, see square.js) are drawn as a
+// continuous surface with grid lines (board.lines) and star points
+// (board.dots); the cells stay as invisible-edged click targets.
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -48,21 +52,34 @@ export function createRenderer(svg) {
     defs.appendChild(filter);
     svg.appendChild(defs);
 
-    const cellsG = svgEl("g", { class: "cells" });
+    const points = board.style === "points";
+    const cellsG = svgEl("g", { class: "cells" + (points ? " points" : "") });
     cellNodes = board.cells.map((c) => {
+      const fill = cellFill(c);
       const poly = svgEl("polygon", {
         class: "cell",
         "data-id": c.id,
         points: pointsAttr(c.poly),
-        fill: cellFill(c),
-        stroke: CELL_STROKE,
-        "stroke-width": 0.025 * u,
+        fill,
+        // Points boards: stroke in the fill colour hides seams between cells.
+        stroke: points ? fill : CELL_STROKE,
+        "stroke-width": (points ? 0.01 : 0.025) * u,
         "stroke-linejoin": "round",
       });
       cellsG.appendChild(poly);
       return poly;
     });
     svg.appendChild(cellsG);
+
+    if (points) {
+      const grid = svgEl("g", { "pointer-events": "none", stroke: CELL_STROKE, "stroke-width": 0.03 * u, "stroke-linecap": "square" });
+      for (const [x1, y1, x2, y2] of board.lines || []) grid.appendChild(svgEl("line", { x1, y1, x2, y2 }));
+      for (const id of board.dots || []) {
+        const c = board.cells[id];
+        grid.appendChild(svgEl("circle", { cx: c.x, cy: c.y, r: 0.08 * u, fill: CELL_STROKE, stroke: "none" }));
+      }
+      svg.appendChild(grid);
+    }
 
     // Overlays never intercept clicks: they always reach the cell below.
     layers = {
@@ -75,7 +92,12 @@ export function createRenderer(svg) {
 
   function setCellFill(fill) {
     cellFill = fill;
-    if (board) board.cells.forEach((c, i) => cellNodes[i].setAttribute("fill", cellFill(c)));
+    if (!board) return;
+    board.cells.forEach((c, i) => {
+      const fill = cellFill(c);
+      cellNodes[i].setAttribute("fill", fill);
+      if (board.style === "points") cellNodes[i].setAttribute("stroke", fill);
+    });
   }
 
   // pieces:   [{ id, player, label? }]

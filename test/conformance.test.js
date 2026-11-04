@@ -6,10 +6,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { games } from "../games.js";
 import { validateBoard } from "../common/board/graph.js";
-import { newGame, replay, moveKey, parseMoveKey, piecesOf, resolveOptions } from "../common/engine.js";
+import {
+  newGame, replay, moveKey, parseMoveKey, piecesOf, resolveOptions, sampleChance, currentPlayer, CHANCE,
+} from "../common/engine.js";
 import { mcts } from "../common/ai/mcts.js";
 import { seededRng } from "../common/rng.js";
 import tictactoe from "./fixtures/tictactoe.js";
+import bagTictactoe from "./fixtures/bag-tictactoe.js";
 
 const entries = [
   ...await Promise.all(games.map(async (g) => ({
@@ -17,7 +20,28 @@ const entries = [
     game: (await import(new URL(`../${g.module}`, import.meta.url))).default,
   }))),
   { entry: { id: "tictactoe (fixture)" }, game: tictactoe },
+  { entry: { id: "bag-tictactoe (fixture)" }, game: bagTictactoe },
 ];
+
+// A ply belongs to a player or to chance.
+const validMover = (game, p) => p === CHANCE || p in game.players;
+
+// Chance plies: chances() lists exactly the legal moves, all strings, with
+// positive probabilities summing to 1.
+function checkChances(game, state, legal) {
+  assert.equal(typeof game.chances, "function", "chance plies need game.chances()");
+  const outcomes = game.chances(state);
+  assert.ok(outcomes.length > 0, "chance ply without outcomes");
+  let total = 0;
+  for (const { move, p } of outcomes) {
+    assert.equal(typeof move, "string", `chance move ${JSON.stringify(move)} must be a string`);
+    assert.ok(p > 0, `chance outcome ${move} has p = ${p}`);
+    total += p;
+  }
+  assert.ok(Math.abs(total - 1) < 1e-9, `chance probabilities sum to ${total}`);
+  assert.deepEqual(outcomes.map((o) => moveKey(o.move)).sort(), legal.map(moveKey).sort(),
+    "chances() and legalMoves() differ at a chance ply");
+}
 
 // Every combination of declared option values.
 function optionSets(game) {
@@ -37,6 +61,20 @@ function snapshot(state) {
     out[k] = ArrayBuffer.isView(v) ? Array.from(v) : v;
   }
   return JSON.stringify(out);
+}
+
+// chanceView panels are well formed and use only declared marble colours.
+function checkChanceView(game, state) {
+  const panels = game.chanceView(state);
+  assert.ok(Array.isArray(panels));
+  for (const panel of panels) {
+    for (const [colour, n] of Object.entries(panel.counts || {})) {
+      assert.ok(game.marbles && colour in game.marbles, `undeclared marble colour ${colour}`);
+      assert.ok(Number.isInteger(n) && n >= 0, `bad count ${colour}: ${n}`);
+    }
+    for (const colour of panel.drawn || []) assert.ok(colour in game.marbles, `undeclared drawn colour ${colour}`);
+    if (panel.owner != null) assert.ok(panel.owner in game.players);
+  }
 }
 
 const PLAYOUTS = 3;
@@ -85,7 +123,7 @@ for (const { entry, game } of entries) {
       const state = newGame(game, options);
       assert.equal(game.outcome(state), null);
       assert.ok(game.legalMoves(state).length > 0);
-      assert.ok(game.toMove(state) in game.players);
+      assert.ok(validMover(game, game.toMove(state)));
     });
 
     test(`${label}: seeded random playouts obey the contract`, () => {
@@ -105,7 +143,11 @@ for (const { entry, game } of entries) {
             break;
           }
           assert.ok(legal.length > 0, "no legal moves but the game is not over");
-          assert.ok(game.toMove(state) in game.players);
+          const mover = game.toMove(state);
+          assert.ok(validMover(game, mover), `toMove ${mover}`);
+          if (mover === CHANCE) checkChances(game, state, legal);
+          const shown = currentPlayer(game, state);
+          assert.ok(shown === null || shown in game.players, `currentPlayer ${shown}`);
 
           const keys = legal.map(moveKey);
           assert.equal(new Set(keys).size, keys.length, "duplicate legal moves");
@@ -119,11 +161,14 @@ for (const { entry, game } of entries) {
             assert.ok(p.id >= 0 && p.id < state.board.size && p.player in game.players);
           }
           if (game.scoreSummary) for (const p of Object.keys(game.players)) game.scoreSummary(state, Number(p));
+          if (game.turnHint) assert.equal(typeof game.turnHint(state), "string");
+          if (game.chanceView) checkChanceView(game, state);
+          if (game.moveLabel) for (const m of legal) if (typeof m === "string") game.moveLabel(state, m);
 
           // clone() must be independent of the original.
           const copy = game.clone(state);
           const before = snapshot(copy);
-          const move = legal[Math.floor(rng() * legal.length)];
+          const move = mover === CHANCE ? sampleChance(game, state, rng) : legal[Math.floor(rng() * legal.length)];
           lastInfo = game.applyMove(state, move);
           assert.equal(snapshot(copy), before, "applyMove on the original changed a clone");
           moves.push(move);
@@ -149,9 +194,15 @@ for (const { entry, game } of entries) {
       });
     }
 
-    test(`${label}: mcts returns a legal move`, () => {
+    test(`${label}: mcts returns a legal decision`, () => {
+      // Advance past any opening chance plies to the first decision.
+      const rng = seededRng(1);
       const state = newGame(game, options);
-      const move = mcts(game, state, { timeMs: 0, iterations: 20, rng: seededRng(1) });
+      while (!game.outcome(state) && game.toMove(state) === CHANCE) {
+        assert.equal(mcts(game, state, { timeMs: 0, iterations: 5, rng }), null, "mcts chose for chance");
+        game.applyMove(state, sampleChance(game, state, rng));
+      }
+      const move = mcts(game, state, { timeMs: 0, iterations: 20, rng });
       assert.ok(game.legalMoves(state).some((m) => moveKey(m) === moveKey(move)));
     });
   }

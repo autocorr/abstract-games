@@ -126,3 +126,68 @@ export function validateBoard(board) {
   });
   return problems;
 }
+
+// ---- coordinates and directions -----------------------------------------
+//
+// Grid generators (square.js, hex.js) give each cell an integer `coord` and
+// attach to the board:
+//
+//   board.dirs:      [[dx, dy], ...] steps in coordinate space
+//   board.at(...c):  cell id at a coordinate, or -1 off the board
+//   board.step(id, d): neighbour of `id` one step in direction index `d`, or -1
+//
+// The helpers below work on any board that has them.
+
+// Attach `at`, `step` and `dirs` to a board whose cells have coords that
+// `keyOf(coord)` turns into a unique string.
+export function attachGrid(board, dirs, coordKey, coordStep) {
+  const index = new Map(board.cells.map((c) => [coordKey(c.coord), c.id]));
+  board.dirs = dirs;
+  board.at = (...coord) => index.get(coordKey(coord.length === 1 ? coord[0] : coord)) ?? -1;
+  board.step = (id, d) => index.get(coordKey(coordStep(board.cells[id].coord, dirs[d]))) ?? -1;
+  return board;
+}
+
+// Cells from `id` (exclusive) stepping in direction `d` until the edge, or
+// while `include(id)` holds when given.
+export function ray(board, id, d, include = null) {
+  const out = [];
+  for (let n = board.step(id, d); n >= 0 && (!include || include(n)); n = board.step(n, d)) out.push(n);
+  return out;
+}
+
+// Length of the line through `id` along direction `d` and its opposite `od`
+// made of cells for which `include` holds (counting `id` itself).
+export function lineLength(board, id, d, od, include) {
+  return 1 + ray(board, id, d, include).length + ray(board, id, od, include).length;
+}
+
+// The connected group containing `id` (cells with include() true), or [].
+export function groupAt(board, id, include) {
+  if (!include(id)) return [];
+  const seen = new Set([id]);
+  const stack = [id];
+  while (stack.length) {
+    const cur = stack.pop();
+    for (const n of board.neighbours[cur]) {
+      if (!seen.has(n) && include(n)) {
+        seen.add(n);
+        stack.push(n);
+      }
+    }
+  }
+  return [...seen];
+}
+
+// Empty neighbours of a group (`isEmpty(id)`), as a sorted array of ids.
+export function liberties(board, group, isEmpty) {
+  const libs = new Set();
+  for (const id of group) for (const n of board.neighbours[id]) if (isEmpty(n)) libs.add(n);
+  return [...libs].sort((a, b) => a - b);
+}
+
+// Index of the direction opposite `d` (directions come in opposite pairs half
+// the list apart).
+export function opposite(board, d) {
+  return (d + board.dirs.length / 2) % board.dirs.length;
+}

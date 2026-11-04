@@ -2,6 +2,40 @@
 
 import { randInt } from "./rng.js";
 
+// toMove() returns CHANCE when the next ply is a random event (a marble draw,
+// a die roll). Chance plies are ordinary string moves recorded in the move
+// list, so replay stays deterministic; game.chances(state) gives their
+// probabilities. CHANCE is never a key of game.players or a winner.
+export const CHANCE = 0;
+
+export function isChance(game, state) {
+  return !game.outcome(state) && game.toMove(state) === CHANCE;
+}
+
+// Pick a chance outcome by probability: [{ move, p }] -> move.
+export function pickWeighted(outcomes, rng = Math.random) {
+  let x = rng();
+  for (const o of outcomes) {
+    x -= o.p;
+    if (x < 0) return o.move;
+  }
+  return outcomes[outcomes.length - 1].move;   // float round-off
+}
+
+// Sample the outcome of the chance ply at `state`.
+export function sampleChance(game, state, rng = Math.random) {
+  return pickWeighted(game.chances(state), rng);
+}
+
+// The player whose turn it is, for display: at a chance ply this is the
+// player the draw belongs to (game.currentPlayer), not CHANCE.
+export function currentPlayer(game, state) {
+  if (game.outcome(state)) return null;
+  const p = game.toMove(state);
+  if (p !== CHANCE) return p;
+  return game.currentPlayer ? game.currentPlayer(state) : null;
+}
+
 // Canonical string for a move: cell-id arrays join with "-", strings pass
 // through. Used for equality, the URL hash and worker messages.
 export function moveKey(move) {
@@ -64,12 +98,17 @@ export function replay(game, options, moves, { strict = true, board = null } = {
   return { state, moves: applied, lastInfo };
 }
 
-// Play uniformly random legal moves until the game ends; mutates `state` and
-// returns the winner (0 for a draw). Games may supply a faster `playout`.
+// Play uniformly random legal moves until the game ends, sampling chance
+// plies by probability; mutates `state` and returns the winner (0 for a
+// draw). Games may supply a faster `playout`.
 export function randomPlayout(game, state, rng = Math.random, maxPlies = 100000) {
   for (let ply = 0; ply < maxPlies; ply++) {
     const result = game.outcome(state);
     if (result) return result.winner;
+    if (game.toMove(state) === CHANCE) {
+      game.applyMove(state, sampleChance(game, state, rng));
+      continue;
+    }
     const moves = game.legalMoves(state);
     if (!moves.length) throw new Error("no legal moves but the game is not over");
     game.applyMove(state, moves[randInt(rng, moves.length)]);

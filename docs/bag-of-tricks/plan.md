@@ -177,7 +177,24 @@ Notes:
 Each phase ends with `npm test` passing and a browser check
 (`npm run serve`, then the screenshot script).
 
-### Phase 0: chance infrastructure
+### Phase 0: chance infrastructure (done)
+
+All of the steps below are done, as described in `ARCHITECTURE.md`, with these
+differences from the design above:
+
+- Group, liberty and line helpers went into `common/board/graph.js` instead
+  of a separate `groups.js`. Area scoring and Go capture wait for Manifold.
+- New hooks:
+  - `currentPlayer(state)` names whose turn a chance ply belongs to, for the
+    turn panel;
+  - `marbles` declares the marble names and colours that `chanceView` uses.
+- `hex.js` was built now, as well as `square.js`.
+- `test/fixtures/bag-tictactoe.js` is the chance fixture. It is in the
+  conformance suite and drives the MCTS chance tests.
+- Still to do, when the first game needs them: stack and chess-glyph
+  rendering, and the mancala board.
+
+The original steps:
 
 1. Add `CHANCE`, `sampleChance` and chance-aware `randomPlayout` to
    `engine.js`.

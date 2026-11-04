@@ -4,7 +4,13 @@
 
 import { createRenderer } from "./render.js";
 import { AIPlayer } from "./ai/player.js";
-import { replay, resolveOptions, findLegalMove, moveKey, parseMoveKey, piecesOf } from "./engine.js";
+import { renderChance } from "./chance-view.js";
+import {
+  replay, resolveOptions, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, CHANCE,
+} from "./engine.js";
+
+// Pause before a chance ply (a marble draw) is played, so it can be seen.
+const CHANCE_DELAY_MS = 450;
 
 const AI_TIMES = ["0.025", "0.05", "0.1", "0.25", "0.5", "1", "2", "5", "10", "30"];
 const DEFAULT_AI_TIME = "1";
@@ -64,7 +70,7 @@ function writeHash(options, moves) {
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(options)) params.set(k, v);
   params.set("moves", moves.map(moveKey).join("."));
-  history.replaceState(null, "", "#" + params.toString().replace(/%2C/gi, ","));
+  history.replaceState(null, "", "#" + params.toString().replace(/%2C/gi, ",").replace(/%3A/gi, ":"));
 }
 
 // ---- mount -------------------------------------------------------------
@@ -91,6 +97,7 @@ export function mount(game, { root = document.body } = {}) {
   let selection = [];
   let thinking = false;
   let aiGeneration = 0;
+  let chanceTimer = null;
   let errorText = "";
   const ai = new AIPlayer(game);
 
@@ -119,9 +126,10 @@ export function mount(game, { root = document.body } = {}) {
   ui.board.setAttribute("aria-label", `${game.title} board`);
   ui.thinking = h("div", { class: "thinking", "aria-hidden": "true" }, h("span"), h("span"), h("span"));
   ui.boardWrap = h("div", { class: "board-wrap" }, ui.boardHeader, ui.board, ui.thinking);
+  ui.chance = h("div", { class: "chance" });
   ui.actions = h("div", { class: "move-actions" });
   ui.status = h("div", { class: "status", "aria-live": "polite" });
-  ui.stage = h("main", { class: "stage" }, ui.boardWrap, ui.actions, ui.status);
+  ui.stage = h("main", { class: "stage" }, ui.boardWrap, ui.chance, ui.actions, ui.status);
 
   ui.rulesDialog = rulesTemplate ? buildDialog("Rules", rulesTemplate.content.cloneNode(true)) : null;
   ui.optionsDialog = buildDialog("Options", buildOptions());
@@ -189,7 +197,9 @@ export function mount(game, { root = document.body } = {}) {
   // ---- game flow ----
 
   const isOver = () => !!game.outcome(state);
-  const isHumanTurn = () => !isOver() && !thinking && settings.players[game.toMove(state)] !== "ai";
+  // A decision ply belongs to a player; chance plies are played by the shell.
+  const isHumanAt = (s) => !game.outcome(s) && game.toMove(s) !== CHANCE && settings.players[game.toMove(s)] !== "ai";
+  const isHumanTurn = () => !thinking && isHumanAt(state);
 
   // (Re)build the position for `options` and `moveList`. Illegal moves (e.g.
   // from a hand-edited URL) truncate the history rather than failing.
@@ -213,7 +223,7 @@ export function mount(game, { root = document.body } = {}) {
     if (renderer.board !== board) renderer.setBoard(board, cellFill());
     writeHash(settings.options, moves);
     render();
-    maybeAI();
+    advance();
   }
 
   function playMove(move) {
@@ -224,20 +234,21 @@ export function mount(game, { root = document.body } = {}) {
     selection = [];
     writeHash(settings.options, moves);
     render();
-    maybeAI();
+    advance();
   }
 
   function reset() {
     start(settings.options, []);
   }
 
-  // Step back to the most recent position where a human is to move.
+  // Step back to the most recent position where a human is to decide. The
+  // draws before that decision are kept, so Undo cannot re-roll chance.
   function undo() {
     if (!moves.length) return;
     let n = moves.length - 1;
     while (n > 0) {
       const { state: s } = replay(game, settings.options, moves.slice(0, n), { board });
-      if (settings.players[game.toMove(s)] !== "ai") break;
+      if (isHumanAt(s)) break;
       n--;
     }
     start(settings.options, moves.slice(0, n));
@@ -247,10 +258,10 @@ export function mount(game, { root = document.body } = {}) {
     // A player switched to human mid-search: stop thinking for them.
     if (thinking && settings.players[game.toMove(state)] !== "ai") cancelAI();
     render();
-    maybeAI();
+    advance();
   }
 
-  // ---- AI ----
+  // ---- AI and chance ----
 
   function setThinking(on) {
     thinking = on;
@@ -261,6 +272,22 @@ export function mount(game, { root = document.body } = {}) {
     aiGeneration++;
     ai.cancel();
     setThinking(false);
+    clearTimeout(chanceTimer);
+    chanceTimer = null;
+  }
+
+  // Move the game along when no human input is needed: play chance plies
+  // after a short pause, and ask the AI for its moves.
+  function advance() {
+    if (isOver() || thinking || chanceTimer) return;
+    if (game.toMove(state) === CHANCE) {
+      chanceTimer = setTimeout(() => {
+        chanceTimer = null;
+        if (!isOver() && game.toMove(state) === CHANCE) playMove(sampleChance(game, state));
+      }, CHANCE_DELAY_MS);
+      return;
+    }
+    maybeAI();
   }
 
   function maybeAI() {
@@ -322,9 +349,13 @@ export function mount(game, { root = document.body } = {}) {
 
   // ---- rendering ----
 
+  // Ring the destination of the most recent cell move (skipping draws and
+  // other string moves).
   function defaultMarkers() {
-    const last = moves[moves.length - 1];
-    return Array.isArray(last) ? [{ id: last[last.length - 1], kind: "ring" }] : [];
+    for (let i = moves.length - 1; i >= 0; i--) {
+      if (Array.isArray(moves[i])) return [{ id: moves[i][moves[i].length - 1], kind: "ring" }];
+    }
+    return [];
   }
 
   function render() {
@@ -348,7 +379,8 @@ export function mount(game, { root = document.body } = {}) {
     ui.actions.replaceChildren();
     if (isHumanTurn()) {
       for (const m of legal.filter((x) => typeof x === "string")) {
-        const label = (game.moveLabels && game.moveLabels[m]) || capitalise(m);
+        const label = (game.moveLabel && game.moveLabel(state, m)) ||
+          (game.moveLabels && game.moveLabels[m]) || capitalise(m);
         ui.actions.append(h("button", { class: "btn", onclick: () => playMove(m) }, label));
       }
     }
@@ -357,13 +389,14 @@ export function mount(game, { root = document.body } = {}) {
     ui.undo.disabled = !moves.length || !humans;
 
     renderTurnPanel(over);
+    renderChance(ui.chance, game, state);
     renderStatus();
     fitBoard();
   }
 
   function renderTurnPanel(over) {
     ui.turnPanel.replaceChildren();
-    const toMove = over ? null : game.toMove(state);
+    const toMove = currentPlayer(game, state);
     for (const p of playerIds) {
       const spec = game.players[p];
       const summary = game.scoreSummary ? game.scoreSummary(state, p) : {};
@@ -391,7 +424,8 @@ export function mount(game, { root = document.body } = {}) {
         `<div class="verdict"><b>Game over</b> &nbsp;·&nbsp; ${verdict}</div>` +
         (lines.length ? `<div class="scoreline">${lines.join("<br>")}</div>` : "");
     } else {
-      ui.status.innerHTML = "";
+      const hint = game.turnHint ? game.turnHint(state) : "";
+      ui.status.innerHTML = hint ? escapeHtml(hint) : "";
     }
   }
 
@@ -414,7 +448,7 @@ export function mount(game, { root = document.body } = {}) {
     const wrapBottom = (parseFloat(wrapStyle.paddingBottom) || 0) + (parseFloat(wrapStyle.borderBottomWidth) || 0);
     // Everything stacked below the board (move buttons, status) plus gaps.
     let below = 0;
-    for (const el of [ui.actions, ui.status]) {
+    for (const el of [ui.chance, ui.actions, ui.status]) {
       const hgt = el.getBoundingClientRect().height;
       if (hgt > 0 || el === ui.status) below += hgt + gap;
     }

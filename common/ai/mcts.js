@@ -1,6 +1,13 @@
 // Generic UCT Monte Carlo tree search over the Game contract. Pure: no DOM.
+//
+// Chance plies (toMove === CHANCE) become chance nodes: selection samples an
+// outcome by its probability instead of applying UCT, and each outcome seen
+// gets its own child. Averaging over sampled outcomes makes each decision
+// node's value an expectation over the randomness ("expectimax" MCTS). The
+// search never peeks at a real future draw: the shell samples those only once
+// they are reached.
 
-import { randomPlayout } from "../engine.js";
+import { randomPlayout, pickWeighted, moveKey, CHANCE } from "../engine.js";
 import { shuffle } from "../rng.js";
 
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -18,6 +25,7 @@ function makeNode(game, state, parent, move, mover) {
     wins: 0,
     children: [],
     untried: null,      // legal moves not yet expanded; filled lazily
+    outcomes: null,     // chance nodes: [{ move, p }] and children by move key
   };
 }
 
@@ -36,9 +44,31 @@ function bestUCT(node, c) {
   return best;
 }
 
+// Chance node: sample an outcome; returns [child, isNew].
+function sampleOutcome(game, node, rng) {
+  if (!node.outcomes) node.outcomes = { list: game.chances(node.state), byKey: new Map() };
+  const move = pickWeighted(node.outcomes.list, rng);
+  const key = moveKey(move);
+  let child = node.outcomes.byKey.get(key);
+  if (child) return [child, false];
+  const state = game.clone(node.state);
+  game.applyMove(state, move);
+  child = makeNode(game, state, node, move, CHANCE);
+  node.outcomes.byKey.set(key, child);
+  node.children.push(child);
+  return [child, true];
+}
+
 function selectAndExpand(game, root, c, rng) {
   let node = root;
   for (;;) {
+    if (node.terminal !== null) return node;
+    if (node.toMove === CHANCE) {
+      const [child, isNew] = sampleOutcome(game, node, rng);
+      if (isNew) return child;
+      node = child;
+      continue;
+    }
     const untried = untriedMoves(game, node, rng);
     if (untried.length) {
       const move = untried.pop();
@@ -68,12 +98,12 @@ function backpropagate(node, winner) {
 }
 
 // Search from `state` (not mutated) and return the most-visited root move,
-// or null if the game is already over. Stops after `timeMs` milliseconds or
+// or null if the game is already over or `state` is a chance ply. Stops after `timeMs` milliseconds or
 // `iterations` iterations, whichever comes first; always runs at least one
 // iteration so a legal move is returned even with zero time.
 export function mcts(game, state, { timeMs = 1000, iterations = Infinity, c = Math.SQRT2, rng = Math.random } = {}) {
   const root = makeNode(game, game.clone(state), null, null, 0);
-  if (root.terminal !== null) return null;
+  if (root.terminal !== null || root.toMove === CHANCE) return null;
   const deadline = now() + Math.max(0, timeMs);
   let n = 0;
   do {
