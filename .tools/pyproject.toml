@@ -1,0 +1,16 @@
+# Developer tooling only (browser automation, experiments). The site itself is
+# plain HTML and JavaScript and never depends on this. The directory is hidden,
+# so the GitHub Pages artifact excludes it.
+#
+#   uv run --project .tools python .tools/scripts/<script>.py
+
+[project]
+name = "abstract-games-tools"
+version = "0"
+requires-python = ">=3.11"
+dependencies = [
+    "playwright",
+]
+
+[tool.uv]
+package = false
