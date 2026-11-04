@@ -36,7 +36,8 @@ common/
     dom.js                  h(), collapsible sections with remembered open state
     setup.js                the Setup section (players, AI time, options, colours); segmented
                             buttons for short choice lists, dropdowns for long ones
-    log-view.js             the Log section (turns, navigation, Copy link)
+    move-list.js            the Log section (turns, navigation, Copy link); not named
+                            log-view.js, which EasyPrivacy blocks (see "Blocked file names")
   ai/
     mcts.js                 generic UCT Monte Carlo tree search over the Game contract
     worker.js               module Web Worker that runs mcts() off the main thread
@@ -349,6 +350,20 @@ own rule tests.
 
 The page shell is not covered by `npm test`; check it in a browser with
 `npm run serve`.
+
+## Blocked file names
+
+Content blockers (uBlock Origin, AdGuard, Brave) block scripts whose URLs
+match tracker patterns, e.g. EasyPrivacy's `/log-view.js`. A blocked module
+breaks every module that imports it, leaving the page blank. Check new file
+names with:
+
+```
+uv run --project .tools python .tools/scripts/check_blocklists.py
+```
+
+It downloads uBlock Origin's default lists and reports any site file they
+block.
 
 ## Adding a game
 

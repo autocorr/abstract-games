@@ -9,7 +9,7 @@ import { renderChance } from "./chance-view.js";
 import { h, escapeHtml, capitalise, section } from "./ui/dom.js";
 import { buildSetup, choiceRow, AI_TIMES } from "./ui/setup.js";
 import { THEMES, loadTheme, setTheme } from "./theme.js";
-import { createLogView } from "./ui/log-view.js";
+import { createLogView } from "./ui/move-list.js";
 import { playAndDescribe, logEntries, groupTurns } from "./log.js";
 import { timeline, isLive, jump, play, undoTarget } from "./timeline.js";
 import { games as registry } from "../games.js";
