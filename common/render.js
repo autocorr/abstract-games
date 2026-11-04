@@ -49,6 +49,7 @@ export function createRenderer(svg) {
   let board = null;
   let cellFill = () => DEFAULT_CELL_FILL;
   let cellNodes = [];
+  let surface = null;
   let layers = null;
   let clickHandler = null;
   let rotation = 0;
@@ -104,6 +105,20 @@ export function createRenderer(svg) {
     svg.appendChild(root);
 
     const points = board.style === "points";
+    // Points boards: one continuous surface under the cells, so the hairline
+    // seams that anti-aliasing leaves between neighbouring cells show the
+    // board colour rather than the page behind it.
+    surface = null;
+    if (points) {
+      const xs = board.cells.flatMap((c) => c.poly.map((p) => p[0]));
+      const ys = board.cells.flatMap((c) => c.poly.map((p) => p[1]));
+      const x = Math.min(...xs), y = Math.min(...ys);
+      surface = svgEl("rect", {
+        x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y,
+        fill: cellFill(board.cells[0]), "pointer-events": "none",
+      });
+      root.appendChild(surface);
+    }
     const cellsG = svgEl("g", { class: "cells" + (points ? " points" : "") });
     cellNodes = board.cells.map((c) => {
       const fill = cellFill(c);
@@ -156,6 +171,7 @@ export function createRenderer(svg) {
   function setCellFill(fill) {
     cellFill = fill;
     if (!board) return;
+    if (surface) surface.setAttribute("fill", cellFill(board.cells[0]));
     board.cells.forEach((c, i) => {
       const fill = cellFill(c);
       cellNodes[i].setAttribute("fill", fill);
