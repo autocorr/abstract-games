@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Liquefaction</title>
+<link rel="stylesheet" href="../../common/base.css">
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Checkmate the opposing King, on a board shaded in four colors where a marble drawn each turn says which squares your King must avoid.</p>
+  <p><b>Board.</b> The squares come in four colors, two dark and two light, so the board still reads as a checkerboard. Each color is one of the four sets of squares a piece jumping two squares straight (a Dabbaba) can reach. A supply holds 5 marbles of each color, and a bag holds 5 of them. Everything is in view: the bag is see-through.</p>
+  <p><b>Pieces.</b> Chess without Queens. On 6×6 each side has 6 Pawns, 2 Knights and 2 Bishops (Knight, Bishop, empty, King, Bishop, Knight), with no pawn double step, no en passant and no castling. On 8×8 each side has the usual pieces minus the Queen, whose square starts empty, and the normal pawn and castling rules. Pawns promote to a Knight, Bishop or Rook. White moves first.</p>
+  <p><b>Turn.</b> Draw a marble. Squares of its color are <i>color-checked</i> for your King this turn (with the color-blind safe colors, they are also hatched): after your move, your King may not stand on one, just as it may not stand in check. If your King is already on that color, it must move off. Then make your move. The drawn marble goes back to the supply, and a marble of the color of the square your piece landed on goes into the bag, so the bag keeps 5 marbles but its mix changes.</p>
+  <p><b>Castling (8×8).</b> You may not castle while color-checked, and the King may not land on the drawn color, but it may pass over it. Otherwise the usual rules apply: not out of, through or into check. The marble added is the color of the King's new square.</p>
+  <p><b>End.</b> If you have no legal move after your draw, you lose. That covers checkmate, a King that cannot leave the drawn color, and stalemate, which is a loss here. 50 moves each without a capture or a pawn move is a draw. There is no draw by repetition.</p>
+  <p><b>Options.</b> Board size, and whether the bag starts with a fixed mix (each King's starting color appears once) or 5 random marbles from the supply. The board colors can be changed to a cyan and magenta scheme, or to one designed for color-blind players.</p>
+  <p><b>Credits.</b> From <i>Bag of Tricks</i> by Brian E. Svoboda (CC BY-SA 4.0), after International Chess. Chess pieces by Colin M.L. Burnett (Cburnett), from Wikimedia Commons, used under the BSD license.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>

@@ -150,7 +150,7 @@ The **move encoding** column shows plies in order. `[a,b]` is a cell move and
 | Alpha Decay | 8×8 | 1 shared, TBD | `draw:X`… (automatic run) → `[from,to]` or a split move | stack-height labels | blocked until setup, movement and bag are defined |
 | Recombination | 8×8, 8-way | 1 per player, 3R 2G 1B 1K | `draw:X` → `[from,to]` or `[edgeCell]` | per-player bags; unused-edge markers | black lifetime; setup; no-move = pass |
 | Cyclotron | 3×7 or 4×7 pits | 1 per player, 10 black (+ white per opponent capture) | (`draw:X` → `[pit]`)… | pit counts, stores | blocked until stone count and capture rule are fixed |
-| Liquefaction | 6×6 / 8×8, `dabbaba` tags | 1 shared, 5 of 4 colours, constant size | `draw:X` → `[from,to]` (promotion as `[from,to,choice]` or a follow-up string ply) | chess glyphs; colour-checked squares highlighted | 6×6 / 8×8; fixed or random initial bag; flying King |
+| Liquefaction | 6×6 / 8×8, `dabbaba` tags | 1 shared, 5 of 4 colours, constant size | `draw:X` → `[from,to]` (promotion as `[from,to,choice]` or a follow-up string ply) | chess glyphs; colour-checked squares highlighted | 6×6 / 8×8; fixed or random initial bag; colour theme (classic / cyan-magenta / colour-blind) |
 | Bivalent | 7×7 points | 1 shared, 5G 5R | `draw:X` → `[point]` | score panel; red reserve | board 7 / 9; variant on/off |
 | Manifold | 9×9 points | 1 per player | `draw:X` `draw:Y` → `[pt]` / `[pt]` / `"pass"` / `"resign-pass"` (→ swap choice after capture) | 4-colour stones; two bags; komi | bag contents; capture-swap rule; komi |
 
@@ -227,11 +227,27 @@ Each game adds one new shared piece.
 4. **Manifold.** Adds Go capture and liberties, two bags, permanent pass,
    and area scoring.
 
-### Phase 3: Liquefaction
+### Phase 3: Liquefaction (done)
 
-Chess move generation (no Queens; promotion to N, B or R; castling and
+Done in `games/liquefaction/`, with Cburnett piece images in
+`common/pieces/cburnett/`. Shared additions: image pieces and the "shade",
+"square" and "check" markers in `render.js`, and colour schemes that recolour
+marbles (`scheme.marbles`) and reach `turnHint(state, scheme)`. The AI
+playout plays capture-biased random moves for 40 moves, then adjudicates on
+material, which ends the scratch game in the playout (`reason:
+"adjudicated"`). A stronger evaluation is still possible later.
+
+The original plan: chess move generation (no Queens; promotion to N, B or R; castling and
 double steps only on 8×8), colour-check, the constant-size bag, and stalemate
 as a loss. Do 6×6 first, then 8×8, then a stronger playout for the AI.
+
+The open questions are settled under *Decisions* in `rules.md`. Two points
+for the code:
+
+- Name the square classes and marbles by letter (A–D), not by colour. The
+  theme option maps letters to fills and display names.
+- This is the first game that can go on forever. The 50-move rule is
+  required, because `randomPlayout` throws after 100,000 plies.
 
 ### Phase 4: drafts and sketches (rules first)
 

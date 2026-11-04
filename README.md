@@ -16,6 +16,9 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Cliques](games/cliques/): a hex-hex majority game where each cluster of
   touching stones goes to the player with its largest group, placements may
   pull a friendly stone along a line, and tied clusters can be claimed.
+- [Liquefaction](games/liquefaction/): chess without Queens on a board in
+  four colors, where a marble drawn each turn names a color your King may not
+  stand on.
 
 ## Running locally
 

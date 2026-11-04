@@ -34,4 +34,12 @@ export const games = [
     path: "games/cliques/",
     module: "games/cliques/game.js",
   },
+  {
+    id: "liquefaction",
+    title: "Liquefaction",
+    board: "Chessboard in four colors",
+    blurb: "Chess without Queens. Each turn a marble drawn from a bag names a square color your King may not stand on, and the square you move to decides which marble goes back in.",
+    path: "games/liquefaction/",
+    module: "games/liquefaction/game.js",
+  },
 ];
