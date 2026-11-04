@@ -9,3 +9,9 @@ Static site of abstract strategy games: plain HTML + native ES modules, no build
 - Python is dev-only tooling (e.g. Playwright) in the hidden `.tools/` uv project, which Pages does not publish:
   `uv run --project .tools python .tools/scripts/screenshot.py [path] [out.png]`
 - Never add Python to the site or to CI (installs are slow).
+
+## Git
+
+- Implement a new game on its own branch (e.g. `game/<id>`), not on `main`,
+  which CI deploys. Make logical commits as you go (e.g. rules decisions,
+  shared-code changes, the game itself) rather than one commit at the end.
