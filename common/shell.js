@@ -6,7 +6,7 @@ import { createRenderer, rotateViewBox, viewBoxAspect } from "./render.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
 import {
-  replay, resolveOptions, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
+  replay, resolveOptions, optionAllowed, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
 } from "./engine.js";
 
 // Pause before a chance ply (a marble draw) is played, so it can be seen.
@@ -30,6 +30,12 @@ const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 const capitalise = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// The declared choice value of option `key` matching a <select> string.
+function parseOption(game, key, text) {
+  const c = game.options[key].choices.find((x) => String(typeof x === "object" ? x.value : x) === text);
+  return typeof c === "object" ? c.value : c;
+}
 
 const startsWith = (move, prefix) => prefix.every((id, i) => move[i] === id);
 
@@ -210,7 +216,10 @@ export function mount(game, { root = document.body } = {}) {
     cancelAI();
     const opts = resolveOptions(game, options);
     settings.options = opts;
-    for (const [k, sel] of Object.entries(ui.optionSelects)) sel.value = String(opts[k]);
+    for (const [k, sel] of Object.entries(ui.optionSelects)) {
+      sel.value = String(opts[k]);
+      for (const o of sel.options) o.disabled = !optionAllowed(game, k, parseOption(game, k, o.value), opts);
+    }
     // Boards depend only on the options, so rebuild only when they change.
     const key = JSON.stringify(opts);
     if (key !== boardKey) {

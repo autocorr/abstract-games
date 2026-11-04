@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cliques</title>
+<link rel="stylesheet" href="../../common/base.css">
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Win more clusters than your opponent.</p>
+  <p><b>Groups and clusters.</b> A group is a set of connected stones of one color. A cluster is a set of connected stones of either color, so it is made of one or more groups. A cluster is decided for the player whose largest group in it is larger. If both players' largest groups in a cluster are the same size, the cluster is tied.</p>
+  <p><b>Board.</b> The board is a hexagon of hexagonal cells. In the standard start, the six corner cells hold stones of alternating colors, three black and three white. The board can also start empty. Black moves first.</p>
+  <p><b>Turn.</b> Place a stone of your color on an empty cell. Then you may pull one of your other stones. A pulled stone moves in a straight line along one of the six directions, through empty cells only, and may stop on any cell where it ends up in the same group as the stone you placed. The pulled stone may come from that group itself, as long as it still ends up connected to the placed stone. To pull, click the placed stone's cell, then the stone to pull, then its destination. To skip the pull, click the placed stone's cell a second time.</p>
+  <p><b>Claims.</b> Instead of placing, you may claim a tied cluster that is not already claimed. The cluster is then decided for you. Gray dots mark the largest group or groups you claimed it with. A claim lasts as long as the cluster stays tied. It lapses if either player's largest group there grows or shrinks so that the tie is broken. It also lapses if the cluster splits, or if it merges with another claimed cluster, in which case both claims lapse. To claim, click the yellow dot on the cluster.</p>
+  <p><b>Opening.</b> While there are fewer clusters than the set minimum, as at the start, every turn must increase the number of clusters. In practice this means placing a stone that touches no other stone, with no pull and no claim.</p>
+  <p><b>Minimum clusters.</b> Once the minimum is reached, there must be at least that many clusters after every turn. The count is checked after the pull, so a placement that joins two clusters is allowed if the pull splits one apart again.</p>
+  <p><b>Swap.</b> On White's first turn, White may swap sides instead and take over Black's position.</p>
+  <p><b>End.</b> The game ends when the player to move has no legal placement or claim. It always ends with exactly the minimum number of clusters. Any position with more clusters still has a legal placement, on an edge or next to a full outer ring. Every cluster is then decided, either by group size or by a claim, because an unclaimed tie could still be claimed. The minimum is odd, so one player always has more decided clusters and wins. There are no draws.</p>
+  <p><b>Options.</b> Board side 3 to 7, minimum clusters 3, 5, 7 or 9, and corner or empty start. Some minimums are not offered on small boards, where the opening could get stuck before reaching them: side 3 allows 3 with an empty start and up to 5 with corners, and side 4 allows up to 7 with an empty start.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>

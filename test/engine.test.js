@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { moveKey, parseMoveKey, sameMove, resolveOptions } from "../common/engine.js";
+import { moveKey, parseMoveKey, sameMove, resolveOptions, optionAllowed } from "../common/engine.js";
 import { seededRng, shuffle } from "../common/rng.js";
 
 test("moveKey / parseMoveKey round-trip", () => {
@@ -23,6 +23,18 @@ test("resolveOptions falls back to defaults and coerces types", () => {
   assert.deepEqual(resolveOptions(game, { size: "160", mode: "b", junk: 1 }), { size: 160, mode: "b" });
   assert.deepEqual(resolveOptions(game, { size: 7 }), { size: 48, mode: "a" });
   assert.deepEqual(resolveOptions({}, { size: 7 }), {});
+});
+
+test("resolveOptions replaces disallowed combinations", () => {
+  const game = {
+    options: {
+      size: { label: "Size", choices: [3, 4, 5], default: 5 },
+      min: { label: "Min", choices: [3, 5, 7, 9], default: 5, allowed: (m, { size }) => m <= size + 2 },
+    },
+  };
+  assert.deepEqual(resolveOptions(game, { size: 3, min: 9 }), { size: 3, min: 5 }, "nearest allowed below");
+  assert.deepEqual(resolveOptions(game, { size: 5, min: 7 }), { size: 5, min: 7 });
+  assert.equal(optionAllowed(game, "min", 7, { size: 4 }), false);
 });
 
 test("seededRng is reproducible and in [0, 1)", () => {

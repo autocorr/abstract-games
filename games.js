@@ -26,4 +26,12 @@ export const games = [
     path: "games/determinant/",
     module: "games/determinant/game.js",
   },
+  {
+    id: "cliques",
+    title: "Cliques",
+    board: "Hexagon of hexagons",
+    blurb: "Place a stone and pull one of yours to its group. Each cluster of touching stones goes to the player with the largest group in it, and ties can be claimed. A minimum number of clusters must always remain.",
+    path: "games/cliques/",
+    module: "games/cliques/game.js",
+  },
 ];

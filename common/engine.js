@@ -65,15 +65,32 @@ export function findLegalMove(game, state, move) {
   return null;
 }
 
+const choiceValues = (spec) => spec.choices.map((c) => (typeof c === "object" ? c.value : c));
+
+// Is `value` of option `key` allowed alongside the other values in `opts`?
+// Options may declare allowed(value, opts) to rule out combinations.
+export function optionAllowed(game, key, value, opts) {
+  const spec = game.options[key];
+  return !spec.allowed || spec.allowed(value, opts);
+}
+
 // Resolve option values against the game's declared options: unknown keys are
-// dropped and missing or invalid values fall back to the default.
+// dropped and missing or invalid values fall back to the default. Then, in
+// declaration order, a value not allowed alongside the others falls back to
+// the nearest allowed choice before it in the list (or the first allowed).
 export function resolveOptions(game, given = {}) {
   const out = {};
   for (const [key, spec] of Object.entries(game.options || {})) {
-    const choices = spec.choices.map((c) => (typeof c === "object" ? c.value : c));
     const raw = given[key];
-    const match = choices.find((c) => String(c) === String(raw));
+    const match = choiceValues(spec).find((c) => String(c) === String(raw));
     out[key] = match !== undefined ? match : spec.default;
+  }
+  for (const [key, spec] of Object.entries(game.options || {})) {
+    if (optionAllowed(game, key, out[key], out)) continue;
+    const values = choiceValues(spec);
+    const ok = values.filter((v) => optionAllowed(game, key, v, out));
+    const before = values.slice(0, values.indexOf(out[key])).filter((v) => ok.includes(v));
+    out[key] = before.length ? before[before.length - 1] : ok[0];
   }
   return out;
 }

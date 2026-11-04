@@ -13,6 +13,9 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Determinant](games/determinant/): a square-grid connection game where
   diagonal cross-cuts are settled by a marble draw, and the winner of the
   draw recolors stones until no cross-cut remains.
+- [Cliques](games/cliques/): a hex-hex majority game where each cluster of
+  touching stones goes to the player with its largest group, placements may
+  pull a friendly stone along a line, and tied clusters can be claimed.
 
 ## Running locally
 

@@ -133,6 +133,11 @@ export default {
 };
 ```
 
+An option may also declare `allowed(value, opts)` to rule out combinations
+(e.g. a minimum too high for a small board): `resolveOptions()` replaces a
+disallowed value with the nearest allowed choice before it, the Options
+dialog disables it, and the conformance tests skip those combinations.
+
 `applyMove` mutates in place and `clone` copies: search code clones once per
 tree node and then mutates freely, which keeps playouts fast. A turn may span
 several plies: `toMove` can return the same player (or `CHANCE`) more than

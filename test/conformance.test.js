@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { games } from "../games.js";
 import { validateBoard } from "../common/board/graph.js";
 import {
-  newGame, replay, moveKey, parseMoveKey, piecesOf, resolveOptions, sampleChance, currentPlayer, CHANCE,
+  newGame, replay, moveKey, parseMoveKey, piecesOf, resolveOptions, optionAllowed, sampleChance, currentPlayer, CHANCE,
 } from "../common/engine.js";
 import { mcts } from "../common/ai/mcts.js";
 import { seededRng } from "../common/rng.js";
@@ -43,14 +43,14 @@ function checkChances(game, state, legal) {
     "chances() and legalMoves() differ at a chance ply");
 }
 
-// Every combination of declared option values.
+// Every allowed combination of declared option values.
 function optionSets(game) {
   let sets = [{}];
   for (const [key, spec] of Object.entries(game.options || {})) {
     const values = spec.choices.map((c) => (typeof c === "object" ? c.value : c));
     sets = sets.flatMap((s) => values.map((v) => ({ ...s, [key]: v })));
   }
-  return sets;
+  return sets.filter((s) => Object.keys(s).every((k) => optionAllowed(game, k, s[k], s)));
 }
 
 // Comparable snapshot of a state, excluding the shared board.
@@ -99,6 +99,10 @@ for (const { entry, game } of entries) {
       const values = spec.choices.map((c) => (typeof c === "object" ? c.value : c));
       assert.ok(spec.label, `option ${key} needs a label`);
       assert.ok(values.includes(spec.default), `option ${key} default is not a choice`);
+    }
+    const defaults = Object.fromEntries(Object.entries(game.options || {}).map(([k, s]) => [k, s.default]));
+    for (const key of Object.keys(defaults)) {
+      assert.ok(optionAllowed(game, key, defaults[key], defaults), `default ${key} is not allowed with the other defaults`);
     }
     assert.deepEqual(resolveOptions(game, {}), Object.fromEntries(
       Object.entries(game.options || {}).map(([k, s]) => [k, s.default])));
