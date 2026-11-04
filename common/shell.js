@@ -2,7 +2,7 @@
 // ARCHITECTURE.md). Games provide rules; this module provides controls,
 // dialogs, rendering, move input, AI players, history, undo and the URL hash.
 
-import { createRenderer } from "./render.js";
+import { createRenderer, rotateViewBox, viewBoxAspect } from "./render.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
 import {
@@ -220,7 +220,7 @@ export function mount(game, { root = document.body } = {}) {
     lastInfo = result.lastInfo;
     selection = [];
     errorText = "";
-    if (renderer.board !== board) renderer.setBoard(board, cellFill());
+    if (renderer.board !== board) showBoard(renderer.rotation);
     writeHash(settings.options, moves);
     render();
     advance();
@@ -358,6 +358,12 @@ export function mount(game, { root = document.body } = {}) {
     return [];
   }
 
+  // (Re)draw the static board at a display rotation (see fitBoard).
+  function showBoard(rotate) {
+    renderer.setBoard(board, cellFill(), game.boardDecor ? game.boardDecor(board) : [], rotate);
+    lastBoardMax = -1;
+  }
+
   function render() {
     const over = isOver();
     const legal = over ? [] : game.legalMoves(state);
@@ -433,6 +439,9 @@ export function mount(game, { root = document.body } = {}) {
   // Size the board to the smaller of the available width and height so it
   // never overflows a short viewport or wastes vertical space.
 
+  // Games with `rotatable: true` may be turned 90 degrees when that draws the
+  // board noticeably larger (a wide board on a portrait phone, say).
+  const ROTATE_GAIN = 1.15;
   let lastBoardMax = -1;
   const landscapeQuery = window.matchMedia("(orientation: landscape) and (max-height: 500px)");
 
@@ -454,9 +463,31 @@ export function mount(game, { root = document.body } = {}) {
     }
     const boardTop = ui.board.getBoundingClientRect().top - root.getBoundingClientRect().top;
     const max = Math.max(0, Math.floor(vh - boardTop - wrapBottom - below - bottomPad));
-    if (max === lastBoardMax) return;
-    lastBoardMax = max;
-    ui.boardWrap.style.setProperty("--board-max", max + "px");
+    if (!board) return;
+
+    // Turn a rotatable board if that makes it clearly bigger in the space
+    // available (width capped by the wrap's max-width, height by `max`).
+    if (game.rotatable) {
+      const padX = (parseFloat(wrapStyle.paddingLeft) || 0) + (parseFloat(wrapStyle.paddingRight) || 0) +
+        (parseFloat(wrapStyle.borderLeftWidth) || 0) + (parseFloat(wrapStyle.borderRightWidth) || 0);
+      const availW = Math.min(ui.stage.clientWidth, parseFloat(wrapStyle.maxWidth) || Infinity) - padX;
+      const scale = (r) => {
+        const [, , w, h] = rotateViewBox(board.viewBox, r).split(" ").map(Number);
+        return Math.min(availW / w, max / h);
+      };
+      const other = renderer.rotation ? 0 : 90;
+      if (availW > 0 && max > 0 && scale(other) > ROTATE_GAIN * scale(renderer.rotation)) {
+        showBoard(other);
+        render();   // redraws pieces and refits; the hysteresis stops it flipping back
+        return;
+      }
+    }
+
+    // The board's width follows from the height budget and its aspect ratio.
+    const width = Math.floor(max * viewBoxAspect(rotateViewBox(board.viewBox, renderer.rotation)));
+    if (width === lastBoardMax) return;
+    lastBoardMax = width;
+    ui.boardWrap.style.setProperty("--board-max", width + "px");
   }
 
   window.addEventListener("resize", fitBoard);

@@ -118,6 +118,8 @@ export default {
   moveLabels,                       // button labels for string moves, e.g. { pass: "Pass" }
   moveLabel(state, move),           // the same, computed (takes precedence)
   turnHint(state),                  // status line text while the game is on
+  boardDecor(board),                // -> lines over the cells, e.g. goal edges
+  rotatable,                        // true: the shell may turn the board 90 degrees
   piecesOf(state),                  // -> [{ id, player, label? }]; default reads state.cells
   markers(state, move, info),       // -> [{ id, kind: "ring" | "dot" }] for the last move
   scoreSummary(state, player),      // -> { main, sub, title } for the turn panel
@@ -188,7 +190,10 @@ contents and the drawn marbles in order.
   keeping the draws before it, so Undo cannot re-roll chance) and the
   URL hash (`#size=48&moves=17.23.4`), so any position can be shared as a
   link; an illegal move in a hand-edited hash truncates the history there;
-- responsive board sizing that keeps the board within the viewport.
+- responsive board sizing that keeps the board within the viewport, using
+  the board's aspect ratio; a `rotatable` game's board is turned 90 degrees
+  (display only) when that draws it clearly larger, e.g. a wide board on a
+  portrait phone.
 
 `mount()` returns a small handle (`state`, `moves`, `play`, `undo`, `reset`);
 game pages expose it as `window.app` for the console.

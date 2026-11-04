@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Depletion</title>
+<link rel="stylesheet" href="../../common/base.css">
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Connect your two sides of the board with a chain of your stones. Black connects the two opposite edges marked in black; White connects the two edges marked in white. The corner cells belong to both edges they touch.</p>
+  <p><b>Board.</b> The board is a rhombus of hexagons divided into colored regions, 3 to 5 depending on the options. The regions are about the same size. A bag holds one marble of each region's color. The board starts empty, and Black moves first.</p>
+  <p><b>Turn.</b> Draw a marble from the bag and set it aside. Then place a stone of your color on any empty cell in the region of the drawn color. If that region is full, you must pass.</p>
+  <p><b>The bag.</b> Drawn marbles stay out of the bag until it is empty. Then all the marbles go back in. Because each color comes up once per cycle, you can tell which regions are still to come. With an odd number of colors, the player who draws first changes from one cycle to the next.</p>
+  <p><b>End.</b> The first player to connect their sides wins. As in Hex, the game cannot end in a draw.</p>
+  <p><b>Options.</b> The board size, the number of colors, and the region layout (diagonal bands, long stripes, nested rhombi, pinwheel or patches) can all be changed in Options.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>

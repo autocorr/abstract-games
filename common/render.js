@@ -5,6 +5,10 @@
 // Boards with style "points" (Go-style, see square.js) are drawn as a
 // continuous surface with grid lines (board.lines) and star points
 // (board.dots); the cells stay as invisible-edged click targets.
+//
+// setBoard() can turn the whole drawing by a display rotation (e.g. 90
+// degrees to fit a wide board on a portrait screen). Rules never see it; piece
+// shadows and labels stay upright.
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -23,12 +27,31 @@ const MARKER_DOT = "#969ca6";
 
 let filterSeq = 0;
 
+// Bounding box "x y w h" of a viewBox string rotated by `deg` about the origin.
+export function rotateViewBox(viewBox, deg) {
+  if (!deg) return viewBox;
+  const [x, y, w, h] = viewBox.split(" ").map(Number);
+  const a = (deg * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
+  const pts = [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([px, py]) => [px * c - py * s, px * s + py * c]);
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const f = (v) => +v.toFixed(4);
+  const minX = Math.min(...xs), minY = Math.min(...ys);
+  return [minX, minY, Math.max(...xs) - minX, Math.max(...ys) - minY].map(f).join(" ");
+}
+
+// Width / height of a viewBox string.
+export function viewBoxAspect(viewBox) {
+  const [, , w, h] = viewBox.split(" ").map(Number);
+  return w / h;
+}
+
 export function createRenderer(svg) {
   let board = null;
   let cellFill = () => DEFAULT_CELL_FILL;
   let cellNodes = [];
   let layers = null;
   let clickHandler = null;
+  let rotation = 0;
   const shadowId = `pieceShadow${++filterSeq}`;
 
   svg.addEventListener("click", (e) => {
@@ -37,20 +60,32 @@ export function createRenderer(svg) {
     clickHandler(Number(target.dataset.id));
   });
 
-  function setBoard(newBoard, fill) {
+  // decor: [{ segments: [[[x1, y1], [x2, y2]], ...], stroke, halo?, width? }]
+  // lines drawn over the cells (e.g. players' goal edges); width is in
+  // multiples of board.unit, and a halo is a thin outline around the line.
+  // rotate: display rotation in degrees (clockwise on screen).
+  function setBoard(newBoard, fill, decor = [], rotate = 0) {
     board = newBoard;
+    rotation = rotate;
     if (fill) cellFill = fill;
     const u = board.unit;
-    svg.setAttribute("viewBox", board.viewBox);
+    svg.setAttribute("viewBox", rotateViewBox(board.viewBox, rotate));
     svg.replaceChildren();
 
+    // The shadow offset is in the rotated frame: turn it back so shadows
+    // always fall down the screen.
+    const a = (-rotate * Math.PI) / 180;
+    const [sx, sy] = [0.03 * u, 0.09 * u];
     const defs = svgEl("defs");
     const filter = svgEl("filter", { id: shadowId, x: "-60%", y: "-60%", width: "220%", height: "220%" });
     filter.appendChild(svgEl("feDropShadow", {
-      dx: 0.03 * u, dy: 0.09 * u, stdDeviation: 0.1 * u, "flood-color": "#000", "flood-opacity": 0.5,
+      dx: +(sx * Math.cos(a) - sy * Math.sin(a)).toFixed(5), dy: +(sx * Math.sin(a) + sy * Math.cos(a)).toFixed(5),
+      stdDeviation: 0.1 * u, "flood-color": "#000", "flood-opacity": 0.5,
     }));
     defs.appendChild(filter);
     svg.appendChild(defs);
+    const root = svgEl("g", rotate ? { transform: `rotate(${rotate})` } : {});
+    svg.appendChild(root);
 
     const points = board.style === "points";
     const cellsG = svgEl("g", { class: "cells" + (points ? " points" : "") });
@@ -69,7 +104,7 @@ export function createRenderer(svg) {
       cellsG.appendChild(poly);
       return poly;
     });
-    svg.appendChild(cellsG);
+    root.appendChild(cellsG);
 
     if (points) {
       const grid = svgEl("g", { "pointer-events": "none", stroke: CELL_STROKE, "stroke-width": 0.03 * u, "stroke-linecap": "square" });
@@ -78,7 +113,18 @@ export function createRenderer(svg) {
         const c = board.cells[id];
         grid.appendChild(svgEl("circle", { cx: c.x, cy: c.y, r: 0.08 * u, fill: CELL_STROKE, stroke: "none" }));
       }
-      svg.appendChild(grid);
+      root.appendChild(grid);
+    }
+
+    if (decor.length) {
+      const g = svgEl("g", { "pointer-events": "none", "stroke-linecap": "round", fill: "none" });
+      for (const { segments, stroke, halo, width = 0.1 } of decor) {
+        const d = segments.map(([[x1, y1], [x2, y2]]) =>
+          `M${+x1.toFixed(4)} ${+y1.toFixed(4)}L${+x2.toFixed(4)} ${+y2.toFixed(4)}`).join("");
+        if (halo) g.appendChild(svgEl("path", { d, stroke: halo, "stroke-width": (width + 0.08) * u }));
+        g.appendChild(svgEl("path", { d, stroke, "stroke-width": width * u }));
+      }
+      root.appendChild(g);
     }
 
     // Overlays never intercept clicks: they always reach the cell below.
@@ -87,7 +133,7 @@ export function createRenderer(svg) {
       pieces: svgEl("g", { filter: `url(#${shadowId})`, "pointer-events": "none" }),
       markers: svgEl("g", { "pointer-events": "none" }),
     };
-    svg.append(layers.highlights, layers.pieces, layers.markers);
+    root.append(layers.highlights, layers.pieces, layers.markers);
   }
 
   function setCellFill(fill) {
@@ -132,6 +178,7 @@ export function createRenderer(svg) {
         const text = svgEl("text", {
           x: c.x, y: c.y, "font-size": 0.4 * u, "text-anchor": "middle",
           "dominant-baseline": "central", fill: spec.mark || "#fff",
+          ...(rotation ? { transform: `rotate(${-rotation} ${c.x} ${c.y})` } : {}),
         });
         text.textContent = p.label;
         layers.pieces.appendChild(text);
@@ -166,5 +213,6 @@ export function createRenderer(svg) {
     draw,
     onCellClick(handler) { clickHandler = handler; },
     get board() { return board; },
+    get rotation() { return rotation; },
   };
 }

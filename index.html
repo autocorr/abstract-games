@@ -42,7 +42,7 @@
     }
     const scheme = game.colorSchemes && Object.values(game.colorSchemes)[0];
     const renderer = createRenderer(svg);
-    renderer.setBoard(state.board, scheme && scheme.cellFill);
+    renderer.setBoard(state.board, scheme && scheme.cellFill, game.boardDecor ? game.boardDecor(state.board) : []);
     renderer.draw({ pieces: piecesOf(game, state), players: game.players });
   }
 

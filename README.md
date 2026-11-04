@@ -8,6 +8,8 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Filament](games/filament/): a placement game on the Cairo pentagonal
   tiling where majorities fill empty cells and the player with fewer groups
   wins.
+- [Depletion](games/depletion/): Hex on a board of colored regions, where a
+  marble drawn from a bag decides which region you must play in.
 
 ## Running locally
 

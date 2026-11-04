@@ -10,4 +10,12 @@ export const games = [
     path: "games/filament/",
     module: "games/filament/game.js",
   },
+  {
+    id: "depletion",
+    title: "Depletion",
+    board: "Hex rhombus in colored regions",
+    blurb: "Connect your sides as in Hex, but a marble drawn from a bag decides which colored region you must play in. Each color comes up once before the bag is refilled.",
+    path: "games/depletion/",
+    module: "games/depletion/game.js",
+  },
 ];
