@@ -35,7 +35,9 @@ export function squareName(col, row) {
 //              intersections; the renderer draws lines between orthogonal
 //              neighbours instead of cell outlines)
 //   stars:     for points boards, [[col, row], ...] star points to mark
-export function squareBoard({ cols, rows = cols, adjacency = "orth", style = "cells", stars = [] } = {}) {
+//   grid:      false: draw the squares without outlines between them, only
+//              a border around the board (as on a chessboard)
+export function squareBoard({ cols, rows = cols, adjacency = "orth", style = "cells", stars = [], grid = true } = {}) {
   const specs = [];
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -64,6 +66,7 @@ export function squareBoard({ cols, rows = cols, adjacency = "orth", style = "ce
   board.cols = cols;
   board.rows = rows;
   board.style = style;
+  if (!grid) board.grid = false;
   attachGrid(board, DIRS8,
     (c) => (Array.isArray(c) ? c.join(",") : `${c.col},${c.row}`),
     (c, [dc, dr]) => [c.col + dc, c.row + dr]);

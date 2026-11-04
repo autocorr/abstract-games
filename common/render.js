@@ -50,6 +50,25 @@ export function rotatedViewBox(board, deg) {
   return [minX - pad, minY - pad, maxX - minX + 2 * pad, maxY - minY + 2 * pad].map(f).join(" ");
 }
 
+// The board's outer edge as an SVG path: every cell edge that no other cell
+// shares.
+export function perimeterPath(board) {
+  const key = ([x, y]) => `${Math.round(x * 1e4)},${Math.round(y * 1e4)}`;
+  const count = new Map();
+  const edges = [];
+  for (const { poly } of board.cells) {
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      const k = [key(a), key(b)].sort().join("|");
+      count.set(k, (count.get(k) || 0) + 1);
+      edges.push([k, a, b]);
+    }
+  }
+  const f = (v) => +v.toFixed(4);
+  return edges.filter(([k]) => count.get(k) === 1)
+    .map(([, [x1, y1], [x2, y2]]) => `M${f(x1)} ${f(y1)}L${f(x2)} ${f(y2)}`).join("");
+}
+
 // Width / height of a viewBox string.
 export function viewBoxAspect(viewBox) {
   const [, , w, h] = viewBox.split(" ").map(Number);
@@ -119,6 +138,9 @@ export function createRenderer(svg) {
     svg.appendChild(root);
 
     const points = board.style === "points";
+    // Boards with grid: false (e.g. a chessboard) draw their cells without
+    // outlines and get a single border around the board instead.
+    const plain = board.grid === false;
     // Points boards: one continuous surface under the cells, so the hairline
     // seams that anti-aliasing leaves between neighbouring cells show the
     // board colour rather than the page behind it.
@@ -141,9 +163,10 @@ export function createRenderer(svg) {
         "data-id": c.id,
         points: pointsAttr(c.poly),
         fill,
-        // Points boards: stroke in the fill colour hides seams between cells.
-        stroke: points ? fill : CELL_STROKE,
-        "stroke-width": (points ? 0.01 : 0.025) * u,
+        // Points and plain boards: a hairline stroke in the fill colour hides
+        // the anti-aliasing seams between cells.
+        stroke: points || plain ? fill : CELL_STROKE,
+        "stroke-width": (points ? 0.01 : plain ? 0.02 : 0.025) * u,
         "stroke-linejoin": "round",
       });
       cellsG.appendChild(poly);
@@ -159,6 +182,13 @@ export function createRenderer(svg) {
         grid.appendChild(svgEl("circle", { cx: c.x, cy: c.y, r: 0.08 * u, fill: CELL_STROKE, stroke: "none" }));
       }
       root.appendChild(grid);
+    }
+
+    if (plain) {
+      root.appendChild(svgEl("path", {
+        d: perimeterPath(board), fill: "none", stroke: CELL_STROKE, "stroke-width": 0.05 * u,
+        "stroke-linecap": "square", "pointer-events": "none",
+      }));
     }
 
     if (decor.length) {
@@ -189,7 +219,7 @@ export function createRenderer(svg) {
     board.cells.forEach((c, i) => {
       const fill = cellFill(c);
       cellNodes[i].setAttribute("fill", fill);
-      if (board.style === "points") cellNodes[i].setAttribute("stroke", fill);
+      if (board.style === "points" || board.grid === false) cellNodes[i].setAttribute("stroke", fill);
     });
   }
 
@@ -203,7 +233,9 @@ export function createRenderer(svg) {
       const c = board.cells[p.id];
       const spec = players[p.player] || {};
       if (p.image) {
-        const s = 0.92 * u;
+        // A full cell, as Lichess's chessground draws its pieces (12.5% of an
+        // 8x8 board, background-size: cover); the margin is in the image.
+        const s = u;
         layers.images.appendChild(svgEl("image", {
           ...enter(p.id),
           href: p.image, x: c.x - s / 2, y: c.y - s / 2, width: s, height: s,

@@ -101,7 +101,7 @@ const boards = new Map();
 const LAST_MOVE = "rgba(14, 15, 19, 0.75)";
 
 function buildBoard(size) {
-  const board = squareBoard({ cols: size });
+  const board = squareBoard({ cols: size, grid: false });
   const n = size;
   const id = (c, r) => (c >= 0 && c < n && r >= 0 && r < n ? r * n + c : -1);
   const leaps = (deltas) => board.cells.map(({ coord: { col, row } }) =>

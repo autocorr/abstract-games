@@ -77,7 +77,7 @@ Tiling generators live in `common/board/`:
 
 | Generator | Coord | Tags |
 | --------- | ----- | ---- |
-| `squareBoard({ cols, rows, adjacency, style, stars })` | `{ col, row }`, row 0 = rank 1 at the bottom | `name` ("a1"), `dark` (a1 dark), `quad` (Dabbaba sub-grid 0-3), `edges` ("N"/"S"/"E"/"W") |
+| `squareBoard({ cols, rows, adjacency, style, stars, grid })` | `{ col, row }`, row 0 = rank 1 at the bottom | `name` ("a1"), `dark` (a1 dark), `quad` (Dabbaba sub-grid 0-3), `edges` ("N"/"S"/"E"/"W") |
 | `rhombusBoard(n)`, `hexHexBoard(side)` | axial `{ q, r }`, pointy-top | `tri` (3-colouring), `edges` (rhombus "N"/"S"/"E"/"W"; hex-hex side 0-5), `name` ("a1": column from q, row from r, top row 1) |
 | `cairoBoard(centres, { rotate })` | (none) | `tone` (pentagon orientation), `name` ("1".."n" in reading order) |
 
@@ -85,6 +85,8 @@ Cell names (`tags.name`) are what the move log shows, so every generator
 gives one; the conformance tests check that they are unique.
 
 `squareBoard` adjacency is `"orth"` (default), `"diag"` or `"king"`. With
+`grid: false` the squares are drawn without outlines between them and the
+board gets one border around its edge, as on a chessboard (Liquefaction). With
 `style: "points"` pieces sit on intersections as in Go: the renderer draws
 `board.lines` and star points (`board.dots`) over a continuous surface, and
 the cells stay as click targets.
