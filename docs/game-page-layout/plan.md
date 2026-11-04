@@ -1,5 +1,17 @@
 # Game page layout: board + gutter redesign
 
+> **Status: implemented** on `ui/board-gutter-layout`. Departures from the
+> plan below:
+> - Two columns apply on landscape screens at least 560px wide and on any
+>   window at least 1000px wide, not at 700px. This keeps portrait tablets
+>   in one column with a full-width board.
+> - The renderer needed no theme variables: board colours belong to the
+>   games, and their decor reads well on both panels.
+> - Points boards (Determinant) now draw one surface under the cells. That
+>   hides the anti-aliasing seams between cells that showed as stripes.
+> - Plies that belong to no player (Liquefaction's random-bag setup) get an
+>   unnumbered line in the log.
+
 This plan reworks the shared game page (`common/shell.js`, `common/base.css`)
 to follow the layout of `references/hex_grow.html`. The board comes first.
 Everything else sits in stacked sections: below the board on a phone, in a

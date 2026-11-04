@@ -2,8 +2,8 @@
 
 The site is static files served by GitHub Pages with no build step. Code is
 shared between games through native ES modules. Each game supplies its rules
-and a board; everything else (rendering, input, dialogs, AI, history, tests)
-comes from `common/`.
+and a board; everything else (layout, rendering, input, AI, history, the move
+log, tests) comes from `common/`.
 
 ## Layout
 
@@ -11,8 +11,12 @@ comes from `common/`.
 index.html                  landing page: one card per game from the registry
 games.js                    registry of games: { id, title, blurb, path, module }
 common/
-  base.css                  theme variables, buttons, dialogs, board layout, landing page
+  base.css                  light/dark theme variables, buttons, game page layout, landing page
+  theme.js                  the site-wide Theme setting (auto / light / dark)
+  theme-init.js             classic script in each page head: applies the saved theme before paint
   engine.js                 helpers over the Game contract: move keys, replay, playouts, CHANCE
+  log.js                    move-log text: describeMove(), turns of plies
+  timeline.js               the move line with a cursor: review, branching, Undo
   rng.js                    seedable RNG for reproducible playouts and tests
   bag.js                    bags of coloured marbles: draws as chance plies, refills
   swap.js                   withSwap(game): the swap (pie) rule for any two-player game
@@ -26,6 +30,10 @@ common/
   chance-view.js            bag panels shown under the board
   pieces/cburnett/          chess piece images (Cburnett, BSD; see its README)
   shell.js                  mount(game): builds the page UI around a Game
+  ui/
+    dom.js                  h(), collapsible sections with remembered open state
+    setup.js                the Setup section (players, AI time, options, colours)
+    log-view.js             the Log section (turns, navigation, Copy link)
   ai/
     mcts.js                 generic UCT Monte Carlo tree search over the Game contract
     worker.js               module Web Worker that runs mcts() off the main thread
@@ -67,8 +75,11 @@ Tiling generators live in `common/board/`:
 | Generator | Coord | Tags |
 | --------- | ----- | ---- |
 | `squareBoard({ cols, rows, adjacency, style, stars })` | `{ col, row }`, row 0 = rank 1 at the bottom | `name` ("a1"), `dark` (a1 dark), `quad` (Dabbaba sub-grid 0-3), `edges` ("N"/"S"/"E"/"W") |
-| `rhombusBoard(n)`, `hexHexBoard(side)` | axial `{ q, r }`, pointy-top | `tri` (3-colouring), `edges` (rhombus "N"/"S"/"E"/"W"; hex-hex side 0-5), `name` (rhombus) |
-| `cairoBoard(centres, { rotate })` | (none) | `tone` (pentagon orientation) |
+| `rhombusBoard(n)`, `hexHexBoard(side)` | axial `{ q, r }`, pointy-top | `tri` (3-colouring), `edges` (rhombus "N"/"S"/"E"/"W"; hex-hex side 0-5), `name` ("a1": column from q, row from r, top row 1) |
+| `cairoBoard(centres, { rotate })` | (none) | `tone` (pentagon orientation), `name` ("1".."n" in reading order) |
+
+Cell names (`tags.name`) are what the move log shows, so every generator
+gives one; the conformance tests check that they are unique.
 
 `squareBoard` adjacency is `"orth"` (default), `"diag"` or `"king"`. With
 `style: "points"` pieces sit on intersections as in Go: the renderer draws
@@ -94,7 +105,7 @@ export default {
     1: { name: "Black", fill: "#202329", mark: "#ffffff" },
     2: { name: "White", fill: "#f2f2f0", mark: "#0e0f13" },
   },
-  options: {                        // the shell builds the Options dialog from this
+  options: {                        // the shell builds the Setup section from this
     size: { label: "Board size", choices: [48, 160], default: 48 },
   },
   colorSchemes: {                   // optional; first entry is the default
@@ -120,10 +131,12 @@ export default {
   swap,                             // true
   seat(state, player),              // seat (person) playing a colour; see "Swap"
 
-  // optional hooks
+  // optional hooks (currentPlayer may also return null for plies that
+  // belong to no player, e.g. filling a bag before the game starts)
   defaultPlayers,                   // e.g. { 1: "human", 2: "ai" } (the default)
   moveLabels,                       // button labels for string moves, e.g. { pass: "Pass" }
   moveLabel(state, move),           // the same, computed (takes precedence)
+  moveText(before, move, info, scheme), // log text for a ply (see "The move log"); null for the default
   turnHint(state, scheme),          // status line text while the game is on (scheme: the
                                     //   active colour scheme object, or null)
   boardDecor(board),                // -> lines over the cells, e.g. goal edges
@@ -141,8 +154,8 @@ export default {
 
 An option may also declare `allowed(value, opts)` to rule out combinations
 (e.g. a minimum too high for a small board): `resolveOptions()` replaces a
-disallowed value with the nearest allowed choice before it, the Options
-dialog disables it, and the conformance tests skip those combinations.
+disallowed value with the nearest allowed choice before it, the Setup
+section disables it, and the conformance tests skip those combinations.
 
 `applyMove` mutates in place and `clone` copies: search code clones once per
 tree node and then mutates freely, which keeps playouts fast. A turn may span
@@ -204,29 +217,86 @@ so it values a swap for the person who makes it.
 
 ## The shell
 
-`mount(game)` in `common/shell.js` builds the whole page around a game:
+`mount(game)` in `common/shell.js` builds the whole page around a game.
 
-- controls (Games, Rules, Options, Undo, Reset), the board, turn panel and
-  status line;
-- the Rules dialog from the page's `<template id="rules">`;
-- the Options dialog: player types (human/AI), AI think time, the game's own
-  options and colour schemes, saved to `localStorage`;
-- move input and highlighting as described above, plus last-move markers
-  (by default a ring on the destination of the last cell move);
-- chance plies: after a short pause the shell samples an outcome and plays
-  it; `chanceView` panels appear under the board and `turnHint` in the
-  status line;
-- the move history, which drives Undo (back to the last human decision,
-  keeping the draws before it, so Undo cannot re-roll chance) and the
-  URL hash (`#size=48&moves=17.23.4`), so any position can be shared as a
-  link; an illegal move in a hand-edited hash truncates the history there;
-- responsive board sizing that keeps the board within the viewport, using
-  the board's aspect ratio; a `rotatable` game's board is turned 90 degrees
-  (display only) when that draws it clearly larger, e.g. a wide board on a
-  portrait phone.
+### Layout
 
-`mount()` returns a small handle (`state`, `moves`, `play`, `undo`, `reset`);
-game pages expose it as `window.app` for the console.
+```
+.page
+  .board-col > .board-wrap > svg.board
+  aside.gutter
+    header.page-head      title, the registry blurb, link back to the games
+    .card.turn-card       players (score, AI tag, thinking dots), status,
+                          bags, move buttons, Undo, New game; while
+                          reviewing, a strip with "Back to latest"
+    details Log           (open by default)
+    details Setup         players per seat, AI think time, the game's options
+                          and colour schemes, Theme (open on wide screens)
+    details Rules         the page's <template id="rules">, after the blurb
+```
+
+On landscape screens and wide windows (`WIDE_QUERY` in shell.js, mirrored
+in base.css) the board takes the left column and the gutter is a sticky
+right-hand column that scrolls on its own. Otherwise the gutter's children
+flow under the board, and the head becomes a slim bar above it. Which
+sections are open is saved site-wide. Settings are saved per game in
+`localStorage`; option changes start a new game at once.
+
+The board is sized to its column and capped by the viewport height (on one
+column it leaves room below for the top of the turn card). A `rotatable`
+game's board is turned 90 degrees (display only) when that draws it clearly
+larger, e.g. a wide board on a portrait phone.
+
+### Play
+
+- Move input and highlighting as described above, plus last-move markers
+  (by default a ring on the destination of the last cell move).
+- Chance plies: after a short pause the shell samples an outcome and plays
+  it; `chanceView` panels appear in the turn card and `turnHint` in the
+  status line.
+
+### The move line, review and the URL hash
+
+The shell keeps the game as a *line* of moves with a cursor
+(`common/timeline.js`); the board shows the position after the plies
+before the cursor. At the end of the line the game is live. Before it:
+
+- the AI and chance wait; only a human to move can play;
+- playing the line's next move just moves the cursor on, and any other move
+  replaces the plies after the cursor (a branch), after which the game is
+  live again;
+- Undo moves the cursor back to the last human decision and keeps the later
+  plies, so stepping forward redoes them. Draws before that decision are
+  kept, so Undo cannot re-roll chance.
+
+The Log section, the arrow keys and Home/End move the cursor. The URL hash
+holds the options and the whole line, plus the cursor while reviewing
+(`#size=48&moves=17.23.4&at=2`), so any position can be shared as a link; an
+illegal move in a hand-edited hash truncates the line there. Copy link
+copies it.
+
+### The move log
+
+`common/log.js` describes each ply. `game.moveText(before, move, info,
+scheme)` is asked first (`before` is the position before the move, `info`
+what `applyMove` returned, `scheme` the active colour scheme or null);
+returning null falls back to the defaults: cell moves join cell names with
+"–", `"draw:X"` reads "drew red" (marble names from the scheme's or the
+game's marbles), and other string moves use their button label. Plies are
+grouped into turns by `currentPlayer`, so a draw is listed with the move
+after it; plies of no player get an unnumbered line.
+
+### Theme
+
+`base.css` has dark and light palettes in the same variables, chosen by
+`prefers-color-scheme`. The Theme setting (Auto / Light / Dark, saved
+site-wide by `theme.js`) overrides it with `data-theme` on `<html>`, and
+`theme-init.js` applies a saved choice before first paint. Board colours
+belong to the games and do not change with the theme.
+
+`mount()` returns a small handle (`state`, `moves` (the whole line),
+`cursor`, `play`, `jump`, `live`, `undo`, `reset`); game pages expose it as
+`window.app` for the console.
 
 Because rules are deterministic, a position is fully described by the
 options plus the move list. The shell, the AI worker and the tests all rebuild
@@ -256,7 +326,8 @@ the game is over, moves are well formed and round-trip through `moveKey`,
 legal move, and boards are well formed. At chance plies it also checks that
 `chances()` matches `legalMoves()` with probabilities summing to 1, that
 `chanceView` uses declared marble colours, and that MCTS never chooses for
-chance; playouts sample chance by probability. Two fixtures in
+chance; playouts sample chance by probability. Every ply must get log text
+under every colour scheme. Two fixtures in
 `test/fixtures/` exercise the suite and the MCTS tests: tic-tac-toe, and bag
 tic-tac-toe (a marble draw picks the square colour to play on). Each game adds its
 own rule tests.
@@ -269,6 +340,9 @@ The page shell is not covered by `npm test`; check it in a browser with
 1. Create `games/<id>/game.js` implementing the contract, building its board
    with a generator from `common/board/`.
 2. Create `games/<id>/index.html` with the rules in `<template id="rules">`
-   and a module script that calls `mount(game)` (copy Filament's).
+   and a module script that calls `mount(game)`. Copy Filament's: its head
+   also loads `theme-init.js`. The title and blurb come from the registry.
 3. Register it in `games.js`.
-4. Add `test/<id>.test.js` with rule tests and run `npm test`.
+4. Optionally add `moveText` if the default log text (cell names) does not
+   read well for the game's moves.
+5. Add `test/<id>.test.js` with rule tests and run `npm test`.
