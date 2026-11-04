@@ -6,7 +6,7 @@ import { createRenderer, rotateViewBox, viewBoxAspect } from "./render.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
 import {
-  replay, resolveOptions, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, CHANCE,
+  replay, resolveOptions, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
 } from "./engine.js";
 
 // Pause before a chance ply (a marble draw) is played, so it can be seen.
@@ -161,7 +161,8 @@ export function mount(game, { root = document.body } = {}) {
     const frag = document.createDocumentFragment();
     ui.optionSelects = {};
     for (const p of playerIds) {
-      const row = optionRow(game.players[p].name,
+      // With the swap rule a setting follows the seat, whatever colour it ends up playing.
+      const row = optionRow(game.swap ? `${game.players[p].name} at start` : game.players[p].name,
         [{ value: "human", label: "Human" }, { value: "ai", label: "AI" }],
         settings.players[p],
         (v) => { settings.players[p] = v; persist(); onPlayersChanged(); });
@@ -198,7 +199,9 @@ export function mount(game, { root = document.body } = {}) {
 
   const isOver = () => !!game.outcome(state);
   // A decision ply belongs to a player; chance plies are played by the shell.
-  const isHumanAt = (s) => !game.outcome(s) && game.toMove(s) !== CHANCE && settings.players[game.toMove(s)] !== "ai";
+  // Settings are kept per seat; after a swap the seats play the other colours.
+  const controller = (s, p) => settings.players[seatOf(game, s, p)];
+  const isHumanAt = (s) => !game.outcome(s) && game.toMove(s) !== CHANCE && controller(s, game.toMove(s)) !== "ai";
   const isHumanTurn = () => !thinking && isHumanAt(state);
 
   // (Re)build the position for `options` and `moveList`. Illegal moves (e.g.
@@ -256,7 +259,7 @@ export function mount(game, { root = document.body } = {}) {
 
   function onPlayersChanged() {
     // A player switched to human mid-search: stop thinking for them.
-    if (thinking && settings.players[game.toMove(state)] !== "ai") cancelAI();
+    if (thinking && controller(state, game.toMove(state)) !== "ai") cancelAI();
     render();
     advance();
   }
@@ -293,7 +296,7 @@ export function mount(game, { root = document.body } = {}) {
   function maybeAI() {
     if (isOver() || thinking) return;
     const player = game.toMove(state);
-    if (settings.players[player] !== "ai") return;
+    if (controller(state, player) !== "ai") return;
     const gen = ++aiGeneration;
     setThinking(true);
     render();
@@ -408,7 +411,7 @@ export function mount(game, { root = document.body } = {}) {
       const summary = game.scoreSummary ? game.scoreSummary(state, p) : {};
       const row = h("div", {
         class: "turn-row" + (p === toMove ? " active" : ""),
-        title: summary.title || `${spec.name}${settings.players[p] === "ai" ? " (AI)" : ""}`,
+        title: summary.title || `${spec.name}${controller(state, p) === "ai" ? " (AI)" : ""}`,
       },
         h("span", { class: "turn-stone", style: `background:${spec.fill}` }),
         summary.main !== undefined ? h("span", { class: "turn-main" }, String(summary.main)) : null,

@@ -148,7 +148,8 @@ export function createRenderer(svg) {
 
   // pieces:   [{ id, player, label? }]
   // players:  game.players ({ [player]: { fill, mark } })
-  // markers:  [{ id, kind: "ring" | "dot" }] (ring colour follows the piece)
+  // markers:  [{ id, kind: "ring" | "dot" | "target" }] (ring colour follows
+  //           the piece; "target" is the highlight dot of a selectable cell)
   // selected: cell ids in the current partial move
   // targets:  cell ids that would extend the partial move
   function draw({ pieces = [], players = {}, markers = [], selected = [], targets = [] }) {
@@ -199,7 +200,8 @@ export function createRenderer(svg) {
         }));
       }
     }
-    for (const id of targets) {
+    const targetIds = [...targets, ...markers.filter((m) => m.kind === "target").map((m) => m.id)];
+    for (const id of targetIds) {
       const c = board.cells[id];
       layers.markers.appendChild(svgEl("circle", {
         cx: c.x, cy: c.y, r: 0.12 * u, fill: HIGHLIGHT, stroke: "#0e0f13", "stroke-width": 0.02 * u,

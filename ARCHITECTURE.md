@@ -15,6 +15,7 @@ common/
   engine.js                 helpers over the Game contract: move keys, replay, playouts, CHANCE
   rng.js                    seedable RNG for reproducible playouts and tests
   bag.js                    bags of coloured marbles: draws as chance plies, refills
+  swap.js                   withSwap(game): the swap (pie) rule for any two-player game
   board/
     graph.js                makeBoard(): polygons -> adjacency, bounds, viewBox; groups,
                             liberties, directions (ray, lineLength)
@@ -113,6 +114,10 @@ export default {
   marbles,                          // { W: { name, fill } } colours used by chanceView
   chanceView(state),                // -> bag panels: [{ title, owner, counts, drawn, active }]
 
+  // added by withSwap() (common/swap.js)
+  swap,                             // true
+  seat(state, player),              // seat (person) playing a colour; see "Swap"
+
   // optional hooks
   defaultPlayers,                   // e.g. { 1: "human", 2: "ai" } (the default)
   moveLabels,                       // button labels for string moves, e.g. { pass: "Pass" }
@@ -121,7 +126,7 @@ export default {
   boardDecor(board),                // -> lines over the cells, e.g. goal edges
   rotatable,                        // true: the shell may turn the board 90 degrees
   piecesOf(state),                  // -> [{ id, player, label? }]; default reads state.cells
-  markers(state, move, info),       // -> [{ id, kind: "ring" | "dot" }] for the last move
+  markers(state, move, info),       // -> [{ id, kind: "ring" | "dot" | "target" }] for the last move
   scoreSummary(state, player),      // -> { main, sub, title } for the turn panel
   outcomeLines(state, outcome),     // -> HTML lines shown under the game-over verdict
   playout(state, rng),              // faster rollout for MCTS; returns a winner
@@ -171,6 +176,20 @@ chance plies, which lets a player decide between draws (push-your-luck).
 ply's outcomes, `drawMarble(bag, move)` applies one, and helpers add, remove,
 replace and return marbles. Bags are always public: `chanceView` shows their
 contents and the drawn marbles in order.
+
+### Swap
+
+The swap (pie) rule is generic: `export default withSwap({ ... })` adds it
+to a two-player game without touching its rules. Player numbers stay
+colours (they own pieces, move and win). Swapping leaves the position as it
+is and trades the two *seats* (the people, human or AI) between colours.
+By default the string move `"swap"` is offered once, at player 2's first
+decision in their own turn (`currentPlayer`, so not when player 2 acts
+inside player 1's turn); `withSwap(game, { offer })` narrows that. The
+state gains `swapped` and `swapClosed`. `seatOf(game, state, player)` in
+`engine.js` maps a colour to its seat (the identity for games without swap):
+the shell keeps human/AI settings per seat, and MCTS credits wins to seats,
+so it values a swap for the person who makes it.
 
 ## The shell
 

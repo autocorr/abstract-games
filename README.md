@@ -10,6 +10,9 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
   wins.
 - [Depletion](games/depletion/): Hex on a board of colored regions, where a
   marble drawn from a bag decides which region you must play in.
+- [Determinant](games/determinant/): a square-grid connection game where
+  diagonal cross-cuts are settled by a marble draw, and the winner of the
+  draw recolors stones until no cross-cut remains.
 
 ## Running locally
 

@@ -18,4 +18,12 @@ export const games = [
     path: "games/depletion/",
     module: "games/depletion/game.js",
   },
+  {
+    id: "determinant",
+    title: "Determinant",
+    board: "Square grid of points",
+    blurb: "Connect your edges with orthogonal chains. A cross-cut sends you to the bag, and the color drawn decides who recolors stones until no cross-cut is left.",
+    path: "games/determinant/",
+    module: "games/determinant/game.js",
+  },
 ];
