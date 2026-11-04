@@ -7,7 +7,8 @@ import { createRenderer, rotateViewBox, viewBoxAspect } from "./render.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
 import { h, escapeHtml, capitalise, section } from "./ui/dom.js";
-import { buildSetup, AI_TIMES } from "./ui/setup.js";
+import { buildSetup, optionRow, AI_TIMES } from "./ui/setup.js";
+import { THEMES, loadTheme, setTheme } from "./theme.js";
 import { createLogView } from "./ui/log-view.js";
 import { playAndDescribe, logEntries, groupTurns } from "./log.js";
 import { timeline, isLive, jump, play, undoTarget } from "./timeline.js";
@@ -169,6 +170,7 @@ export function mount(game, { root = document.body } = {}) {
       describeLine();   // marble names in the log may follow the scheme
       render();         // and so may the bags and hints
     },
+    extraRows: [optionRow("Theme", THEMES, loadTheme(), setTheme)],
   });
   ui.optionSelects = setup.optionSelects;
   ui.log = createLogView({
