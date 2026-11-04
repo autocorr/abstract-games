@@ -226,6 +226,68 @@ svg.board { width: 100%; height: auto; display: block; }
 .move-actions, .turn-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .move-actions:empty { display: none; }
 
+/* While reviewing an earlier position. */
+.review {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: -2px -6px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.review[hidden] { display: none; }
+.review b { color: var(--text); font-weight: 600; }
+.review-text { flex: 1 1 180px; }
+.review .btn { padding: 5px 12px; }
+
+/* ---- log -------------------------------------------------------------- */
+
+.log-scroll {
+  position: relative;
+  max-height: min(240px, 30vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  padding: 4px 0;
+}
+.log-list { list-style: none; margin: 0; padding: 0; font-size: 13px; line-height: 1.4; }
+.log-list li { display: flex; align-items: baseline; gap: 6px; padding: 1px 8px; }
+.log-list .turn-no {
+  min-width: 2.2em;
+  text-align: right;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.log-list .turn-stone { width: 10px; height: 10px; border-width: 1px; align-self: center; }
+.log-list .plies { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; }
+.log-list .sep { color: var(--text-dim); }
+.log-list .ply {
+  font: inherit;
+  color: var(--text);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.log-list .ply:hover { background: var(--panel-hover); }
+.log-list .ply.current { border-color: var(--accent); background: var(--accent-soft); }
+.log-list .ply.future { color: var(--text-dim); opacity: 0.6; }
+.log-start .ply { color: var(--text-dim); font-style: italic; }
+.log-result { font-weight: 600; padding-left: calc(2.2em + 14px) !important; }
+
+.log-nav { display: flex; gap: 6px; margin-top: 8px; }
+.log-nav .btn.icon { padding: 5px 10px; min-width: 36px; }
+.log-nav .copy-link { margin-left: auto; padding: 5px 12px; }
+
 /* ---- sections --------------------------------------------------------- */
 
 .section { padding: 0; }

@@ -8,6 +8,9 @@ import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
 import { h, escapeHtml, capitalise, section } from "./ui/dom.js";
 import { buildSetup, AI_TIMES } from "./ui/setup.js";
+import { createLogView } from "./ui/log-view.js";
+import { playAndDescribe, logEntries, groupTurns } from "./log.js";
+import { timeline, isLive, jump, play, undoTarget } from "./timeline.js";
 import { games as registry } from "../games.js";
 import {
   replay, resolveOptions, optionAllowed, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
@@ -61,10 +64,13 @@ function readHash(game) {
   for (const key of Object.keys(game.options || {})) if (params.has(key)) options[key] = params.get(key);
   const raw = params.get("moves");
   const moves = raw ? raw.split(".").map(parseMoveKey) : [];
-  return { options, moves };
+  const at = params.has("at") ? Number(params.get("at")) : moves.length;
+  return { options, moves, at };
 }
 
-function writeHash(options, moves) {
+// The full line goes in the hash; `at` marks the position on show while
+// reviewing, so a reload or a shared link opens there with the line intact.
+function writeHash(options, { moves, cursor }) {
   if (!moves.length) {
     history.replaceState(null, "", location.pathname + location.search);
     return;
@@ -72,6 +78,7 @@ function writeHash(options, moves) {
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(options)) params.set(k, v);
   params.set("moves", moves.map(moveKey).join("."));
+  if (cursor < moves.length) params.set("at", cursor);
   history.replaceState(null, "", "#" + params.toString().replace(/%2C/gi, ",").replace(/%3A/gi, ":"));
 }
 
@@ -90,11 +97,16 @@ export function mount(game, { root = document.body } = {}) {
   };
   const persist = () => saveSettings(game, settings);
 
-  // Position: everything is derived from options + move list.
+  // Position: everything is derived from options + the line of moves. The
+  // board shows the position after line.moves[0 .. line.cursor) (see
+  // timeline.js); `entries` describe every ply of the line for the log.
   let board = null;
   let boardKey = null;
   let state = null;
-  let moves = [];
+  let line = timeline();
+  let entries = [];
+  let turns = [];
+  let lineResult = null;   // outcome at the end of the line
   let lastInfo = null;
   let selection = [];
   let thinking = false;
@@ -132,13 +144,14 @@ export function mount(game, { root = document.body } = {}) {
   ui.boardWrap = h("div", { class: "board-wrap" }, ui.board);
   ui.boardCol = h("main", { class: "board-col" }, ui.boardWrap);
 
+  ui.review = h("div", { class: "review", hidden: true });
   ui.players = h("div", { class: "players" });
   ui.status = h("div", { class: "status", "aria-live": "polite" });
   ui.chance = h("div", { class: "chance" });
   ui.actions = h("div", { class: "move-actions" });
   ui.undo = h("button", { class: "btn", onclick: undo }, "Undo");
   ui.turnCard = h("section", { class: "card turn-card", "aria-label": "Turn" },
-    ui.players, ui.status, ui.chance, ui.actions,
+    ui.review, ui.players, ui.status, ui.chance, ui.actions,
     h("div", { class: "turn-buttons" }, ui.undo, h("button", { class: "btn", onclick: reset }, "New game")));
 
   const setup = buildSetup(game, settings, {
@@ -153,10 +166,16 @@ export function mount(game, { root = document.body } = {}) {
       settings.scheme = v;
       persist();
       renderer.setCellFill(cellFill());
-      render();   // marbles and hints may follow the scheme
+      describeLine();   // marble names in the log may follow the scheme
+      render();         // and so may the bags and hints
     },
   });
   ui.optionSelects = setup.optionSelects;
+  ui.log = createLogView({
+    onJump: (n) => seek(n),
+    onCopy: () => navigator.clipboard.writeText(location.href),
+  });
+  ui.logSection = section("log", "Log", ui.log.node, { open: true });
   ui.setup = section("setup", "Setup", setup.node, { open: wideQuery.matches });
 
   const rulesTemplate = document.getElementById("rules");
@@ -167,7 +186,7 @@ export function mount(game, { root = document.body } = {}) {
       ])
     : null;
 
-  ui.gutter = h("aside", { class: "gutter" }, ui.head, ui.turnCard, ui.setup, ui.rules);
+  ui.gutter = h("aside", { class: "gutter" }, ui.head, ui.turnCard, ui.logSection, ui.setup, ui.rules);
   ui.page = h("div", { class: "page" }, ui.boardCol, ui.gutter);
   root.append(ui.page);
 
@@ -190,9 +209,12 @@ export function mount(game, { root = document.body } = {}) {
   const isHumanAt = (s) => !game.outcome(s) && game.toMove(s) !== CHANCE && controller(s, game.toMove(s)) !== "ai";
   const isHumanTurn = () => !thinking && isHumanAt(state);
 
-  // (Re)build the position for `options` and `moveList`. Illegal moves (e.g.
-  // from a hand-edited URL) truncate the history rather than failing.
-  function start(options, moveList) {
+  const played = () => line.moves.slice(0, line.cursor);
+
+  // (Re)build the line for `options` and `moveList`, showing the position
+  // after `at` plies. Illegal moves (e.g. from a hand-edited URL) truncate
+  // the line rather than failing.
+  function start(options, moveList, at = moveList.length) {
     cancelAI();
     const opts = resolveOptions(game, options);
     settings.options = opts;
@@ -206,25 +228,73 @@ export function mount(game, { root = document.body } = {}) {
       board = game.createBoard(opts);
       boardKey = key;
     }
-    const result = replay(game, opts, moveList, { strict: false, board });
-    state = result.state;
-    moves = result.moves;
-    lastInfo = result.lastInfo;
+    const full = replay(game, opts, moveList, { strict: false, board });
+    lineResult = game.outcome(full.state);
+    line = timeline(full.moves, Math.min(at, full.moves.length));
+    describeLine();
+    if (line.cursor === full.moves.length) {
+      state = full.state;
+      lastInfo = full.lastInfo;
+    } else {
+      loadCursor();
+    }
     selection = [];
     errorText = "";
     if (renderer.board !== board) showBoard(renderer.rotation);
-    writeHash(settings.options, moves);
+    writeHash(settings.options, line);
     render();
     advance();
   }
 
+  // Log entries for the whole line (again after a colour scheme change).
+  function describeLine() {
+    entries = logEntries(game, settings.options, line.moves, { board, scheme: currentScheme() });
+    turns = groupTurns(entries);
+  }
+
+  // Rebuild `state` for the cursor by replaying the line up to it.
+  function loadCursor() {
+    const r = replay(game, settings.options, played(), { board });
+    state = r.state;
+    lastInfo = r.lastInfo;
+  }
+
+  // Show the position after n plies of the line. While not at the end the
+  // AI and chance wait; a human to move may branch from here.
+  function seek(n) {
+    const target = jump(line, n);
+    if (target.cursor === line.cursor) return;
+    cancelAI();
+    if (target.cursor === line.cursor + 1) {
+      lastInfo = game.applyMove(state, line.moves[line.cursor]);   // one step forward
+      line = target;
+    } else {
+      line = target;
+      loadCursor();
+    }
+    selection = [];
+    errorText = "";
+    writeHash(settings.options, line);
+    render();
+    advance();
+  }
+
+  // Play a move at the cursor: follow the line if it is the next move there,
+  // otherwise drop the plies after the cursor and continue from this move.
   function playMove(move) {
     const legal = findLegalMove(game, state, move);
     if (!legal) return;
-    lastInfo = game.applyMove(state, legal);
-    moves.push(legal);
+    const { entry, info } = playAndDescribe(game, state, legal, currentScheme());
+    const next = play(line, legal);
+    if (next.moves !== line.moves) {
+      entries = [...entries.slice(0, line.cursor), entry];
+      turns = groupTurns(entries);
+      lineResult = game.outcome(state);
+    }
+    line = { moves: next.moves, cursor: next.cursor };
+    lastInfo = info;
     selection = [];
-    writeHash(settings.options, moves);
+    writeHash(settings.options, line);
     render();
     advance();
   }
@@ -233,17 +303,13 @@ export function mount(game, { root = document.body } = {}) {
     start(settings.options, []);
   }
 
-  // Step back to the most recent position where a human is to decide. The
-  // draws before that decision are kept, so Undo cannot re-roll chance.
+  // Step back to the most recent position where a human is to decide,
+  // keeping the plies after it so they can be stepped through again. The
+  // draws before that decision stay, so Undo cannot re-roll chance.
   function undo() {
-    if (!moves.length) return;
-    let n = moves.length - 1;
-    while (n > 0) {
-      const { state: s } = replay(game, settings.options, moves.slice(0, n), { board });
-      if (isHumanAt(s)) break;
-      n--;
-    }
-    start(settings.options, moves.slice(0, n));
+    if (!line.cursor) return;
+    const humanAfter = (n) => isHumanAt(replay(game, settings.options, line.moves.slice(0, n), { board }).state);
+    seek(undoTarget(line, humanAfter));
   }
 
   function onPlayersChanged() {
@@ -271,11 +337,11 @@ export function mount(game, { root = document.body } = {}) {
   // Move the game along when no human input is needed: play chance plies
   // after a short pause, and ask the AI for its moves.
   function advance() {
-    if (isOver() || thinking || chanceTimer) return;
+    if (!isLive(line) || isOver() || thinking || chanceTimer) return;
     if (game.toMove(state) === CHANCE) {
       chanceTimer = setTimeout(() => {
         chanceTimer = null;
-        if (!isOver() && game.toMove(state) === CHANCE) playMove(sampleChance(game, state));
+        if (isLive(line) && !isOver() && game.toMove(state) === CHANCE) playMove(sampleChance(game, state));
       }, CHANCE_DELAY_MS);
       return;
     }
@@ -289,7 +355,7 @@ export function mount(game, { root = document.body } = {}) {
     const gen = ++aiGeneration;
     setThinking(true);
     render();
-    ai.choose({ options: settings.options, moves, timeMs: parseFloat(settings.aiTime) * 1000 })
+    ai.choose({ options: settings.options, moves: played(), timeMs: parseFloat(settings.aiTime) * 1000 })
       .then((move) => {
         if (gen !== aiGeneration) return;
         setThinking(false);
@@ -344,8 +410,9 @@ export function mount(game, { root = document.body } = {}) {
   // Ring the destination of the most recent cell move (skipping draws and
   // other string moves).
   function defaultMarkers() {
-    for (let i = moves.length - 1; i >= 0; i--) {
-      if (Array.isArray(moves[i])) return [{ id: moves[i][moves[i].length - 1], kind: "ring" }];
+    for (let i = line.cursor - 1; i >= 0; i--) {
+      const m = line.moves[i];
+      if (Array.isArray(m)) return [{ id: m[m.length - 1], kind: "ring" }];
     }
     return [];
   }
@@ -363,7 +430,7 @@ export function mount(game, { root = document.body } = {}) {
       ? [...new Set(legal.filter((m) => Array.isArray(m) && m.length > selection.length && startsWith(m, selection))
           .map((m) => m[selection.length]))]
       : [];
-    const lastMove = moves[moves.length - 1];
+    const lastMove = line.moves[line.cursor - 1];
     renderer.draw({
       pieces: piecesOf(game, state),
       players: game.players,
@@ -384,11 +451,16 @@ export function mount(game, { root = document.body } = {}) {
     }
 
     const humans = playerIds.some((p) => settings.players[p] !== "ai");
-    ui.undo.disabled = !moves.length || !humans;
+    ui.undo.disabled = !line.cursor || !humans;
 
+    renderReview();
     renderPlayers();
     renderChance(ui.chance, game, state, (currentScheme() || {}).marbles);
     renderStatus();
+    ui.log.update({
+      turns, cursor: line.cursor, length: line.moves.length, players: game.players,
+      result: lineResult ? verdictText(lineResult) : "",
+    });
     fitBoard();
   }
 
@@ -419,13 +491,28 @@ export function mount(game, { root = document.body } = {}) {
     }
   }
 
+  const playerName = (p) => (game.players[p] ? game.players[p].name : `Player ${p}`);
+  const verdictText = (result) => (result.winner ? `${playerName(result.winner)} wins` : "Draw");
+
+  // While reviewing: where we are, and a way back to the latest position.
+  function renderReview() {
+    const live = isLive(line);
+    ui.review.hidden = live;
+    if (live) return;
+    const later = line.moves.length - line.cursor;
+    ui.review.replaceChildren(
+      h("div", { class: "review-text" },
+        h("b", {}, `Viewing move ${line.cursor} of ${line.moves.length}`),
+        isHumanTurn() ? h("span", {}, ` · a different move here replaces the ${later} after it`) : null),
+      h("button", { class: "btn", onclick: () => seek(line.moves.length) }, "Back to latest"));
+  }
+
   function renderStatus() {
     const result = game.outcome(state);
     if (errorText) {
       ui.status.innerHTML = `<b>${escapeHtml(errorText)}</b>`;
     } else if (result) {
-      const name = (p) => escapeHtml(game.players[p] ? game.players[p].name : `Player ${p}`);
-      const verdict = result.winner ? `<b>${name(result.winner)} wins</b>` : "<b>Draw</b>";
+      const verdict = `<b>${escapeHtml(verdictText(result))}</b>`;
       const lines = game.outcomeLines ? game.outcomeLines(state, result) : [];
       ui.status.innerHTML =
         `<div class="verdict"><b>Game over</b> &nbsp;·&nbsp; ${verdict}</div>` +
@@ -497,19 +584,33 @@ export function mount(game, { root = document.body } = {}) {
   // A pasted link to a different position in the same tab.
   window.addEventListener("hashchange", () => {
     const fromHash = readHash(game);
-    if (fromHash) start({ ...settings.options, ...fromHash.options }, fromHash.moves);
+    if (fromHash) start({ ...settings.options, ...fromHash.options }, fromHash.moves, fromHash.at);
+  });
+
+  // Keys step through the line: arrows by a ply, Home and End to the ends.
+  document.addEventListener("keydown", (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const t = e.target;
+    if (t instanceof Element && (t.closest("select, input, textarea") || t.isContentEditable)) return;
+    const to = { ArrowLeft: line.cursor - 1, ArrowRight: line.cursor + 1, Home: 0, End: line.moves.length }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    seek(to);
   });
 
   // ---- start ----
   const fromHash = readHash(game);
-  if (fromHash) start({ ...settings.options, ...fromHash.options }, fromHash.moves);
+  if (fromHash) start({ ...settings.options, ...fromHash.options }, fromHash.moves, fromHash.at);
   else start(settings.options, []);
 
   // Handle for the console and future tooling.
   return {
     get state() { return state; },
-    get moves() { return moves.slice(); },
+    get moves() { return line.moves.slice(); },   // the whole line
+    get cursor() { return line.cursor; },
     play: playMove,
+    jump: seek,
+    live: () => seek(line.moves.length),
     undo,
     reset,
   };
