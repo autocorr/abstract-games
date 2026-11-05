@@ -94,7 +94,8 @@ gives one; the conformance tests check that they are unique.
 board gets one border around its edge, as on a chessboard (Liquefaction). With
 `style: "points"` pieces sit on intersections as in Go: the renderer draws
 `board.lines` and star points (`board.dots`) over a continuous surface, and
-the cells stay as click targets.
+the cells stay as click targets. `starPoints(n)` gives the usual Go layout
+for `stars`.
 
 Grid boards also carry directions for line-based rules: `board.dirs` (8 king
 steps for squares, 6 for hexes, listed so that the opposite of `d` is

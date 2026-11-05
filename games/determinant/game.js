@@ -20,7 +20,7 @@
 // W-E), every stone changes colour, the bag's marble colours are exchanged,
 // and Black moves next. This is the same game as the players trading sides.
 
-import { squareBoard } from "../../common/board/square.js";
+import { squareBoard, starPoints } from "../../common/board/square.js";
 import { goalMasks, connectsSides } from "../../common/board/graph.js";
 import { makeBag, cloneBag, drawOutcomes, drawMarble, addMarbles, bagPanel } from "../../common/bag.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
@@ -36,20 +36,8 @@ const START_BAG = { B: 2, W: 3 };
 
 const SIZES = Array.from({ length: 13 }, (_, i) => 7 + i);
 
-// Go-style star points: the 3rd line (4th from 13), the centre on odd
-// boards, and the side midpoints on large odd boards.
-function stars(n) {
-  const k = n >= 13 ? 3 : 2, m = (n - 1) / 2, far = n - 1 - k;
-  const out = [[k, k], [k, far], [far, k], [far, far]];
-  if (n % 2) {
-    out.push([m, m]);
-    if (n >= 15) out.push([k, m], [far, m], [m, k], [m, far]);
-  }
-  return out;
-}
-
 function buildBoard(n) {
-  const board = squareBoard({ cols: n, style: "points", stars: stars(n) });
+  const board = squareBoard({ cols: n, style: "points", stars: starPoints(n) });
   // patches[p] = [a, b, c, d]: a = (col, row), b = east of a, c = north of a,
   // d = north-east of a. Diagonals are a-d and b-c.
   board.patches = [];

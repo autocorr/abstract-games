@@ -21,6 +21,19 @@ export const DIRS8 = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1
 export const ORTHOGONAL = [0, 2, 4, 6];
 export const DIAGONAL = [1, 3, 5, 7];
 
+// Go-style star points for an n x n points board, as [col, row]: the 3rd
+// line (4th from 13), the centre on odd boards, and the side midpoints on
+// large odd boards.
+export function starPoints(n) {
+  const k = n >= 13 ? 3 : 2, m = (n - 1) / 2, far = n - 1 - k;
+  const out = [[k, k], [k, far], [far, k], [far, far]];
+  if (n % 2) {
+    out.push([m, m]);
+    if (n >= 15) out.push([k, m], [far, m], [m, k], [m, far]);
+  }
+  return out;
+}
+
 // Build a cols x rows board.
 //
 //   adjacency: "orth" (shared edges; default), "diag" (diagonal only, as for
