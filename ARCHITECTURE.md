@@ -16,15 +16,17 @@ common/
   fonts/                    Inter variable font (SIL OFL), subset by .tools/scripts/subset_inter.py
   theme.js                  the site-wide Theme setting (auto / light / dark)
   theme-init.js             classic script in each page head: applies the saved theme before paint
-  engine.js                 helpers over the Game contract: move keys, replay, playouts, CHANCE
-  log.js                    move-log text: describeMove(), turns of plies
+  engine.js                 helpers over the Game contract: move keys, option choices, replay,
+                            playouts, cachedBoards(), CHANCE
+  log.js                    move-log text: describeMove(), moveLabel(), turns of plies
   timeline.js               the move line with a cursor: review, branching, Undo
   rng.js                    seedable RNG for reproducible playouts and tests
-  bag.js                    bags of coloured marbles: draws as chance plies, refills
+  bag.js                    bags of coloured marbles: draws as chance plies, refills, bagPanel()
   swap.js                   withSwap(game): the swap (pie) rule for any two-player game
   board/
-    graph.js                makeBoard(): polygons -> adjacency, bounds, viewBox; groups,
-                            liberties, directions (ray, lineLength)
+    graph.js                makeBoard(): polygons -> adjacency, bounds, viewBox; geometry
+                            helpers; groups, liberties, side-to-side connection,
+                            directions (ray, lineLength)
     square.js               square grids: chess/draughts boards and Go-style points boards
     hex.js                  hex rhombus (Hex) and hex-hex boards
     cairo.js                Cairo pentagonal tiling patches
@@ -33,14 +35,15 @@ common/
   pieces/cburnett/          chess piece images (Cburnett, BSD; see its README)
   shell.js                  mount(game): builds the page UI around a Game
   ui/
-    dom.js                  h(), collapsible sections with remembered open state
+    dom.js                  h(), svgEl(), collapsible sections with remembered open state
+    settings.js             saved Setup settings (localStorage) and the URL hash
     setup.js                the Setup section (players, AI time, options, colours); segmented
                             buttons for short choice lists, dropdowns for long ones
     move-list.js            the Log section (turns, navigation, Copy link); not named
                             log-view.js, which EasyPrivacy blocks (see "Blocked file names")
   ai/
     mcts.js                 generic UCT Monte Carlo tree search over the Game contract
-    worker.js               module Web Worker that runs mcts() off the main thread
+    worker.js               module Web Worker that runs searchMove() off the main thread
     player.js               AIPlayer: talks to the worker, falls back to the main thread
 games/
   <id>/
@@ -97,6 +100,13 @@ steps for squares, 6 for hexes, listed so that the opposite of `d` is
 `opposite(board, d)`), `board.at(...coord)` and `board.step(id, d)` (both -1
 off the board). `graph.js` builds on these with `ray()` and `lineLength()`,
 and on adjacency alone with `components()`, `groupAt()` and `liberties()`.
+For connection games, `goalMasks(board, players)` marks each player's two
+`sides` (edge tags) and `connectsSides(board, cells, id, mask)` tells
+whether a group joins them.
+
+Boards depend only on the options and are never mutated, so a game can
+build each one once with `createBoard: cachedBoards(keyOf, build)` from
+`engine.js`, keyed on the options that shape the board.
 
 ## The Game contract
 
@@ -247,7 +257,8 @@ in base.css) the board takes the left column and the gutter is a sticky
 right-hand column that scrolls on its own. Otherwise the gutter's children
 flow under the board, and the head becomes a slim bar above it. Which
 sections are open is saved site-wide. Settings are saved per game in
-`localStorage`; option changes start a new game at once.
+`localStorage` (`common/ui/settings.js`); option changes start a new game
+at once, and a link's options become the saved ones.
 
 A board whose cells fill a rectangle (square grids) sits on a framing panel;
 other shapes (hexagons, diamonds, Cairo patches) are drawn straight on the
@@ -281,7 +292,8 @@ before the cursor. At the end of the line the game is live. Before it:
   live again;
 - Undo moves the cursor back to the last human decision and keeps the later
   plies, so stepping forward redoes them. Draws before that decision are
-  kept, so Undo cannot re-roll chance.
+  kept, so Undo cannot re-roll chance. With no earlier human decision (a
+  human moving second, at their first move) Undo does nothing.
 
 The Log section, the arrow keys and Home/End move the cursor. The URL hash
 holds the options and the whole line, plus the cursor while reviewing
@@ -327,8 +339,9 @@ so decision values are expectations over the randomness. The search is only
 asked at decision plies, and it never sees a real draw before the shell makes
 it. It runs in
 a module Web Worker (`common/ai/worker.js`) that imports the game from
-`game.url`, replays the move list and searches for the requested time. If a
-worker cannot be created the search runs on the main thread instead. A game
+`game.url`, replays the move list and searches for the requested time
+(`searchMove()` in `mcts.js`). If a worker cannot be created the same
+search runs on the main thread instead. A game
 can speed up rollouts by providing `playout(state, rng)`.
 
 ## Testing
