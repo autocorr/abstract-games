@@ -181,6 +181,7 @@ export default withSwap({
     },
   },
   moveLabels: { [KEEP]: "Keep sides and roll" },
+  pieceLabels: "Group sizes",   // Setup can hide the numbers on the stones
 
   createBoard: cachedBoards((o) => o.size, ({ size }) => hexHexBoard(size)),
   initialState(board, { swap }) {

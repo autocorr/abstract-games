@@ -13,7 +13,7 @@
 
 <template id="rules">
   <p><b>Setup.</b> The board is a hexagon of hexagonal cells, 4 to 8 cells per side (37 to 169 cells, always an odd number). The board starts empty, and Black moves first.</p>
-  <p><b>Turn.</b> Roll a die, then place one stone of your color on an empty cell. The placement's <i>result</i> is the size of the group the new stone ends up in: 1 plus the size of every one of your groups it touches. Merging groups is allowed. Each stone shows the size of its group, and dots mark the cells you may play.</p>
+  <p><b>Turn.</b> Roll a die, then place one stone of your color on an empty cell. The placement's <i>result</i> is the size of the group the new stone ends up in: 1 plus the size of every one of your groups it touches. Merging groups is allowed. Each stone shows the size of its group (Group sizes in Setup hides the numbers), and dots mark the cells you may play.</p>
   <p><b>Rolls 1 to 5.</b> The result must equal the roll. A 1 is a new stone touching none of yours; a 4 could grow a group of 3, or join a group of 2 and a single stone.</p>
   <p><b>Roll 6.</b> The result may be 6 or more. Only a 6 can make or grow a group larger than 6.</p>
   <p><b>Stepping down.</b> If no empty cell gives the result rolled, make the largest smaller result that some cell gives. For example, rolling 5 with groups of only 1 and 2, you must make a 3.</p>

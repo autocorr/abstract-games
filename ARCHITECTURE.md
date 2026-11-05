@@ -158,6 +158,8 @@ export default {
   turnHint(state, scheme),          // status line text while the game is on (scheme: the
                                     //   active colour scheme object, or null)
   boardDecor(board),                // -> lines over the cells, e.g. goal edges
+  pieceLabels,                      // e.g. "Group sizes": the pieces carry labels, and Setup
+                                    //   offers Show / Hide for them (saved, no new game)
   rotatable,                        // true: the shell may turn the board 90 degrees;
                                     //   a number: by that angle (clockwise, degrees)
   piecesOf(state),                  // -> [{ id, player, label?, image? }]; default reads state.cells;
@@ -269,7 +271,9 @@ right-hand column that scrolls on its own. Otherwise the gutter's children
 flow under the board, and the head becomes a slim bar above it. Which
 sections are open is saved site-wide. Settings are saved per game in
 `localStorage` (`common/ui/settings.js`); option changes start a new game
-at once, and a link's options become the saved ones.
+at once, and a link's options become the saved ones. Display settings
+(colour scheme, Show / Hide for a game's `pieceLabels`) only redraw, and
+stay out of the URL.
 
 A board whose cells fill a rectangle (square grids) sits on a framing panel;
 other shapes (hexagons, diamonds, Cairo patches) are drawn straight on the

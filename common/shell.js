@@ -107,6 +107,7 @@ export function mount(game, { root = document.body } = {}) {
       describeLine();   // marble names in the log may follow the scheme
       render();         // and so may the bags and hints
     },
+    onLabels(v) { settings.labels = v; persist(); render(); },
     extraRows: [choiceRow("Theme", THEMES, loadTheme(), setTheme).node],
   });
   ui.optionControls = setup.optionControls;
@@ -376,8 +377,9 @@ export function mount(game, { root = document.body } = {}) {
           .map((m) => m[selection.length]))]
       : [];
     const lastMove = line.moves[line.cursor - 1];
+    const pieces = piecesOf(game, state);
     renderer.draw({
-      pieces: piecesOf(game, state),
+      pieces: settings.labels === "off" ? pieces.map(({ label, ...p }) => p) : pieces,
       players: game.players,
       markers: lastMove === undefined ? [] : game.markers ? game.markers(state, lastMove, lastInfo) : defaultMarkers(),
       selected: selection,
