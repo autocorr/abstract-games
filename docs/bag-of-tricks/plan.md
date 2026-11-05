@@ -229,8 +229,10 @@ Each game adds one new shared piece.
 2. **Bivalent** (done). Adds the points board, line scanning, and neutral stones
    with marbles returning to the bag. Neutral pieces carry their own `fill`
    (`player: null`). The rules decisions and komi trials are in `rules.md`.
-3. **Accrete.** Adds hex-hex, push-your-luck plies, and multi-placement
-   turns.
+3. **Accrete** (done as **Coagulate**, with a d4 instead of the bag).
+   Adds push-your-luck plies (a "reroll" string move beside the cells) and
+   multi-placement turns; scoring is shared with Nucleation in
+   `common/largest-groups.js`. The rules are in `rules.md`.
 4. **Manifold.** Adds Go capture and liberties, two bags, permanent pass,
    and area scoring.
 
