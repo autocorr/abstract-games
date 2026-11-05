@@ -24,6 +24,8 @@ common/
   bag.js                    bags of coloured marbles: draws as chance plies, refills, bagPanel()
   dice.js                   dice: rolls as chance plies, dicePanel()
   swap.js                   withSwap(game): the swap (pie) rule for any two-player game
+  largest-groups.js         group sizes and the "largest groups cascading" win condition, with
+                            piecesOf / scoreSummary / outcomeLines hooks (Nucleation, Coagulate)
   board/
     graph.js                makeBoard(): polygons -> adjacency, bounds, viewBox; geometry
                             helpers; groups, liberties, side-to-side connection,

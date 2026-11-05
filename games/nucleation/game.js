@@ -29,6 +29,7 @@ import { hexHexBoard } from "../../common/board/hex.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
 import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
 import { withSwap } from "../../common/swap.js";
+import { analyzeGroups as analyze, cascadeWinner, decider as deciderFor, largestGroupsHooks } from "../../common/largest-groups.js";
 
 const BLACK = 1, WHITE = 2;
 const PLAYERS = {
@@ -39,35 +40,8 @@ const PLAYERS = {
 const SIZES = [4, 5, 6, 7, 8];
 const MAX_ROLL = 6;
 const KEEP = "keep";
-const SCORE_SIZES = 5;   // group sizes shown in the turn card
 
 // ---- analysis ------------------------------------------------------------
-
-// Groups of connected same-coloured stones: group[id] is the stone's group
-// index (-1 if empty); size[g] and owner[g] describe group g.
-function analyze(board, cells) {
-  const group = new Int16Array(cells.length).fill(-1);
-  const size = [], owner = [];
-  const stack = [];
-  for (let start = 0; start < cells.length; start++) {
-    const p = cells[start];
-    if (!p || group[start] >= 0) continue;
-    const g = size.length;
-    let n = 0;
-    group[start] = g;
-    stack.push(start);
-    while (stack.length) {
-      const id = stack.pop();
-      n++;
-      for (const nb of board.neighbours[id]) {
-        if (cells[nb] === p && group[nb] < 0) { group[nb] = g; stack.push(nb); }
-      }
-    }
-    size.push(n);
-    owner.push(p);
-  }
-  return { group, size, owner };
-}
 
 // Size of the group a stone of `player` placed on empty cell `id` would
 // make: 1 plus each distinct touching group of theirs.
@@ -103,17 +77,6 @@ function placements(s, a = analyze(s.board, s.cells)) {
   return { cells: empty.filter((_, i) => eff[i] === target), target, mode };
 }
 
-// Each player's group sizes, largest first.
-function sizesOf(a, player) {
-  return a.size.filter((_, g) => a.owner[g] === player).sort((x, y) => y - x);
-}
-
-// Index of the first group where the lists differ, or -1 if they are equal.
-function firstDifference(x, y) {
-  for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return i;
-  return -1;
-}
-
 // ---- moves ---------------------------------------------------------------
 
 // Place the mover's stone on `id`. Callers that already have the analysis
@@ -125,11 +88,8 @@ function place(s, id, a = analyze(s.board, s.cells), { target, mode } = placemen
   s.placed = id;
   s.roll = 0;
   if (s.stones === s.cells.length) {
-    const after = analyze(s.board, s.cells);
-    const black = sizesOf(after, BLACK), white = sizesOf(after, WHITE);
-    const i = firstDifference(black, white);
     s.over = true;
-    s.winner = i < 0 ? 0 : (black[i] || 0) > (white[i] || 0) ? BLACK : WHITE;
+    s.winner = cascadeWinner(analyze(s.board, s.cells));
   } else {
     s.turn = 3 - s.turn;
     // White's first turn opens with the swap decision when the rule is on.
@@ -155,17 +115,7 @@ function apply(s, move) {
 
 const sizeText = (n) => (n >= MAX_ROLL ? `${MAX_ROLL} or more` : String(n));
 
-// Why the last group differs: "Largest group: 9 vs 7." or "Tied on the top
-// 2 groups; group 3 decides: 4 vs 3."
-function decider(black, white) {
-  const i = firstDifference(black, white);
-  if (i < 0) return "";
-  const b = black[i] || 0, w = white[i] || 0;
-  if (i === 0) return `Largest group: Black ${b}, White ${w}.`;
-  return `Tied on the largest ${i} group${i > 1 ? "s" : ""}; group ${i + 1} decides: Black ${b}, White ${w}.`;
-}
-
-const listText = (sizes) => sizes.join(" ") || "none";
+const decider = (black, white) => deciderFor(black, white, PLAYERS);
 
 export default withSwap({
   id: "nucleation",
@@ -249,15 +199,7 @@ export default withSwap({
     if (s.over || s.phase === "ready") return [];
     return [dicePanel([s.roll || null], { owner: s.turn, active: s.phase === "roll" })];
   },
-  // Every stone shows the size of its group.
-  piecesOf(s) {
-    const a = analyze(s.board, s.cells);
-    const out = [];
-    for (let id = 0; id < s.cells.length; id++) {
-      if (s.cells[id]) out.push({ id, player: s.cells[id], label: String(a.size[a.group[id]]) });
-    }
-    return out;
-  },
+  ...largestGroupsHooks(PLAYERS),
   // An outline round the last stone placed (a ring would cover its label);
   // dots on the cells open to the roll.
   markers(s) {
@@ -282,20 +224,6 @@ export default withSwap({
     if (mode === "exact") return `${name} rolled ${s.roll}: ${make}.`;
     if (mode === "down") return `${name} rolled ${s.roll}, but no group of ${sizeText(s.roll)} is possible: ${make}.`;
     return `${name} rolled ${s.roll}, but every cell makes a larger group: ${make}.`;
-  },
-  // The leading group sizes, which decide the game, largest first.
-  scoreSummary(s, player) {
-    const sizes = sizesOf(analyze(s.board, s.cells), player);
-    return {
-      main: sizes.length ? sizes.slice(0, SCORE_SIZES).join(" ") + (sizes.length > SCORE_SIZES ? " …" : "") : "–",
-      sub: PLAYERS[player].name,
-      title: `${PLAYERS[player].name}'s groups, largest first: ${listText(sizes)}`,
-    };
-  },
-  outcomeLines(s) {
-    const a = analyze(s.board, s.cells);
-    const black = sizesOf(a, BLACK), white = sizesOf(a, WHITE);
-    return [decider(black, white), `Black: ${listText(black)}`, `White: ${listText(white)}`];
   },
 }, {
   // Offered at White's decision before the first roll.
