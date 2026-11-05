@@ -619,24 +619,34 @@ stones of the current player's colour, and all red marbles return to the bag.
 
 Points are written a1 to g7, and marbles G and R.
 
-### Open questions
+### Decisions
 
-- **Which lines count.** Presumably only maximal runs through the placed
-  stone. *Provisional default:* for each of the 4 directions, take the
-  maximal run of same-colour-or-red stones through the placed stone. A
-  length of 3 scores for the opponent, 4 scores for the player, 5 or more
-  scores nothing.
-- **"Who scored last" when one placement scores for both players.**
-  *Provisional default:* the player who made the placement.
-- **Conversions making new lines.** When a red stone turns into your colour,
-  it can complete lines through *that* stone in other directions. Do those
-  score? *Provisional default:* no. Only lines through the placed stone are
-  scored, and conversion happens after scoring.
-- **Converted red stones.** They presumably return to the red reserve. The
-  red marbles in the bag then always equal the red stones in reserve, so a
-  red draw always has a stone available.
-- **Variant scoring.** Does the mass conversion in the variant score lines?
-  *Provisional default:* no.
+The open questions in the booklet are settled as follows for the
+implementation.
+
+- **Which lines count.** After each placement, check the maximal run, in
+  each of the 4 directions, through the placed stone and through every red
+  stone on the board. Red stones count as the mover's colour. A run of
+  exactly 3 scores for the opponent, exactly 4 for the mover, and 5 or more
+  scores nothing. Rescoring red stones each turn is what makes Fig. 9.3 (3)
+  work: a red stone that completes the opponent's three scores against them
+  on their next turn, wherever they play. A line never scores twice: a red
+  stone in a scoring line converts at once, and a line without red stones
+  only changes when a stone is placed in it.
+- **Conversions.** A converted stone takes the mover's colour, which it
+  already counted as this turn, so a conversion makes no new lines. A run of
+  the mover's own stones that a conversion to the *other* colour cuts out of
+  a longer run is not scored, since it holds neither the placed stone nor a
+  red stone.
+- **Red supply.** A converted red stone goes back to the reserve, with its
+  marble back in the bag, so the red marbles in the bag always equal the red
+  stones in reserve.
+- **Ties.** The "player who scored last" tie-break is dropped. Black (the
+  second player) receives a komi, set in 0.5 steps; a fractional komi rules
+  out ties, and with a whole-number komi a tie is a draw.
+- **Board.** 7×7 only, for now.
+- **Stone counts.** Ignored: a player never runs out of stones.
+- **Variant.** Set aside for now.
 
 ---
 
