@@ -127,7 +127,24 @@ implementation.
 - **Variant.** Set aside for now. Its open questions (who replaces a marble,
   whether gray can be replaced, whether declining is allowed, and whether a
   capture on the 7th draw comes before the refill) are not decided.
-- **Swap rule.** To be decided from MCTS self-play trials.
+- **Swap rule.** None. MCTS self-play found no first-player edge:
+
+  | Search per move | Games | White wins |
+  | --------------- | ----- | ---------- |
+  | 2,000 iterations | 400 | 49.0% ± 2.5 |
+  | 10,000 iterations | 200 | 48.0% ± 3.5 |
+
+  Games last about 52 moves, and 43–51% end in stalemate, more often at the
+  stronger search.
+- **Turtling** (advancing as a flat phalanx) is not a dominant strategy.
+  "Turtle" takes a winning move if it has one and otherwise moves its
+  rearmost movable checker; "turtle + captures" takes a capture first.
+  Against MCTS at 2,000 iterations, turtle won 1.3% of 400 games (and 0.8%
+  of 120 at 10,000), and turtle + captures won 13.5% of 400. Against
+  heuristic players over 8,000 games each, turtle beat random play 43.8% of
+  the time and greedy play (win, else capture, else random) 18.5%, and
+  turtle + captures beat greedy 67.7%. MCTS keeps a looser formation (about 3
+  ranks from front to rear checker, against 2 for the turtles).
 
 ---
 
