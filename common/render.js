@@ -23,6 +23,7 @@ const DEFAULT_CELL_FILL = "#ffd890";
 const CELL_STROKE = "#3a3f4a";
 const HIGHLIGHT = "#ffd54f";
 const MARKER_DOT = "#969ca6";
+const LABEL_PX = 40;   // font size piece labels are set at before scaling (see drawPieces)
 
 let filterSeq = 0;
 
@@ -232,10 +233,13 @@ export function createRenderer(svg) {
         fill: spec.fill || "#888", stroke: "#0e0f13", "stroke-width": 0.03 * u,
       }));
       if (p.label) {
+        // Board units are about 1, and browsers lay out sub-pixel font sizes
+        // imprecisely (Chromium misplaces the baseline), so the text is set
+        // at LABEL_PX and scaled down to 0.4 of a cell.
         const text = svgEl("text", {
-          x: c.x, y: c.y, "font-size": 0.4 * u, "text-anchor": "middle",
+          "font-size": LABEL_PX, "font-weight": 700, "text-anchor": "middle",
           "dominant-baseline": "central", fill: spec.mark || "#fff",
-          ...(rotation ? { transform: `rotate(${-rotation} ${c.x} ${c.y})` } : {}),
+          transform: `translate(${c.x} ${c.y})${rotation ? ` rotate(${-rotation})` : ""} scale(${(0.4 * u) / LABEL_PX})`,
         });
         text.textContent = p.label;
         layers.pieces.appendChild(text);
