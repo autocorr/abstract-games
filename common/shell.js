@@ -8,20 +8,19 @@ import { fillsRectangle } from "./board/graph.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
 import { h, svgEl, escapeHtml, section } from "./ui/dom.js";
-import { buildSetup, choiceRow, AI_TIMES } from "./ui/setup.js";
+import { buildSetup, choiceRow } from "./ui/setup.js";
+import { loadSettings, saveSettings, readHash, writeHash } from "./ui/settings.js";
 import { THEMES, loadTheme, setTheme } from "./theme.js";
 import { createLogView } from "./ui/move-list.js";
 import { playAndDescribe, logEntries, groupTurns, moveLabel } from "./log.js";
 import { timeline, isLive, jump, play, undoTarget } from "./timeline.js";
 import { games as registry } from "../games.js";
 import {
-  replay, resolveOptions, optionAllowed, parseChoice, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
+  replay, resolveOptions, optionAllowed, parseChoice, findLegalMove, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
 } from "./engine.js";
 
 // Pause before a chance ply (a marble draw) is played, so it can be seen.
 const CHANCE_DELAY_MS = 450;
-
-const DEFAULT_AI_TIME = "1";
 
 // Two columns (board left, gutter right) on landscape screens and wide
 // windows; one column (head, board, then the sections) otherwise. Keep in
@@ -34,63 +33,11 @@ const NARROW_RESERVE_PX = 110;
 
 const startsWith = (move, prefix) => prefix.every((id, i) => move[i] === id);
 
-// ---- persistence -------------------------------------------------------
-
-function loadSettings(game) {
-  try {
-    return JSON.parse(localStorage.getItem(`abstract-games:${game.id}`)) || {};
-  } catch {
-    return {};
-  }
-}
-
-function saveSettings(game, settings) {
-  try {
-    localStorage.setItem(`abstract-games:${game.id}`, JSON.stringify(settings));
-  } catch {
-    // Private browsing or storage disabled: settings just won't persist.
-  }
-}
-
-// URL hash: "#size=48&moves=17.23-31.pass". Option keys come from game.options.
-function readHash(game) {
-  const params = new URLSearchParams(location.hash.slice(1));
-  if (!params.has("moves")) return null;
-  const options = {};
-  for (const key of Object.keys(game.options || {})) if (params.has(key)) options[key] = params.get(key);
-  const raw = params.get("moves");
-  const moves = raw ? raw.split(".").map(parseMoveKey) : [];
-  const at = params.has("at") ? Number(params.get("at")) : moves.length;
-  return { options, moves, at };
-}
-
-// The full line goes in the hash; `at` marks the position on show while
-// reviewing, so a reload or a shared link opens there with the line intact.
-function writeHash(options, { moves, cursor }) {
-  if (!moves.length) {
-    history.replaceState(null, "", location.pathname + location.search);
-    return;
-  }
-  const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(options)) params.set(k, v);
-  params.set("moves", moves.map(moveKey).join("."));
-  if (cursor < moves.length) params.set("at", cursor);
-  history.replaceState(null, "", "#" + params.toString().replace(/%2C/gi, ",").replace(/%3A/gi, ":"));
-}
-
 // ---- mount -------------------------------------------------------------
 
 export function mount(game, { root = document.body } = {}) {
   const playerIds = Object.keys(game.players).map(Number);
-  const stored = loadSettings(game);
-  const settings = {
-    players: { ...(game.defaultPlayers || { 1: "human", 2: "ai" }), ...(stored.players || {}) },
-    aiTime: AI_TIMES.includes(stored.aiTime) ? stored.aiTime : DEFAULT_AI_TIME,
-    options: resolveOptions(game, stored.options),
-    scheme: game.colorSchemes && stored.scheme in game.colorSchemes
-      ? stored.scheme
-      : Object.keys(game.colorSchemes || {})[0],
-  };
+  const settings = loadSettings(game);
   const persist = () => saveSettings(game, settings);
 
   // Position: everything is derived from options + the line of moves. The
