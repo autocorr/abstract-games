@@ -21,9 +21,9 @@
 // so do their lists: there are no draws.
 //
 // Swap (pie rule, common/swap.js, optional): after Black's first stone,
-// White may swap sides instead of rolling. White's first turn then starts
-// with a decision ply ("keep" or "swap") before the roll, so the swap is
-// decided without knowing the die.
+// White may swap instead of rolling: that stone becomes White's and Black
+// rolls next. White's first turn then starts with a decision ply ("keep" or
+// "swap") before the roll, so the swap is decided without knowing the die.
 
 import { hexHexBoard } from "../../common/board/hex.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
@@ -144,7 +144,7 @@ function apply(s, move) {
     s.phase = "place";
     return null;
   }
-  if (s.phase === "ready") {   // KEEP; a swap goes through withSwap's onSwap
+  if (s.phase === "ready") {   // KEEP; a swap goes through swapColours
     s.phase = "roll";
     return null;
   }
@@ -180,7 +180,7 @@ export default withSwap({
       default: "on",
     },
   },
-  moveLabels: { [KEEP]: "Keep sides and roll" },
+  moveLabels: { [KEEP]: "Roll" },
   pieceLabels: "Group sizes",   // Setup can hide the numbers on the stones
 
   createBoard: cachedBoards((o) => o.size, ({ size }) => hexHexBoard(size)),
@@ -217,6 +217,13 @@ export default withSwap({
     return placements(s).cells.map((id) => [id]);
   },
   applyMove: apply,
+  // The swap: every stone changes colour (the board is symmetric), and the
+  // other player rolls next.
+  swapColours(s) {
+    for (let id = 0; id < s.cells.length; id++) if (s.cells[id]) s.cells[id] = 3 - s.cells[id];
+    s.turn = 3 - s.turn;
+    s.phase = "roll";
+  },
   outcome(s) {
     return s.over ? { winner: s.winner } : null;
   },
@@ -261,7 +268,7 @@ export default withSwap({
   },
   // "d5 (3)": the cell and the size of the group it made.
   moveText(s, move, info) {
-    if (move === KEEP) return "kept sides";
+    if (move === KEEP) return "no swap";
     if (!Array.isArray(move)) return null;
     return `${s.board.cells[move[0]].tags.name} (${info.size})`;
   },
@@ -291,10 +298,8 @@ export default withSwap({
     return [decider(black, white), `Black: ${listText(black)}`, `White: ${listText(white)}`];
   },
 }, {
-  // Offered at White's decision before the first roll; either way the roll
-  // comes next.
+  // Offered at White's decision before the first roll.
   offer: (s) => s.phase === "ready",
-  onSwap: (s) => { s.phase = "roll"; },
 });
 
 export const internals = { placements, decider };

@@ -16,7 +16,7 @@ import { playAndDescribe, logEntries, groupTurns, moveLabel } from "./log.js";
 import { timeline, isLive, jump, play, undoTarget } from "./timeline.js";
 import { games as registry } from "../games.js";
 import {
-  replay, resolveOptions, optionAllowed, parseChoice, findLegalMove, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
+  replay, resolveOptions, optionAllowed, parseChoice, findLegalMove, piecesOf, sampleChance, currentPlayer, CHANCE,
 } from "./engine.js";
 
 // Pause before a chance ply (a marble draw) is played, so it can be seen.
@@ -144,9 +144,8 @@ export function mount(game, { root = document.body } = {}) {
 
   const isOver = () => !!game.outcome(state);
   // A decision ply belongs to a player; chance plies are played by the shell.
-  // Settings are kept per seat; after a swap the seats play the other colours.
-  const controller = (s, p) => settings.players[seatOf(game, s, p)];
-  const isHumanAt = (s) => !game.outcome(s) && game.toMove(s) !== CHANCE && controller(s, game.toMove(s)) !== "ai";
+  const controller = (p) => settings.players[p];
+  const isHumanAt = (s) => !game.outcome(s) && game.toMove(s) !== CHANCE && controller(game.toMove(s)) !== "ai";
   const isHumanTurn = () => !thinking && isHumanAt(state);
 
   const played = () => line.moves.slice(0, line.cursor);
@@ -257,7 +256,7 @@ export function mount(game, { root = document.body } = {}) {
 
   function onPlayersChanged() {
     // A player switched to human mid-search: stop thinking for them.
-    if (thinking && controller(state, game.toMove(state)) !== "ai") cancelAI();
+    if (thinking && controller(game.toMove(state)) !== "ai") cancelAI();
     render();
     advance();
   }
@@ -294,7 +293,7 @@ export function mount(game, { root = document.body } = {}) {
   function maybeAI() {
     if (isOver() || thinking) return;
     const player = game.toMove(state);
-    if (controller(state, player) !== "ai") return;
+    if (controller(player) !== "ai") return;
     const gen = ++aiGeneration;
     setThinking(true);
     render();
@@ -418,7 +417,7 @@ export function mount(game, { root = document.body } = {}) {
     for (const p of playerIds) {
       const spec = game.players[p];
       const summary = game.scoreSummary ? game.scoreSummary(state, p) : {};
-      const isAI = controller(state, p) === "ai";
+      const isAI = controller(p) === "ai";
       const active = p === toMove;
       const sub = summary.sub !== undefined && String(summary.sub) !== spec.name ? String(summary.sub) : null;
       ui.players.append(h("div", {

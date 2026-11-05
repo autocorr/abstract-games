@@ -145,9 +145,10 @@ export default {
   chanceView(state),                // -> panels: bags [{ title, owner, counts, drawn, active }]
                                     //   or dice [{ title, owner, dice: [4 | null], active }]
 
-  // added by withSwap() (common/swap.js)
+  // the swap rule: withSwap() (common/swap.js) needs swapColours and adds the rest
+  swapColours(state),               // exchange the position's colours (and reflect the board)
   swap,                             // true
-  seat(state, player),              // seat (person) playing a colour; see "Swap"
+  swapOffered(state),               // whether "swap" is legal now; see "Swap"
 
   // optional hooks (currentPlayer may also return null for plies that
   // belong to no player, e.g. filling a bag before the game starts)
@@ -232,18 +233,22 @@ turn.
 ### Swap
 
 The swap (pie) rule is generic: `export default withSwap({ ... })` adds it
-to a two-player game without touching its rules. Player numbers stay
-colours (they own pieces, move and win). Swapping leaves the position as it
-is and trades the two *seats* (the people, human or AI) between colours.
+to a two-player game, which supplies `swapColours(state)`. Swapping takes
+over the opponent's opening without anyone changing colour, as in Hex: the
+colours of the whole position are exchanged (stones, the player to move,
+and anything owned by a colour, such as claims or marble colours), and the
+board is reflected where the players' goals differ (Determinant mirrors it
+across the diagonal, so N-S edges become W-E). After White swaps on move 2,
+the opening stone is White's and Black moves next. This is the same game as
+the players trading sides, but each player keeps their colour, and so do
+their human/AI settings and the AI's sense of who wins.
+
 By default the string move `"swap"` is offered once, at player 2's first
 decision in their own turn (`currentPlayer`, so not when player 2 acts
-inside player 1's turn); `withSwap(game, { offer })` narrows that, and
-`onSwap(state)` lets a game that offers the swap at a ply of its own move on
-from it (Nucleation offers it at a decision before White's first roll, so
-it is made without knowing the die). The state gains `swapped` and `swapClosed`. `seatOf(game, state, player)` in
-`engine.js` maps a colour to its seat (the identity for games without swap):
-the shell keeps human/AI settings per seat, and MCTS credits wins to seats,
-so it values a swap for the person who makes it.
+inside player 1's turn); `withSwap(game, { offer })` narrows that.
+Nucleation offers it at a decision ply before White's first roll, so it is
+made without knowing the die; its `swapColours` moves on to the roll. The
+state gains `swapClosed`.
 
 ## The shell
 
@@ -260,7 +265,7 @@ so it values a swap for the person who makes it.
                           bags, move buttons, Undo, New game; while
                           reviewing, a strip with "Back to latest"
     details Log           (open by default)
-    details Setup         players per seat, AI think time, the game's options
+    details Setup         human or AI per player, AI think time, the game's options
                           and colour schemes, Theme (open on wide screens)
     details Rules         the page's <template id="rules">, after the blurb
 ```

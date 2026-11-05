@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import game, { internals } from "../games/nucleation/game.js";
-import { newGame, replay, seatOf, CHANCE } from "../common/engine.js";
+import { newGame, replay, CHANCE } from "../common/engine.js";
 import { describeMove } from "../common/log.js";
 import { seededRng } from "../common/rng.js";
 
@@ -122,18 +122,18 @@ test("the swap is decided before White's first roll", () => {
   assert.equal(game.toMove(s), 2);
   assert.deepEqual(game.legalMoves(s), ["keep", "swap"]);
   assert.equal(game.chanceView(s).length, 0);
-  assert.match(game.turnHint(s), /roll to play on\. Or swap sides/);
+  assert.match(game.turnHint(s), /roll to play on\. Or swap: Black's opening becomes White's, and Black moves next\./);
 
   const swapped = replay(game, opts, ["roll:1", [18], "swap"]).state;
-  assert.equal(game.toMove(swapped), CHANCE, "the roll follows the swap");
-  assert.equal(game.currentPlayer(swapped), 2);
-  assert.equal(seatOf(game, swapped, 2), 1, "the first seat now plays White");
-  assert.equal(swapped.cells[18], 1);
+  assert.equal(swapped.cells[18], 2, "Black's stone is now White's");
+  assert.equal(game.toMove(swapped), CHANCE, "a roll follows the swap");
+  assert.equal(game.currentPlayer(swapped), 1, "and it is Black's");
+  assert.ok(!game.legalMoves(swapped).includes("swap"));
 
   const kept = replay(game, opts, ["roll:1", [18], "keep", "roll:2"]).state;
   assert.equal(game.toMove(kept), 2);
   assert.ok(!game.legalMoves(kept).includes("swap"));
-  assert.equal(seatOf(game, kept, 2), 2);
+  assert.equal(kept.cells[18], 1);
 
   const off = replay(game, { size: 4, swap: "off" }, ["roll:1", [18]]).state;
   assert.equal(game.toMove(off), CHANCE, "no swap decision without the rule");
@@ -149,7 +149,7 @@ test("log text, die panel and markers", () => {
   const info = game.applyMove(after, [18]);
   assert.deepEqual(info, { size: 1, target: 1, mode: "down" });
   assert.equal(describeMove(game, before, [18], info), `${before.board.cells[18].tags.name} (1)`);
-  assert.equal(describeMove(game, after, "keep", null), "kept sides");
+  assert.equal(describeMove(game, after, "keep", null), "no swap");
   assert.deepEqual(game.markers(after), [{ id: 18, kind: "square" }]);
   const placing = replay(game, { size: 4, swap: "off" }, ["roll:1", [18], "roll:1"]).state;
   const targets = game.markers(placing).filter((m) => m.kind === "target");

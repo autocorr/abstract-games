@@ -48,9 +48,21 @@ test("options exclude minimums the board cannot guarantee", () => {
   assert.deepEqual(resolveOptions(game, { size: 3, min: 9, start: "empty" }), { size: 3, min: 3, start: "empty" });
 });
 
-test("White may swap after Black's first move", () => {
+test("White may swap after Black's first move: every stone changes colour", () => {
   const s = replay(game, { size: 5, start: "corners" }, [[30]]).state;
   assert.ok(game.legalMoves(s).includes("swap"));
+  const before = s.cells.slice();
+  game.applyMove(s, "swap");
+  assert.deepEqual(Array.from(s.cells), Array.from(before, (c) => (c ? 3 - c : 0)));
+  assert.equal(game.toMove(s), 1, "Black moves next");
+  assert.ok(!game.legalMoves(s).includes("swap"));
+});
+
+test("the swap also exchanges the colour of claims", () => {
+  const s = newGame(game, { size: 5, start: "empty" });
+  s.claims = [{ player: 1, cells: [0] }];
+  game.swapColours(s);
+  assert.equal(s.claims[0].player, 2);
 });
 
 test("in the opening, every turn places a stone touching no other stone", () => {

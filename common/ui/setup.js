@@ -1,4 +1,4 @@
-// The Setup section of a game page: who plays each seat, AI think time, the
+// The Setup section of a game page: who plays each colour, AI think time, the
 // game's own options and colour schemes. Changes apply at once; the shell
 // decides what each one does through the callbacks.
 //
@@ -74,8 +74,7 @@ export function buildSetup(game, settings, { onPlayer, onAiTime, onOption, onSch
   const node = h("div", { class: "setup" });
   const optionControls = {};
   for (const p of Object.keys(game.players).map(Number)) {
-    // With the swap rule a setting follows the seat, whatever colour it ends up playing.
-    node.append(choiceRow(game.swap ? `${game.players[p].name} at start` : game.players[p].name,
+    node.append(choiceRow(game.players[p].name,
       [{ value: "human", label: "Human" }, { value: "ai", label: "AI" }],
       settings.players[p], (v) => onPlayer(p, v)).node);
   }

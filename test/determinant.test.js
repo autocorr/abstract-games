@@ -28,13 +28,15 @@ test("the bag starts with three white and two black marbles; Black moves first",
   assert.equal(game.legalMoves(s).length, N * N);
 });
 
-test("White may swap sides on their first turn only; the position is unchanged", () => {
+test("White may swap on their first turn only: the position is mirrored and recoloured", () => {
   assert.ok(game.legalMoves(play([[1, 4]])).includes("swap"));
   const s = play([[1, 4], "swap"]);
-  assert.equal(s.cells[at(1, 4)], 1);
-  assert.deepEqual(s.bag.counts, { B: 2, W: 3 });
-  assert.equal(game.toMove(s), 2, "White, now the opening seat, moves next");
-  assert.equal(game.seat(s, 1), 2);
+  assert.equal(s.cells[at(1, 4)], 0);
+  assert.equal(s.cells[at(4, 1)], 2, "Black's stone is reflected across the diagonal and turns white");
+  assert.equal(s.cells.filter(Boolean).length, 1);
+  assert.equal(s.placed, at(4, 1));
+  assert.deepEqual(s.bag.counts, { B: 3, W: 2 }, "the marble colours are exchanged");
+  assert.equal(game.toMove(s), 1, "Black moves next");
   assert.ok(!game.legalMoves(s).includes("swap"));
   assert.ok(!game.legalMoves(play([[1, 4], [3, 3]])).includes("swap"));
 });

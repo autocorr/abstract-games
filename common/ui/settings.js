@@ -10,7 +10,7 @@ const DEFAULT_AI_TIME = "1";
 const storageKey = (game) => `abstract-games:${game.id}`;
 
 // The saved settings for `game`, with anything missing or no longer valid
-// replaced by its default: { players: { [seat]: "human" | "ai" }, aiTime,
+// replaced by its default: { players: { [player]: "human" | "ai" }, aiTime,
 // options, scheme, labels: "on" | "off" (piece labels, see pieceLabels) }.
 export function loadSettings(game) {
   let stored = {};

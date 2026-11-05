@@ -36,12 +36,6 @@ export function currentPlayer(game, state) {
   return game.currentPlayer ? game.currentPlayer(state) : null;
 }
 
-// The seat (person) playing `player` (a colour) in `state`. Seats start as
-// the player numbers and only differ after a swap (see swap.js).
-export function seatOf(game, state, player) {
-  return game.seat && player !== CHANCE ? game.seat(state, player) : player;
-}
-
 // Canonical string for a move: cell-id arrays join with "-", strings pass
 // through. Used for equality, the URL hash and worker messages.
 export function moveKey(move) {

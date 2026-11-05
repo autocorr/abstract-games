@@ -40,7 +40,10 @@
 // (or claiming would be legal), so every cluster is decided and the player
 // with more decided clusters wins. There are no draws.
 //
-// Swap (pie rule, common/swap.js): White may swap sides on their first turn.
+// Swap (pie rule, common/swap.js): on White's first turn White may swap
+// instead: every stone and claim changes colour, and Black moves next. The
+// board and the corner start look the same after a 60-degree turn, so this
+// is the same game as the players trading sides.
 
 import { hexHexBoard, DIRS6 } from "../../common/board/hex.js";
 import { ray } from "../../common/board/graph.js";
@@ -378,6 +381,11 @@ export default withSwap({
     return [...placementMoves(s), ...claimMoves(s, analyze(s.board, s.cells))];
   },
   applyMove: apply,
+  swapColours(s) {
+    for (let id = 0; id < s.cells.length; id++) if (s.cells[id]) s.cells[id] = 3 - s.cells[id];
+    for (const claim of s.claims) claim.player = 3 - claim.player;
+    s.turn = 3 - s.turn;
+  },
   outcome(s) {
     return s.over ? { winner: s.winner } : null;
   },

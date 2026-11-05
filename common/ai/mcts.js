@@ -6,12 +6,8 @@
 // node's value an expectation over the randomness ("expectimax" MCTS). The
 // search never peeks at a real future draw: the shell samples those only once
 // they are reached.
-//
-// Wins are credited to seats rather than colours (seatOf in engine.js), so
-// that a swap move, after which the mover plays the other colour, is valued
-// for the person who made it.
 
-import { randomPlayout, pickWeighted, moveKey, parseMoveKey, replay, seatOf, CHANCE } from "../engine.js";
+import { randomPlayout, pickWeighted, moveKey, parseMoveKey, replay, CHANCE } from "../engine.js";
 import { shuffle } from "../rng.js";
 
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -22,9 +18,9 @@ function makeNode(game, state, parent, move, mover) {
     state,
     parent,
     move,
-    mover,              // seat that made `move` (credited with wins here)
+    mover,              // player that made `move` (credited with wins here)
     toMove: over ? 0 : game.toMove(state),
-    terminal: over ? winnerSeat(game, state, over.winner) : null,
+    terminal: over ? over.winner : null,
     visits: 0,
     wins: 0,
     children: [],
@@ -32,9 +28,6 @@ function makeNode(game, state, parent, move, mover) {
     outcomes: null,     // chance nodes: [{ move, p }] and children by move key
   };
 }
-
-// Draws stay 0; a winning colour becomes the seat playing it.
-const winnerSeat = (game, state, winner) => (winner ? seatOf(game, state, winner) : 0);
 
 function untriedMoves(game, node, rng) {
   if (!node.untried) node.untried = node.terminal === null ? shuffle(game.legalMoves(node.state).slice(), rng) : [];
@@ -81,7 +74,7 @@ function selectAndExpand(game, root, c, rng) {
       const move = untried.pop();
       const state = game.clone(node.state);
       game.applyMove(state, move);
-      const child = makeNode(game, state, node, move, seatOf(game, node.state, node.toMove));
+      const child = makeNode(game, state, node, move, node.toMove);
       node.children.push(child);
       return child;
     }
@@ -93,8 +86,7 @@ function selectAndExpand(game, root, c, rng) {
 function rollout(game, node, rng) {
   if (node.terminal !== null) return node.terminal;
   const state = game.clone(node.state);
-  const winner = game.playout ? game.playout(state, rng) : randomPlayout(game, state, rng);
-  return winnerSeat(game, state, winner);
+  return game.playout ? game.playout(state, rng) : randomPlayout(game, state, rng);
 }
 
 function backpropagate(node, winner) {

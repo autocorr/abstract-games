@@ -16,7 +16,9 @@
 // exactly one winner: games cannot be drawn.
 //
 // Swap (pie rule, common/swap.js): on White's first turn White may instead
-// trade sides, taking Black's opening stone; the bag is unchanged.
+// swap: the position is reflected across the a1 diagonal (N-S edges become
+// W-E), every stone changes colour, the bag's marble colours are exchanged,
+// and Black moves next. This is the same game as the players trading sides.
 
 import { squareBoard } from "../../common/board/square.js";
 import { goalMasks, connectsSides } from "../../common/board/graph.js";
@@ -144,6 +146,23 @@ export default withSwap({
     const out = [];
     for (let id = 0; id < s.cells.length; id++) if (!s.cells[id]) out.push([id]);
     return out;
+  },
+  swapColours(s) {
+    const { board } = s;
+    const mirror = (id) => board.at(board.cells[id].coord.row, board.cells[id].coord.col);
+    const cells = new Uint8Array(s.cells.length);
+    for (let id = 0; id < cells.length; id++) if (s.cells[id]) cells[mirror(id)] = 3 - s.cells[id];
+    s.cells = cells;
+    if (s.placed >= 0) s.placed = mirror(s.placed);
+    s.flipped = s.flipped.map(mirror);
+    s.cuts = cutsAmong(cells, board, [...board.patches.keys()]);   // none when the swap is offered
+    const other = { B: "W", W: "B" };
+    s.bag = {
+      counts: { B: s.bag.counts.W, W: s.bag.counts.B },
+      drawn: s.bag.drawn.map((c) => other[c]),
+    };
+    s.turn = 3 - s.turn;
+    if (s.resolver) s.resolver = 3 - s.resolver;
   },
   applyMove(s, move) {
     const { board, cells } = s;
