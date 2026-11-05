@@ -42,4 +42,12 @@ export const games = [
     path: "games/liquefaction/",
     module: "games/liquefaction/game.js",
   },
+  {
+    id: "nucleation",
+    title: "Nucleation",
+    board: "Hexagon of hexagons",
+    blurb: "Roll a die and place a stone so that its group grows to the number rolled, or the nearest size below it you can make. Only a six grows a group past six. When the board is full, the larger groups win.",
+    path: "games/nucleation/",
+    module: "games/nucleation/game.js",
+  },
 ];

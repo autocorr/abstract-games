@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nucleation</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Setup.</b> The board is a hexagon of hexagonal cells, 4 to 8 cells per side (37 to 169 cells, always an odd number). The board starts empty, and Black moves first.</p>
+  <p><b>Turn.</b> Roll a die, then place one stone of your color on an empty cell. The placement's <i>result</i> is the size of the group the new stone ends up in: 1 plus the size of every one of your groups it touches. Merging groups is allowed. Each stone shows the size of its group, and dots mark the cells you may play.</p>
+  <p><b>Rolls 1 to 5.</b> The result must equal the roll. A 1 is a new stone touching none of yours; a 4 could grow a group of 3, or join a group of 2 and a single stone.</p>
+  <p><b>Roll 6.</b> The result may be 6 or more. Only a 6 can make or grow a group larger than 6.</p>
+  <p><b>Stepping down.</b> If no empty cell gives the result rolled, make the largest smaller result that some cell gives. For example, rolling 5 with groups of only 1 and 2, you must make a 3.</p>
+  <p><b>Stepping up.</b> If every empty cell would give a result larger than the roll, make the smallest result available.</p>
+  <p><b>End.</b> The game ends when the board is full. Each player lists their group sizes from largest to smallest. Compare the two lists one position at a time: first the largest groups, then the second largest, and so on. At the first position where the sizes differ, the player with the larger group wins. The board has an odd number of cells, so there are no draws.</p>
+  <p><b>Swap.</b> With the swap rule on, after Black places the first stone, White may swap sides instead of rolling and take over Black's position.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>

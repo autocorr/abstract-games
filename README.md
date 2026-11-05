@@ -10,6 +10,7 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Determinant](games/determinant/)
 - [Cliques](games/cliques/)
 - [Liquefaction](games/liquefaction/)
+- [Nucleation](games/nucleation/)
 
 ## Running locally
 
