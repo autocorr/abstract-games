@@ -116,9 +116,9 @@ function firstDifference(x, y) {
 
 // ---- moves ---------------------------------------------------------------
 
-function place(s, id) {
-  const a = analyze(s.board, s.cells);
-  const { target, mode } = placements(s, a);
+// Place the mover's stone on `id`. Callers that already have the analysis
+// and the placements for this position may pass them in.
+function place(s, id, a = analyze(s.board, s.cells), { target, mode } = placements(s, a)) {
   const size = resultAt(s.board, s.cells, a, id, s.turn);
   s.cells[id] = s.turn;
   s.stones++;
@@ -230,8 +230,9 @@ export default withSwap({
       } else if (s.phase === "ready") {
         s.phase = "roll";
       } else {
-        const { cells } = placements(s);
-        place(s, cells[Math.floor(rng() * cells.length)]);
+        const a = analyze(s.board, s.cells);
+        const legal = placements(s, a);
+        place(s, legal.cells[Math.floor(rng() * legal.cells.length)], a, legal);
       }
     }
     return s.winner;
@@ -279,7 +280,7 @@ export default withSwap({
   scoreSummary(s, player) {
     const sizes = sizesOf(analyze(s.board, s.cells), player);
     return {
-      main: sizes.slice(0, SCORE_SIZES).join(" ") + (sizes.length > SCORE_SIZES ? " …" : "") || "–",
+      main: sizes.length ? sizes.slice(0, SCORE_SIZES).join(" ") + (sizes.length > SCORE_SIZES ? " …" : "") : "–",
       sub: PLAYERS[player].name,
       title: `${PLAYERS[player].name}'s groups, largest first: ${listText(sizes)}`,
     };
@@ -296,4 +297,4 @@ export default withSwap({
   onSwap: (s) => { s.phase = "roll"; },
 });
 
-export const internals = { analyze, placements, sizesOf, decider };
+export const internals = { placements, decider };

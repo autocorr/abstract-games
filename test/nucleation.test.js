@@ -39,7 +39,7 @@ test("a turn is a roll, then a placement", () => {
 test("the result must equal the roll, merging groups", () => {
   // Black singles at (-2,0) and (0,0); the cell between them, (-1,0), joins both.
   const { s, at } = position({ black: [[-2, 0], [0, 0]], roll: 3 });
-  assert.deepEqual(placements(s).mode, "exact");
+  assert.equal(placements(s).mode, "exact");
   assert.deepEqual(legalSet(s), new Set([at([-1, 0])]));
   s.roll = 2;
   const two = legalSet(s);
