@@ -11,6 +11,7 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Cliques](games/cliques/)
 - [Liquefaction](games/liquefaction/)
 - [Nucleation](games/nucleation/)
+- [Bivalent](games/bivalent/)
 
 ## Running locally
 

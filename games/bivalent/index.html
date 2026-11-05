@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bivalent</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Setup.</b> Stones are played on the points of a 7×7 grid, as in Go. The board starts empty, the bag holds 5 gray and 5 red marbles, and White moves first.</p>
+  <p><b>Turn.</b> Draw a marble. On gray, place a stone of your color on any empty point; the marble goes back in the bag. On red, place a neutral red stone; the marble is set aside.</p>
+  <p><b>Lines.</b> After the placement, lines score. A line is a run of your stones and red stones, horizontal, vertical or diagonal; on your turn every red stone counts as your color.</p>
+  <ul>
+    <li>Exactly four in a row: you score 1 point.</li>
+    <li>Exactly three: your <i>opponent</i> scores 1 point.</li>
+    <li>Five or more: nothing.</li>
+  </ul>
+  <p>Each line scores on its own: a stone that makes a three and a four gives each player a point. The lines checked are those through the stone just placed and through every red stone on the board.</p>
+  <p><b>Red stones.</b> A red stone in a scoring line becomes a stone of your color, and its marble goes back in the bag. A red stone that does not score stays red and counts for your opponent on their turn. So a red stone that completes your opponent's three scores against them on their next turn, wherever they play, unless they first extend the line to four.</p>
+  <p><b>End.</b> The game ends when every point is filled. Black adds the komi to their points, and the higher total wins. With a whole-number komi, equal totals are a draw.</p>
+  <p><b>Credits.</b> From <i>Bag of Tricks</i> by Brian E. Svoboda (CC BY-SA 4.0), inspired by Cameron Browne's <i>Yavalath</i> and Néstor Romeral Andrés's <i>Squava</i>.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>

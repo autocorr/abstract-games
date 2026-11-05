@@ -50,4 +50,12 @@ export const games = [
     path: "games/nucleation/",
     module: "games/nucleation/game.js",
   },
+  {
+    id: "bivalent",
+    title: "Bivalent",
+    board: "Square grid of points",
+    blurb: "Draw gray to place your stone, red to place a neutral one. Lines of four score for you, lines of three for your opponent, and red stones count for whoever is moving.",
+    path: "games/bivalent/",
+    module: "games/bivalent/game.js",
+  },
 ];
