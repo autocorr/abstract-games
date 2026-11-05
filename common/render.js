@@ -23,7 +23,6 @@ const DEFAULT_CELL_FILL = "#ffd890";
 const CELL_STROKE = "#3a3f4a";
 const HIGHLIGHT = "#ffd54f";
 const MARKER_DOT = "#969ca6";
-const MAX_ENTERING = 8;   // more new pieces than this at once: no entrance
 
 let filterSeq = 0;
 
@@ -74,8 +73,6 @@ export function createRenderer(svg) {
   let cellFill = () => DEFAULT_CELL_FILL;
   let cellNodes = [];
   let surface = null;
-  // Pieces as last drawn ("player/image/label" by cell), to spot new ones.
-  let drawn = null;
   let layers = null;
   let clickHandler = null;
   let rotation = 0;
@@ -96,7 +93,6 @@ export function createRenderer(svg) {
   // rotate: display rotation in degrees (clockwise on screen).
   function setBoard(newBoard, fill, decor = [], rotate = 0) {
     board = newBoard;
-    drawn = null;
     rotation = rotate;
     if (fill) cellFill = fill;
     const u = board.unit;
@@ -213,9 +209,8 @@ export function createRenderer(svg) {
     });
   }
 
-  // Rebuild the piece layers; enter(id) gives extra attributes for a piece
-  // making its entrance.
-  function drawPieces(pieces, players, enter) {
+  // Rebuild the piece layers.
+  function drawPieces(pieces, players) {
     const u = board.unit;
     layers.pieces.replaceChildren();
     layers.images.replaceChildren();
@@ -227,20 +222,17 @@ export function createRenderer(svg) {
         // 8x8 board, background-size: cover); the margin is in the image.
         const s = u;
         layers.images.appendChild(svgEl("image", {
-          ...enter(p.id),
           href: p.image, x: c.x - s / 2, y: c.y - s / 2, width: s, height: s,
           ...(rotation ? { transform: `rotate(${-rotation} ${c.x} ${c.y})` } : {}),
         }));
         continue;
       }
       layers.pieces.appendChild(svgEl("circle", {
-        ...enter(p.id),
         cx: c.x, cy: c.y, r: 0.42 * u,
         fill: spec.fill || "#888", stroke: "#0e0f13", "stroke-width": 0.03 * u,
       }));
       if (p.label) {
         const text = svgEl("text", {
-          ...enter(p.id),
           x: c.x, y: c.y, "font-size": 0.4 * u, "text-anchor": "middle",
           "dominant-baseline": "central", fill: spec.mark || "#fff",
           ...(rotation ? { transform: `rotate(${-rotation} ${c.x} ${c.y})` } : {}),
@@ -264,19 +256,6 @@ export function createRenderer(svg) {
   function draw({ pieces = [], players = {}, markers = [], selected = [], targets = [] }) {
     const u = board.unit;
     const owner = new Map(pieces.map((p) => [p.id, p.player]));
-
-    // Pieces that appeared or changed since the last draw get a short
-    // entrance (class "enter", see base.css). Not on a board's first draw
-    // or for big jumps (e.g. stepping far through the log). When nothing
-    // about the pieces changed, their elements are kept as they are, so a
-    // redraw right after a move does not cut an entrance short.
-    const now = new Map(pieces.map((p) => [p.id, `${p.player}/${p.image || ""}/${p.label || ""}`]));
-    const samePieces = drawn && drawn.size === now.size && [...now].every(([id, key]) => drawn.get(id) === key);
-    const fresh = new Set();
-    if (drawn && !samePieces) for (const [id, key] of now) if (drawn.get(id) !== key) fresh.add(id);
-    if (fresh.size > MAX_ENTERING) fresh.clear();
-    drawn = now;
-    const enter = (id) => (fresh.has(id) ? { class: "enter" } : {});
 
     layers.highlights.replaceChildren();
     for (const m of markers) {
@@ -304,7 +283,7 @@ export function createRenderer(svg) {
       }));
     }
 
-    if (!samePieces) drawPieces(pieces, players, enter);
+    drawPieces(pieces, players);
 
     layers.markers.replaceChildren();
     for (const m of markers) {

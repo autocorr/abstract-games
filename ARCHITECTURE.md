@@ -262,8 +262,7 @@ at once, and a link's options become the saved ones.
 
 A board whose cells fill a rectangle (square grids) sits on a framing panel;
 other shapes (hexagons, diamonds, Cairo patches) are drawn straight on the
-page. Pieces that appear or change pop in briefly (not for big jumps through
-the log, nor with reduced motion).
+page.
 
 The board is sized to its column and capped by the viewport height (on one
 column it leaves room below for the top of the turn card). A `rotatable`
