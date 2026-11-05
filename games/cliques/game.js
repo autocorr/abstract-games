@@ -78,22 +78,25 @@ function buildBoard(side) {
 
 // ---- analysis ------------------------------------------------------------
 
-// Number of clusters (components of occupied cells).
-function countClusters(board, cells, seen, stack) {
-  seen.fill(0);
+// Label the clusters (components of occupied cells): label[id] is the
+// stone's cluster index, numbered in order of their lowest cell id, or -1
+// for an empty cell. Returns the number of clusters. `label` (an
+// Int16Array) and `stack` are reused across calls on hot paths.
+function labelClusters(board, cells, label, stack) {
+  label.fill(-1);
   let count = 0;
   for (let start = 0; start < cells.length; start++) {
-    if (!cells[start] || seen[start]) continue;
-    count++;
-    seen[start] = 1;
+    if (!cells[start] || label[start] >= 0) continue;
+    label[start] = count;
     stack.length = 0;
     stack.push(start);
     while (stack.length) {
       const id = stack.pop();
       for (const n of board.neighbours[id]) {
-        if (cells[n] && !seen[n]) { seen[n] = 1; stack.push(n); }
+        if (cells[n] && label[n] < 0) { label[n] = count; stack.push(n); }
       }
     }
+    count++;
   }
   return count;
 }
@@ -123,25 +126,11 @@ function sameGroup(board, cells, a, b, seen, stack) {
 //   clusters: [{ stones, best: [_, black, white] }]
 function analyze(board, cells) {
   const n = cells.length;
-  const clusterOf = new Int16Array(n).fill(-1);
+  const clusterOf = new Int16Array(n);
+  const count = labelClusters(board, cells, clusterOf, []);
+  const clusters = Array.from({ length: count }, () => ({ stones: [], best: [0, 0, 0] }));
+  for (let id = 0; id < n; id++) if (cells[id]) clusters[clusterOf[id]].stones.push(id);   // ascending
   const groupSize = new Int16Array(n);
-  const clusters = [];
-  const stack = [];
-  for (let start = 0; start < n; start++) {
-    if (!cells[start] || clusterOf[start] >= 0) continue;
-    const k = clusters.length;
-    const stones = [];
-    clusterOf[start] = k;
-    stack.push(start);
-    while (stack.length) {
-      const id = stack.pop();
-      stones.push(id);
-      for (const nb of board.neighbours[id]) {
-        if (cells[nb] && clusterOf[nb] < 0) { clusterOf[nb] = k; stack.push(nb); }
-      }
-    }
-    clusters.push({ stones: stones.sort((a, b) => a - b), best: [0, 0, 0] });
-  }
   const done = new Uint8Array(n);
   for (let start = 0; start < n; start++) {
     if (!cells[start] || done[start]) continue;
@@ -218,25 +207,12 @@ function placementMoves(s, { onlyOne = false, cells: only = null } = {}) {
   const me = s.turn;
   const seen = new Uint8Array(cells.length);
   const stack = [];
-  const before = countClusters(board, cells, seen, stack);
+  // Cluster labels before the turn, for the cheap plain-placement count,
+  // and scratch labels for counting after each pull.
+  const label = new Int16Array(cells.length);
+  const scratch = new Int16Array(cells.length);
+  const before = labelClusters(board, cells, label, stack);
   const need = required(s, before);
-
-  // Cluster labels for the cheap plain-placement count.
-  const label = new Int16Array(cells.length).fill(-1);
-  {
-    let k = 0;
-    for (let start = 0; start < cells.length; start++) {
-      if (!cells[start] || label[start] >= 0) continue;
-      label[start] = k;
-      stack.length = 0;
-      stack.push(start);
-      while (stack.length) {
-        const id = stack.pop();
-        for (const n of board.neighbours[id]) if (cells[n] && label[n] < 0) { label[n] = k; stack.push(n); }
-      }
-      k++;
-    }
-  }
 
   const out = [];
   const group = [];
@@ -277,7 +253,7 @@ function placementMoves(s, { onlyOne = false, cells: only = null } = {}) {
         // A source outside G leaves G whole, so d is next to it; a source in
         // G may split it, so check d still joins the placed stone.
         const ok = (!inGroup[src] || sameGroup(board, cells, p, d, seen, stack)) &&
-          countClusters(board, cells, seen, stack) >= need;
+          labelClusters(board, cells, scratch, stack) >= need;
         cells[d] = 0;
         cells[src] = me;
         if (ok) {
@@ -459,11 +435,11 @@ export default withSwap({
 
   turnHint(s) {
     if (s.over) return "";
-    const seen = new Uint8Array(s.cells.length);
-    const count = countClusters(s.board, s.cells, seen, []);
+    const a = analyze(s.board, s.cells);
+    const count = a.clusters.length;
     const name = PLAYERS[s.turn].name;
     if (count < s.min) return `${name}: place a stone touching no other stone (opening: clusters ${count} of ${s.min}).`;
-    const claim = claimMoves(s, analyze(s.board, s.cells)).length ? ", or claim a tied cluster at a yellow dot" : "";
+    const claim = claimMoves(s, a).length ? ", or claim a tied cluster at a yellow dot" : "";
     return `${name}: place a stone, then you may pull one of yours to its group${claim}. Clusters ${count}, minimum ${s.min}.`;
   },
   scoreSummary(s, player) {
