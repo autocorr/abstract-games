@@ -574,7 +574,7 @@ svg.board, .game-card svg { filter: var(--board-filter); }
 .landing footer { margin-top: 32px; font-size: 13px; color: var(--text-dim); }
 .game-card svg .cell:hover { filter: none; }
 
-/* ---- chance devices (bags of marbles) -------------------------------- */
+/* ---- chance devices (bags of marbles, dice) --------------------------- */
 
 .chance {
   display: flex;
@@ -612,3 +612,18 @@ svg.board, .game-card svg { filter: var(--board-filter); }
 .marble.small { width: 11px; height: 11px; }
 .marble.newest { width: 15px; height: 15px; outline: 2px solid var(--accent); outline-offset: 1px; }
 .bag .turn-stone { width: 12px; height: 12px; }
+.die {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #0e0f13;
+  background: #f2f2f0;
+  color: #0e0f13;
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.die.blank { color: #8a8d93; font-weight: 600; }

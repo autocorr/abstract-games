@@ -64,11 +64,15 @@ function snapshot(state) {
   return JSON.stringify(out);
 }
 
-// chanceView panels are well formed and use only declared marble colours.
+// chanceView panels are well formed and use only declared marble colours;
+// dice panels show faces (positive integers) or null for unrolled dice.
 function checkChanceView(game, state) {
   const panels = game.chanceView(state);
   assert.ok(Array.isArray(panels));
   for (const panel of panels) {
+    if (panel.dice) {
+      for (const v of panel.dice) assert.ok(v === null || (Number.isInteger(v) && v > 0), `bad die face ${v}`);
+    }
     for (const [colour, n] of Object.entries(panel.counts || {})) {
       assert.ok(game.marbles && colour in game.marbles, `undeclared marble colour ${colour}`);
       assert.ok(Number.isInteger(n) && n >= 0, `bad count ${colour}: ${n}`);

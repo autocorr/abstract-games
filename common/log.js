@@ -5,6 +5,7 @@
 // marble draw is listed with the move that follows it.
 
 import { currentPlayer, newGame } from "./engine.js";
+import { isRollMove, rolledValue } from "./dice.js";
 
 const capitalise = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -23,6 +24,7 @@ export function describeMove(game, before, move, info, scheme = null) {
     if (text) return text;
   }
   if (Array.isArray(move)) return move.map((id) => cellName(before.board, id)).join("–");
+  if (isRollMove(move)) return `rolled ${rolledValue(move)}`;
   // "draw:R" and other "<action>:<marble>" chance moves name the marble.
   const colon = move.indexOf(":");
   const marbles = (scheme && scheme.marbles) || game.marbles;

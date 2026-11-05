@@ -1,4 +1,4 @@
-// DOM rendering of a game's chance devices (bags of marbles; dice later).
+// DOM rendering of a game's chance devices: bags of marbles and dice.
 //
 // game.chanceView(state) returns panels:
 //
@@ -7,6 +7,9 @@
 //      counts: { W: 3, B: 2 },  // marbles in the bag
 //      drawn: ["B", "G"],       // drawn marbles in order (last = newest)
 //      active: true }]          // optional: the bag being drawn from now
+//
+// A dice panel (dicePanel() in dice.js) has `dice: [4, null]` instead of
+// counts and drawn: each die's face, or null for one not rolled yet.
 //
 // game.marbles names and colours each marble: { W: { name, fill } }. A colour
 // scheme may override them with its own `marbles` (same shape), so marbles
@@ -29,7 +32,13 @@ export function renderChance(container, game, state, marbles = game.marbles) {
     const owner = panel.owner && game.players[panel.owner];
     const head = h("div", { class: "bag-title" },
       owner ? h("span", { class: "turn-stone", style: `background:${owner.fill}` }) : null,
-      panel.title || "Bag");
+      panel.title || (panel.dice ? "Die" : "Bag"));
+
+    if (panel.dice) {
+      const faces = panel.dice.map((v) => h("span", { class: "die" + (v == null ? " blank" : "") }, v == null ? "–" : String(v)));
+      container.append(h("div", { class: "bag" + (panel.active ? " active" : "") }, head, faces));
+      continue;
+    }
 
     const contents = h("div", { class: "bag-contents" },
       Object.entries(panel.counts || {}).map(([colour, n]) =>

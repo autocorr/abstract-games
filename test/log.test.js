@@ -18,6 +18,7 @@ test("describeMove defaults: cells, draws and labelled string moves", () => {
   const scheme = { marbles: { D: { name: "Umber", fill: "#000" } } };
   assert.equal(describeMove(bagTictactoe, state, "draw:D", null, scheme), "drew umber");
   assert.equal(describeMove(bagTictactoe, state, [0, 4], null), "a1–b2");
+  assert.equal(describeMove(bagTictactoe, state, "roll:4", null), "rolled 4");
   assert.equal(describeMove(bagTictactoe, state, "pass", null), "Pass");
   const labelled = { ...bagTictactoe, moveLabels: { pass: "No move" } };
   assert.equal(describeMove(labelled, state, "pass", null), "No move");
