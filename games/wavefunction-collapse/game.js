@@ -158,7 +158,8 @@ function pickPlayoutMove(s, rng) {
   return moves[randInt(rng, moves.length)];
 }
 
-const colourName = (c) => (c ? SQUARE[c] : "any");
+// "gray (white)", or "gray (any)" before any W or B has been drawn.
+const grayText = (s) => `gray (${s.colour ? MARBLES[s.colour].name.toLowerCase() : "any"})`;
 
 const game = {
   id: "wavefunction-collapse",
@@ -263,7 +264,7 @@ const game = {
     if (typeof move === "string") {
       if (move === PASS) return "pass";
       if (move.startsWith(SETUP)) return `back rank ${[...move.slice(SETUP.length)].join(" ")}`;
-      if (drawnColour(move) === "G") return `drew gray (${s.colour ? MARBLES[s.colour].name.toLowerCase() : "any"})`;
+      if (drawnColour(move) === "G") return `drew ${grayText(s)}`;
       return null;
     }
     const [from, to] = move;
@@ -284,15 +285,15 @@ const game = {
       return `${name} draws a marble…${gray}`;
     }
     const marble = s.bag.drawn[s.bag.drawn.length - 1];
-    const drew = marble === "G" ? `gray (${s.colour ? MARBLES[s.colour].name.toLowerCase() : "any"})` : MARBLES[marble].name.toLowerCase();
-    if (s.moves[0] === PASS) return `${name} drew ${drew}, but no checker on a ${colourName(s.colour)} square can move: pass.`;
+    const drew = marble === "G" ? grayText(s) : MARBLES[marble].name.toLowerCase();
+    if (s.moves[0] === PASS) return `${name} drew ${drew}, but no checker on a ${SQUARE[s.colour]} square can move: pass.`;
     return s.colour
-      ? `${name} drew ${drew}: move a checker on a ${colourName(s.colour)} square.`
+      ? `${name} drew ${drew}: move a checker on a ${SQUARE[s.colour]} square.`
       : `${name} drew ${drew}: move any checker.`;
   },
 
   moveLabel(s, move) {
-    return move === PASS ? `Pass (no ${colourName(s.colour)}-square move)` : null;
+    return move === PASS ? `Pass (no ${SQUARE[s.colour]}-square move)` : null;
   },
 
   scoreSummary(s, player) {
@@ -314,4 +315,4 @@ const game = {
 export default game;
 
 // For tests.
-export const internals = { generateMoves, captureAt, BACK_RANKS, WHITE, BLACK, PASS };
+export const internals = { BACK_RANKS, WHITE, BLACK, PASS };

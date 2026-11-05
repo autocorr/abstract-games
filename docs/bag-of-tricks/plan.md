@@ -143,7 +143,7 @@ The **move encoding** column shows plies in order. `[a,b]` is a cell move and
 
 | Game | Board | Bag(s) | Ply sequence for one turn | Extra UI | Options (from open questions) |
 | ---- | ----- | ------ | ------------------------- | -------- | ----------------------------- |
-| Wavefunction Collapse | 8×8, `checker` tags | 1 shared, 3W 3B 1G, refilled after 7 | `draw:X` → `[from,to]` (→ `swap:…` choice in variant) | discard row in draw order | gray-after-refill rule; stuck = lose / pass; variant on/off; who swaps |
+| Wavefunction Collapse | 8×8, `dark` tags | 1 shared, 3W 3B 1G, refilled after 7 | `setup:…` once, then `draw:X` → `[from,to]` or `"pass"` | discard row in draw order | none (variant set aside) |
 | Disperse | hex rhombus n×n, 3-colour tags, edge tags | 1 shared, one marble per cell, never refilled | `draw:X` → `[cell]` | per-colour counts (large bag) | size 9 / 11 / 12; swap rule; alternate rules (2-draw) |
 | Accrete | hex-hex | 1 shared, 3W 3B | `draw:X`… → `"stop"` / `"draw"` choices → `[cell]`×n | push-your-luck buttons; "n stones left" hint | bag 3W 3B / 4W 2B; board side |
 | Parity Inversion | hex-hex | 1 shared, 2W 2B, grows and shrinks | `draw:X` → `[cell]` | bag count changes shown | feedback direction; scoring rule; built only after rules are fixed |
@@ -208,11 +208,17 @@ The original steps:
    style.
 7. Update `ARCHITECTURE.md`: chance plies, the new hooks, the new modules.
 
-### Phase 1: Wavefunction Collapse (the reference game)
+### Phase 1: Wavefunction Collapse (done)
 
-This is the most complete ruleset, on the simplest board, and it uses every
-part of Phase 0. Build the base game first, then the bag-alteration variant
-as an option. Later games copy its structure.
+Done in `games/wavefunction-collapse/`, after the other games rather than as
+the reference game. It needed no shared changes. The rules decisions and the
+self-play trials are in `rules.md`: a random back rank as an opening chance
+ply (`setup:adeh`), a forced pass when the drawn colour cannot move, and no
+swap rule. The bag-alteration variant is set aside.
+
+The original plan: this is the most complete ruleset, on the simplest
+board, and it uses every part of Phase 0. Build the base game first, then
+the bag-alteration variant as an option. Later games copy its structure.
 
 ### Phase 2: games with complete or nearly complete rules
 

@@ -12,6 +12,7 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Liquefaction](games/liquefaction/)
 - [Nucleation](games/nucleation/)
 - [Bivalent](games/bivalent/)
+- [Wavefunction Collapse](games/wavefunction-collapse/)
 
 ## Running locally
 
