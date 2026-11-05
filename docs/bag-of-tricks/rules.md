@@ -26,7 +26,7 @@ revisited before that game is built.
 | -- | --------------------- | -------------------------- | --------------------- | -------------------------------------------------- | -------- |
 | 1  | Wavefunction Collapse | Hens and Chicks, Breakthrough | 8×8 chequered      | 1 draw/turn picks square colour; cycle and refill  | Complete |
 | 2  | Disperse              | Hex                        | Hex rhombus, 3 colours | Bag = one marble per cell, never refilled         | Draft    |
-| 3  | Accrete               | Catchup                    | Hex-hex               | Push-your-luck draws set the number of placements  | Draft    |
+| 3  | Accrete               | Catchup                    | Hex-hex               | Push-your-luck draws set the number of placements  | Draft (built as Coagulate, with a d4) |
 | 4  | Parity Inversion      | Odd                        | Hex-hex               | Draw picks stone colour; bag grows or shrinks with groups | Sketch |
 | 5  | Alpha Decay           | Chase, Lielow              | 8×8                   | Run of white draws picks the stack height to move  | Sketch   |
 | 6  | Recombination         | Lines of Action            | 8×8 (assumed)         | Per-player bag picks distance; black marble adds a checker | Draft |
@@ -269,6 +269,38 @@ push-your-luck fashion.
   cells, they place as many as fit.
 - **First-player advantage.** There is no balancing rule (Catchup has
   one). Unknown whether one is needed.
+
+### Coagulate (implemented)
+
+Built as **Coagulate**, a dice version of Accrete with its own rules, which
+settle the open questions above by replacing the bag.
+
+- **Materials:** a hex-hex board of side 4 to 7 (37, 61, 91 or 127 cells,
+  always odd), black and white stones, and one four-sided die (d4). The
+  board starts empty, and Black moves first.
+- **Rolling.** Roll the d4. The first roll of a turn always counts. You may
+  then stop or roll again. A re-roll counts if it is **greater than the roll
+  before it**, and you may again stop or roll. If it is **equal or lower**,
+  you bust: your turn ends with no stones placed. Counting rolls form a
+  strictly rising run, so at most 4 count (1, 2, 3, 4); after a 4 you must
+  stop.
+  - The prompt says a lower re-roll busts and a greater one counts; an
+    **equal** re-roll is not covered. It busts here, which keeps "greater"
+    strict and the maximum at 4.
+  - "Lower than the original roll" is read as lower than the previous
+    roll. Compared only with the first roll, a run of high re-rolls after a
+    1 would never end, and the stated maximum of 4 stones would not hold.
+- **Placement.** Stop, and place exactly as many stones as rolls counted,
+  one at a time, on empty cells. Placing the first stone is how you stop. If
+  fewer empty cells remain, fill them and the game ends.
+- **End.** The game ends when the board is full. Each player lists their
+  group sizes, largest first, and the lists are compared position by
+  position: the first larger group wins (as in Catchup and Nucleation). The
+  totals are odd and even, so the lists always differ and there are no
+  draws.
+- **Swap (option, on by default).** After Black's first turn, White may
+  swap before rolling: Black's stones become White's, and Black rolls next.
+  The swap is decided before White's die is seen, as in Nucleation.
 
 ---
 
