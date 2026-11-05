@@ -60,3 +60,10 @@ test("the swap hint passes the colour scheme through", () => {
   assert.equal(hinted.turnHint(state, scheme), "Move. Or swap sides and take over X.");
   assert.deepEqual(seen, [scheme]);
 });
+
+test("onSwap lets the game move on after a swap", () => {
+  const moved = withSwap(ttt, { onSwap: (s) => { s.note = "swapped"; } });
+  const { state: s } = replay(moved, {}, [[4], SWAP]);
+  assert.equal(s.note, "swapped");
+  assert.equal(s.swapped, true);
+});

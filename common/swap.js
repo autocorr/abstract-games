@@ -14,6 +14,8 @@
 // side then moves on as usual: after White swaps on move 2, White is still
 // to move, now played by the seat that opened as Black. `offer(state)` can
 // narrow when the swap is available; it is still offered at most once.
+// `onSwap(state)` runs after a swap, for a game that offers it at a ply of
+// its own (e.g. a decision before a die roll) and must move on from there.
 //
 // The wrapper adds two fields to the state: `swapped` (seats are crossed)
 // and `swapClosed` (the offer has been taken or declined).
@@ -30,7 +32,7 @@ function defaultOffer(game, s) {
   return game.toMove(s) === 2 && owner === 2;
 }
 
-export function withSwap(game, { offer = (s) => defaultOffer(game, s) } = {}) {
+export function withSwap(game, { offer = (s) => defaultOffer(game, s), onSwap = null } = {}) {
   const offered = (s) => !s.swapClosed && !game.outcome(s) && game.toMove(s) !== CHANCE && offer(s);
   return {
     ...game,
@@ -51,6 +53,7 @@ export function withSwap(game, { offer = (s) => defaultOffer(game, s) } = {}) {
       if (offered(s)) s.swapClosed = true;
       if (move === SWAP) {
         s.swapped = !s.swapped;
+        if (onSwap) onSwap(s);
         return null;
       }
       return game.applyMove(s, move);
