@@ -59,8 +59,8 @@ export function withSwap(game, { offer = (s) => defaultOffer(game, s) } = {}) {
       return s.swapped ? 3 - player : player;
     },
     swapOffered: offered,
-    turnHint(s) {
-      const hint = game.turnHint ? game.turnHint(s) : "";
+    turnHint(s, scheme) {
+      const hint = game.turnHint ? game.turnHint(s, scheme) : "";
       return offered(s) ? `${hint} Or swap sides and take over ${game.players[1].name}.`.trim() : hint;
     },
     // Custom playouts never swap; they run on the inner game.

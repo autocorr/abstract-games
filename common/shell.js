@@ -172,9 +172,7 @@ export function mount(game, { root = document.body } = {}) {
     onPlayer(p, v) { settings.players[p] = v; persist(); onPlayersChanged(); },
     onAiTime(v) { settings.aiTime = v; persist(); },
     onOption(key, v) {
-      settings.options = resolveOptions(game, { ...settings.options, [key]: v });
-      persist();
-      start(settings.options, []);
+      start({ ...settings.options, [key]: v }, []);
     },
     onScheme(v) {
       settings.scheme = v;
@@ -228,11 +226,13 @@ export function mount(game, { root = document.body } = {}) {
 
   // (Re)build the line for `options` and `moveList`, showing the position
   // after `at` plies. Illegal moves (e.g. from a hand-edited URL) truncate
-  // the line rather than failing.
+  // the line rather than failing. The options become the saved ones, so
+  // opening a link to a game on another board keeps that board in Setup.
   function start(options, moveList, at = moveList.length) {
     cancelAI();
     const opts = resolveOptions(game, options);
     settings.options = opts;
+    persist();
     for (const [k, control] of Object.entries(ui.optionControls)) {
       control.set(opts[k]);
       control.disable((v) => !optionAllowed(game, k, parseOption(game, k, v), opts));
@@ -324,7 +324,8 @@ export function mount(game, { root = document.body } = {}) {
   function undo() {
     if (!line.cursor) return;
     const humanAfter = (n) => isHumanAt(replay(game, settings.options, line.moves.slice(0, n), { board }).state);
-    seek(undoTarget(line, humanAfter));
+    const target = undoTarget(line, humanAfter);
+    if (target !== null) seek(target);
   }
 
   function onPlayersChanged() {

@@ -605,8 +605,9 @@ const game = {
     parts.push(s.board.chess.cls[kingSquare(s, s.turn)] === s.colour
       ? `The King must leave its ${colour} square.`
       : `The King may not move onto ${colour}.`);
-    const left = FIFTY_MOVE_PLIES - s.clock;
-    if (left <= 20) parts.push(`Draw in ${left} moves without a capture or pawn move.`);
+    // The rule counts plies; say it as moves each, like the rules do.
+    const left = Math.ceil((FIFTY_MOVE_PLIES - s.clock) / 2);
+    if (left <= 10) parts.push(`Draw in ${left} ${left === 1 ? "move" : "moves"} each without a capture or pawn move.`);
     return parts.join(" ");
   },
 

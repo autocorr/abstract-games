@@ -33,10 +33,11 @@ export function play(t, move) {
 }
 
 // Where Undo goes: the latest ply count before the cursor whose position is
-// a human decision (isHumanAt(n) for the position after n plies), or 0.
-// Chance plies before that decision are kept, so Undo never re-rolls them.
+// a human decision (isHumanAt(n) for the position after n plies), or null
+// if there is none (going back further would only reach positions where
+// nobody can act). Chance plies before that decision are kept, so Undo
+// never re-rolls them.
 export function undoTarget(t, isHumanAt) {
-  let n = t.cursor - 1;
-  while (n > 0 && !isHumanAt(n)) n--;
-  return Math.max(0, n);
+  for (let n = t.cursor - 1; n >= 0; n--) if (isHumanAt(n)) return n;
+  return null;
 }

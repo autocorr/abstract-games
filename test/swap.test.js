@@ -51,3 +51,12 @@ test("mcts credits the swap to the seat that makes it", () => {
   assert.equal(game.toMove(t), 1);
   assert.deepEqual(mcts(game, t, { iterations: 2000, rng: seededRng(1) }), [5]);
 });
+
+test("the swap hint passes the colour scheme through", () => {
+  const seen = [];
+  const hinted = withSwap({ ...ttt, turnHint: (s, scheme) => { seen.push(scheme); return "Move."; } });
+  const scheme = { name: "Test" };
+  const { state } = replay(hinted, {}, [[4]]);
+  assert.equal(hinted.turnHint(state, scheme), "Move. Or swap sides and take over X.");
+  assert.deepEqual(seen, [scheme]);
+});

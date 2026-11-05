@@ -253,3 +253,13 @@ test("log text uses algebraic notation", () => {
   assert.equal(describeMove(game, s, "fill:A", null, scheme), `added ${scheme.marbles.A.name.toLowerCase()}`);
   assert.equal(describeMove(game, s, "draw:A", null, scheme), `drew ${scheme.marbles.A.name.toLowerCase()}`);
 });
+
+test("the fifty-move countdown counts moves each, as the rules do", () => {
+  const s = position(6, { d1: "wK", d6: "bK", a1: "wN" });
+  s.clock = 80;   // 20 plies, 10 moves each, before the draw
+  assert.match(game.turnHint(s), /Draw in 10 moves each/);
+  s.clock = 99;
+  assert.match(game.turnHint(s), /Draw in 1 move each/);
+  s.clock = 70;
+  assert.doesNotMatch(game.turnHint(s), /Draw in/);
+});

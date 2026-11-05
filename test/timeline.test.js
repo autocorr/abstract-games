@@ -47,7 +47,10 @@ test("undoTarget: back to the previous human decision, keeping draws before it",
   assert.equal(undoTarget(timeline(line, 4), at), 3);
   assert.equal(undoTarget(timeline(line, 3), at), 0);
   assert.equal(undoTarget(timeline(line, 1), at), 0);
-  assert.equal(undoTarget(timeline(line, 0), at), 0);
-  // No human decision at all: back to the start.
-  assert.equal(undoTarget(timeline(line), () => false), 0);
+  assert.equal(undoTarget(timeline(line, 0), at), null);
+  // No human decision before the cursor (e.g. the human moves second and
+  // this is their first decision): nowhere to go.
+  assert.equal(undoTarget(timeline(line), () => false), null);
+  const second = new Set([1, 3]);
+  assert.equal(undoTarget(timeline(line, 1), (n) => second.has(n)), null);
 });
