@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { moveKey, parseMoveKey, sameMove, resolveOptions, optionAllowed } from "../common/engine.js";
+import { moveKey, parseMoveKey, sameMove, resolveOptions, optionAllowed, cachedBoards, choiceValues, parseChoice } from "../common/engine.js";
 import { seededRng, shuffle } from "../common/rng.js";
 
 test("moveKey / parseMoveKey round-trip", () => {
@@ -86,4 +86,21 @@ test("bag refills after the last marble is drawn", async () => {
   const game = (await import("./fixtures/bag-tictactoe.js")).default;
   const { state } = replay(game, {}, ["draw:D", [0], "draw:D", [4], "draw:L", [1], "draw:L", [3]]);
   assert.deepEqual(state.bag, { counts: { D: 2, L: 2 }, drawn: [] });
+});
+
+test("cachedBoards builds each keyed board once", () => {
+  let built = 0;
+  const create = cachedBoards((o) => o.size, ({ size }) => ({ size, n: ++built }));
+  const a = create({ size: 5, other: 1 });
+  assert.equal(create({ size: 5, other: 2 }), a);
+  assert.notEqual(create({ size: 7 }), a);
+  assert.equal(built, 2);
+});
+
+test("parseChoice matches values written as strings", () => {
+  const spec = { choices: [6, { value: 8, label: "8×8" }, "pinwheel"] };
+  assert.deepEqual(choiceValues(spec), [6, 8, "pinwheel"]);
+  assert.equal(parseChoice(spec, "8"), 8);
+  assert.equal(parseChoice(spec, "pinwheel"), "pinwheel");
+  assert.equal(parseChoice(spec, "9"), undefined);
 });

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateBoard, ray, lineLength, groupAt, liberties, opposite, gridName, fillsRectangle } from "../common/board/graph.js";
+import { validateBoard, ray, lineLength, groupAt, liberties, opposite, gridName, fillsRectangle, goalMasks, connectsSides } from "../common/board/graph.js";
 import { squareBoard } from "../common/board/square.js";
 import { rhombusBoard, hexHexBoard } from "../common/board/hex.js";
 
@@ -123,4 +123,19 @@ test("fillsRectangle: square grids fill their bounds, hex boards do not", () => 
   assert.equal(fillsRectangle(squareBoard({ cols: 7, style: "points" })), true);
   assert.equal(fillsRectangle(rhombusBoard(5)), false);
   assert.equal(fillsRectangle(hexHexBoard(3)), false);
+});
+
+test("goalMasks and connectsSides: a chain between a player's two sides", () => {
+  const b = squareBoard({ cols: 4 });
+  const goal = goalMasks(b, { 1: { sides: ["N", "S"] }, 2: { sides: ["W", "E"] } });
+  assert.equal(goal[1][b.at(0, 0)], 2);   // a1: on S, Black's second side
+  assert.equal(goal[2][b.at(0, 0)], 1);   // and on W, White's first
+  assert.equal(goal[1][b.at(1, 1)], 0);
+  const cells = new Uint8Array(b.size);
+  for (const row of [0, 1, 2]) cells[b.at(1, row)] = 1;
+  assert.equal(connectsSides(b, cells, b.at(1, 0), goal[1]), false);
+  cells[b.at(1, 3)] = 1;
+  assert.equal(connectsSides(b, cells, b.at(1, 0), goal[1]), true);
+  cells[b.at(1, 2)] = 2;   // cut by the other colour
+  assert.equal(connectsSides(b, cells, b.at(1, 0), goal[1]), false);
 });

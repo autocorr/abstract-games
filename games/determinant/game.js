@@ -19,8 +19,9 @@
 // trade sides, taking Black's opening stone; the bag is unchanged.
 
 import { squareBoard } from "../../common/board/square.js";
-import { makeBag, cloneBag, drawOutcomes, drawMarble, addMarbles } from "../../common/bag.js";
-import { CHANCE } from "../../common/engine.js";
+import { goalMasks, connectsSides } from "../../common/board/graph.js";
+import { makeBag, cloneBag, drawOutcomes, drawMarble, addMarbles, bagPanel } from "../../common/bag.js";
+import { CHANCE, cachedBoards } from "../../common/engine.js";
 import { withSwap } from "../../common/swap.js";
 
 const BLACK = 1, WHITE = 2;
@@ -45,8 +46,6 @@ function stars(n) {
   return out;
 }
 
-const boards = new Map();
-
 function buildBoard(n) {
   const board = squareBoard({ cols: n, style: "points", stars: stars(n) });
   // patches[p] = [a, b, c, d]: a = (col, row), b = east of a, c = north of a,
@@ -60,12 +59,7 @@ function buildBoard(n) {
       board.patches.push(quad);
     }
   }
-  // goalSide[p][id]: bit 1 = on the player's first side, 2 = on the second.
-  board.goalSide = {};
-  for (const [p, { sides }] of Object.entries(PLAYERS)) {
-    board.goalSide[p] = Uint8Array.from(board.cells, (c) =>
-      (c.tags.edges.includes(sides[0]) ? 1 : 0) | (c.tags.edges.includes(sides[1]) ? 2 : 0));
-  }
+  board.goal = goalMasks(board, PLAYERS);
   return board;
 }
 
@@ -86,34 +80,11 @@ function flippable(s) {
   return [...out].sort((a, b) => a - b);
 }
 
-// Does the orthogonal group containing `id` touch both of its owner's sides?
-function connects(s, id) {
-  const { board, cells } = s;
-  const player = cells[id];
-  const goal = board.goalSide[player];
-  const seen = new Uint8Array(board.size);
-  const stack = [id];
-  seen[id] = 1;
-  let touched = 0;
-  while (stack.length) {
-    const cur = stack.pop();
-    touched |= goal[cur];
-    if (touched === 3) return true;
-    for (const n of board.neighbours[cur]) {
-      if (!seen[n] && cells[n] === player) {
-        seen[n] = 1;
-        stack.push(n);
-      }
-    }
-  }
-  return false;
-}
-
 // End of turn: only stones that changed colour this turn can complete a
 // connection (a player already connected would have won earlier).
 function endTurn(s) {
   for (const id of [s.placed, ...s.flipped]) {
-    if (connects(s, id)) {
+    if (connectsSides(s.board, s.cells, id, s.board.goal[s.cells[id]])) {
       s.winner = s.cells[id];
       break;
     }
@@ -134,10 +105,7 @@ export default withSwap({
     size: { label: "Board size", choices: SIZES, default: 11 },
   },
 
-  createBoard({ size }) {
-    if (!boards.has(size)) boards.set(size, buildBoard(size));
-    return boards.get(size);
-  },
+  createBoard: cachedBoards((o) => o.size, ({ size }) => buildBoard(size)),
   initialState(board) {
     return {
       board,
@@ -230,7 +198,7 @@ export default withSwap({
   },
 
   chanceView(s) {
-    return [{ title: "Bag", counts: s.bag.counts, drawn: s.bag.drawn, active: s.phase === "draw" && !s.winner }];
+    return [bagPanel(s.bag, { active: s.phase === "draw" && !s.winner })];
   },
   // Ring on this turn's placed and replaced stones; while resolving, target
   // dots on the stones that may be replaced.

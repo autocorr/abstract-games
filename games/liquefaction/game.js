@@ -23,9 +23,10 @@
 // land on it, and otherwise follows chess. 100 plies by the players without a
 // capture or pawn move is a draw. See docs/bag-of-tricks/rules.md.
 
-import { squareBoard } from "../../common/board/square.js";
-import { makeBag, cloneBag, drawOutcomes, drawMarble, addMarbles, bagSize } from "../../common/bag.js";
-import { CHANCE, pickWeighted } from "../../common/engine.js";
+import { squareBoard, DIRS8, ORTHOGONAL, DIAGONAL } from "../../common/board/square.js";
+import { ray } from "../../common/board/graph.js";
+import { makeBag, cloneBag, drawOutcomes, drawMarble, addMarbles, bagSize, bagPanel } from "../../common/bag.js";
+import { CHANCE, pickWeighted, cachedBoards } from "../../common/engine.js";
 
 const WHITE = 1, BLACK = 2;
 const PLAYERS = {
@@ -93,30 +94,22 @@ const PIECE_URL = Object.fromEntries([WHITE, BLACK].flatMap((p) => [P, N, B, R, 
 // ---- board geometry ------------------------------------------------------
 
 const KNIGHT = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]];
-const KING = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
-const ORTH = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-const DIAG = [[1, 1], [-1, 1], [-1, -1], [1, -1]];
 
-const boards = new Map();
 const LAST_MOVE = "rgba(14, 15, 19, 0.75)";
 
+// Move tables per square, precomputed for speed: leaper targets, and slider
+// rays (directions of square.js's DIRS8) out to the edge.
 function buildBoard(size) {
   const board = squareBoard({ cols: size, grid: false });
   const n = size;
-  const id = (c, r) => (c >= 0 && c < n && r >= 0 && r < n ? r * n + c : -1);
-  const leaps = (deltas) => board.cells.map(({ coord: { col, row } }) =>
-    deltas.map(([dc, dr]) => id(col + dc, row + dr)).filter((x) => x >= 0));
-  const rays = (deltas) => board.cells.map(({ coord: { col, row } }) => deltas.map(([dc, dr]) => {
-    const out = [];
-    for (let c = col + dc, r = row + dr; id(c, r) >= 0; c += dc, r += dr) out.push(id(c, r));
-    return out;
-  }).filter((ray) => ray.length));
+  const onBoard = (ids) => ids.filter((t) => t >= 0);
+  const rays = (dirs) => board.cells.map((c) => dirs.map((d) => ray(board, c.id, d)).filter((r) => r.length));
   board.chess = {
     n,
-    knight: leaps(KNIGHT),
-    king: leaps(KING),
-    orth: rays(ORTH),
-    diag: rays(DIAG),
+    knight: board.cells.map(({ coord: { col, row } }) => onBoard(KNIGHT.map(([dc, dr]) => board.at(col + dc, row + dr)))),
+    king: board.cells.map((c) => onBoard(DIRS8.map((_, d) => board.step(c.id, d)))),
+    orth: rays(ORTHOGONAL),
+    diag: rays(DIAGONAL),
     cls: board.cells.map((c) => CLASSES[c.tags.quad]),
     col: board.cells.map((c) => c.coord.col),
     row: board.cells.map((c) => c.coord.row),
@@ -223,7 +216,9 @@ function pseudoMoves(s, player) {
 // Castling rights: bit 1 White short, 2 White long, 4 Black short, 8 Black long.
 const CASTLE_BITS = { [WHITE]: [1, 2], [BLACK]: [4, 8] };
 
-function castlingMoves(s, player, colour) {
+// Castling moves for `player`, who is not colour-checked (generateMoves
+// rules that out first).
+function castlingMoves(s, player) {
   const geo = s.board.chess, cells = s.cells, n = geo.n;
   if (!geo.big) return [];
   const [shortBit, longBit] = CASTLE_BITS[player];
@@ -232,7 +227,6 @@ function castlingMoves(s, player, colour) {
   const at = (c) => row * n + c;
   const king = at(4);
   if (cells[king] !== make(K, player)) return [];
-  if (geo.cls[king] === colour) return [];               // colour-checked: may not castle
   const enemy = other(player);
   if (attacked(geo, cells, king, enemy)) return [];      // in check
   const out = [];
@@ -256,7 +250,7 @@ function generateMoves(s, player, colour) {
   const colourChecked = geo.cls[kingAt] === colour;
   const enemy = other(player);
   const out = [];
-  const candidates = colourChecked ? [] : castlingMoves(s, player, colour);
+  const candidates = colourChecked ? [] : castlingMoves(s, player);
   for (const m of pseudoMoves(s, player)) candidates.push(m);
   for (const m of candidates) {
     const [from, to] = m;
@@ -399,10 +393,7 @@ const game = {
   colorSchemes,
   moveLabels: Object.fromEntries(PROMOTIONS.map((t) => [PROMOTE + t, `Promote to ${NAMES[t]}`])),
 
-  createBoard({ size }) {
-    if (!boards.has(size)) boards.set(size, buildBoard(size));
-    return boards.get(size);
-  },
+  createBoard: cachedBoards((o) => o.size, ({ size }) => buildBoard(size)),
 
   initialState(board, opts) {
     const n = board.chess.n;
@@ -584,12 +575,10 @@ const game = {
   },
 
   chanceView(s) {
-    return [{
+    return [bagPanel(s.bag, {
       title: s.phase === "setup" ? "Bag (filling)" : "Bag",
-      counts: s.bag.counts,
-      drawn: s.bag.drawn,
       active: s.winner === null && (s.phase === "draw" || s.phase === "setup"),
-    }];
+    })];
   },
 
   turnHint(s, scheme) {

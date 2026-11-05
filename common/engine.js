@@ -101,6 +101,18 @@ export function resolveOptions(game, given = {}) {
   return out;
 }
 
+// A createBoard(opts) that builds each board once: boards depend only on
+// the options (those that `keyOf(opts)` names) and games never mutate them,
+// so positions and replays can share them.
+export function cachedBoards(keyOf, build) {
+  const boards = new Map();
+  return (opts) => {
+    const key = keyOf(opts);
+    if (!boards.has(key)) boards.set(key, build(opts));
+    return boards.get(key);
+  };
+}
+
 // Build the starting position for a set of options. Pass `board` to reuse a
 // board already built for the same options.
 export function newGame(game, options = {}, board = null) {

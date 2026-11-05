@@ -113,6 +113,11 @@ export function replaceDrawn(bag, from, to) {
   return true;
 }
 
+// The chanceView panel showing `bag` (see chance-view.js).
+export function bagPanel(bag, { title = "Bag", active = false } = {}) {
+  return { title, counts: bag.counts, drawn: bag.drawn, active };
+}
+
 // Compact notation used by the booklet: "3W 3B 1G" (zero counts omitted).
 export function formatCounts(counts) {
   return Object.entries(counts).filter(([, n]) => n > 0).map(([c, n]) => `${n}${c}`).join(" ");

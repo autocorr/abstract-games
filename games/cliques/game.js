@@ -43,6 +43,8 @@
 // Swap (pie rule, common/swap.js): White may swap sides on their first turn.
 
 import { hexHexBoard, DIRS6 } from "../../common/board/hex.js";
+import { ray } from "../../common/board/graph.js";
+import { cachedBoards } from "../../common/engine.js";
 import { withSwap } from "../../common/swap.js";
 import { shuffle } from "../../common/rng.js";
 
@@ -63,8 +65,6 @@ export const minimumAllowed = (min, { size, start }) => min <= (MAX_MIN[size]?.[
 // otherwise at least the minimum.
 const required = (s, before) => (before < s.min ? before + 1 : s.min);
 
-const boards = new Map();
-
 function buildBoard(side) {
   const board = hexHexBoard(side);
   // Corners in direction order round the board (0 = east, then anticlockwise
@@ -72,11 +72,7 @@ function buildBoard(side) {
   const m = side - 1;
   board.corners = DIRS6.map(([dq, dr]) => board.at(m * dq, m * dr));
   // rays[id][d]: the cells from id (exclusive) in direction d to the edge.
-  board.rays = board.cells.map((c) => DIRS6.map((_, d) => {
-    const out = [];
-    for (let n = board.step(c.id, d); n >= 0; n = board.step(n, d)) out.push(n);
-    return out;
-  }));
+  board.rays = board.cells.map((c) => DIRS6.map((_, d) => ray(board, c.id, d)));
   return board;
 }
 
@@ -373,10 +369,7 @@ export default withSwap({
     },
   },
 
-  createBoard({ size }) {
-    if (!boards.has(size)) boards.set(size, buildBoard(size));
-    return boards.get(size);
-  },
+  createBoard: cachedBoards((o) => o.size, ({ size }) => buildBoard(size)),
   initialState(board, { min, start }) {
     const cells = new Uint8Array(board.size);
     if (start === "corners") board.corners.forEach((id, d) => { cells[id] = d % 2 ? WHITE : BLACK; });

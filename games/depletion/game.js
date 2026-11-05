@@ -10,8 +10,9 @@
 // Each player's edges are marked in their colour.
 
 import { rhombusBoard, rhombusSides } from "../../common/board/hex.js";
-import { makeBag, cloneBag, drawOutcomes, drawMarble, lastDrawn, isEmpty, returnDrawn } from "../../common/bag.js";
-import { CHANCE } from "../../common/engine.js";
+import { goalMasks, connectsSides } from "../../common/board/graph.js";
+import { makeBag, cloneBag, drawOutcomes, drawMarble, lastDrawn, isEmpty, returnDrawn, bagPanel } from "../../common/bag.js";
+import { CHANCE, cachedBoards } from "../../common/engine.js";
 import { LAYOUTS, makeRegions } from "./regions.js";
 
 // Marble colours in the order regions use them.
@@ -39,9 +40,6 @@ function mix(hex, base, t) {
 }
 const tint = (t) => (cell) => mix(COLOURS[cell.tags.region].fill, "#f3ecdd", t);
 
-// Boards depend only on the options and are never mutated, so share them.
-const boards = new Map();
-
 function buildBoard({ size, colours, layout }) {
   const board = rhombusBoard(size, { rotate: -30 });
   const region = makeRegions(board, colours, layout);
@@ -50,35 +48,8 @@ function buildBoard({ size, colours, layout }) {
     c.tags.region = region[c.id];
     board.regionCells[region[c.id]].push(c.id);
   }
-  // goalSide[p][id]: bit 1 = on the player's first side, 2 = on the second.
-  board.goalSide = {};
-  for (const [p, { sides }] of Object.entries(PLAYERS)) {
-    board.goalSide[p] = Uint8Array.from(board.cells, (c) =>
-      (c.tags.edges.includes(sides[0]) ? 1 : 0) | (c.tags.edges.includes(sides[1]) ? 2 : 0));
-  }
+  board.goal = goalMasks(board, PLAYERS);
   return board;
-}
-
-// Does the group of `player` stones containing `id` touch both goal sides?
-function connects(state, id, player) {
-  const { board, cells } = state;
-  const goal = board.goalSide[player];
-  const seen = new Uint8Array(board.size);
-  const stack = [id];
-  seen[id] = 1;
-  let touched = 0;
-  while (stack.length) {
-    const cur = stack.pop();
-    touched |= goal[cur];
-    if (touched === 3) return true;
-    for (const n of board.neighbours[cur]) {
-      if (!seen[n] && cells[n] === player) {
-        seen[n] = 1;
-        stack.push(n);
-      }
-    }
-  }
-  return false;
 }
 
 const colourOf = (state) => COLOURS[COLOUR_INDEX[lastDrawn(state.bag)]];
@@ -104,11 +75,7 @@ export default {
     vivid: { name: "Vivid", cellFill: tint(0.3) },
   },
 
-  createBoard(opts) {
-    const key = `${opts.size}/${opts.colours}/${opts.layout}`;
-    if (!boards.has(key)) boards.set(key, buildBoard(opts));
-    return boards.get(key);
-  },
+  createBoard: cachedBoards((o) => `${o.size}/${o.colours}/${o.layout}`, buildBoard),
   initialState(board, opts) {
     const counts = Object.fromEntries(COLOURS.slice(0, opts.colours).map((c) => [c.key, 1]));
     return { board, cells: new Uint8Array(board.size), turn: 1, phase: "draw", bag: makeBag(counts), winner: null };
@@ -141,7 +108,7 @@ export default {
     if (move !== "pass") {
       const id = move[0];
       s.cells[id] = s.turn;
-      if (connects(s, id, s.turn)) s.winner = s.turn;
+      if (connectsSides(s.board, s.cells, id, s.board.goal[s.turn])) s.winner = s.turn;
     }
     s.turn = 3 - s.turn;
     s.phase = "draw";
@@ -153,7 +120,7 @@ export default {
   },
 
   chanceView(s) {
-    return [{ title: "Bag", counts: s.bag.counts, drawn: s.bag.drawn, active: s.phase === "draw" && !s.winner }];
+    return [bagPanel(s.bag, { active: s.phase === "draw" && !s.winner })];
   },
   turnHint(s) {
     if (s.winner) return "";
