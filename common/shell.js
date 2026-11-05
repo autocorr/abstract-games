@@ -4,6 +4,7 @@
 // history, undo and the URL hash.
 
 import { createRenderer, rotatedViewBox, viewBoxAspect } from "./render.js";
+import { fillsRectangle } from "./board/graph.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
 import { h, svgEl, escapeHtml, section } from "./ui/dom.js";
@@ -30,19 +31,6 @@ const WIDE_QUERY = "(orientation: landscape) and (min-width: 560px), (min-width:
 // On one-column layouts the board leaves this much of the viewport below it,
 // so the top of the turn card stays in view.
 const NARROW_RESERVE_PX = 110;
-
-// Does the board's cells' area fill its bounding box (a square grid)?
-function fillsRectangle(board) {
-  const { minX, minY, maxX, maxY } = board.bounds;
-  let area = 0;
-  for (const { poly } of board.cells) {
-    for (let i = 0; i < poly.length; i++) {
-      const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length];
-      area += x1 * y2 - x2 * y1;
-    }
-  }
-  return Math.abs(area) / 2 >= 0.98 * (maxX - minX) * (maxY - minY);
-}
 
 const startsWith = (move, prefix) => prefix.every((id, i) => move[i] === id);
 

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateBoard, ray, lineLength, groupAt, liberties, opposite } from "../common/board/graph.js";
-import { squareBoard, squareName } from "../common/board/square.js";
+import { validateBoard, ray, lineLength, groupAt, liberties, opposite, gridName, fillsRectangle } from "../common/board/graph.js";
+import { squareBoard } from "../common/board/square.js";
 import { rhombusBoard, hexHexBoard } from "../common/board/hex.js";
 
 test("square board: coordinates, names and colour tags", () => {
@@ -11,7 +11,7 @@ test("square board: coordinates, names and colour tags", () => {
   const a1 = b.at(0, 0), h8 = b.at(7, 7);
   assert.equal(b.cells[a1].tags.name, "a1");
   assert.equal(b.cells[h8].tags.name, "h8");
-  assert.equal(squareName(3, 1), "d2");
+  assert.equal(gridName(3, 1), "d2");
   assert.ok(b.cells[a1].y > b.cells[h8].y, "rank 1 is drawn at the bottom");
   assert.equal(b.cells[a1].tags.dark, true);
   assert.equal(b.cells[b.at(1, 0)].tags.dark, false);
@@ -116,4 +116,11 @@ test("hex-hex: a1-style names from the top-left", () => {
   assert.equal(b.cells[b.at(-2, 0)].tags.name, "a3");   // west corner
   assert.equal(b.cells[b.at(0, 0)].tags.name, "c3");    // centre
   assert.equal(new Set(b.cells.map((c) => c.tags.name)).size, b.size);
+});
+
+test("fillsRectangle: square grids fill their bounds, hex boards do not", () => {
+  assert.equal(fillsRectangle(squareBoard({ cols: 5 })), true);
+  assert.equal(fillsRectangle(squareBoard({ cols: 7, style: "points" })), true);
+  assert.equal(fillsRectangle(rhombusBoard(5)), false);
+  assert.equal(fillsRectangle(hexHexBoard(3)), false);
 });

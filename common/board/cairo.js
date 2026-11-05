@@ -12,17 +12,10 @@
 // Tags: tone (pentagon orientation), colour (if given with the centre), and
 // name ("1".."n" in reading order, for the move log).
 
-import { makeBoard, rotatePoint } from "./graph.js";
+import { makeBoard, rotatePoint, pointKey } from "./graph.js";
 
 const EPS = 1e-3;
 const S = (1 + Math.sqrt(3)) / 2;   // spacing of the square-centre lattice
-
-// Rounded position key; adding 0 turns -0 into +0 so float noise around zero
-// cannot split one vertex into two entries.
-function roundKey([x, y]) {
-  const r = (v) => Math.round(v * 1e4) / 1e4 + 0;
-  return r(x) + "," + r(y);
-}
 
 function unitApart(p, q) {
   return Math.abs(Math.hypot(p[0] - q[0], p[1] - q[1]) - 1) < EPS;
@@ -44,7 +37,7 @@ function snubSquareVertices(radius) {
       for (const corner of [[0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5], [0.5, -0.5]]) {
         const [dx, dy] = rotatePoint(corner, d);
         const p = [cx + dx, cy + dy];
-        const key = roundKey(p);
+        const key = pointKey(p);
         if (!points.has(key)) points.set(key, p);
       }
     }

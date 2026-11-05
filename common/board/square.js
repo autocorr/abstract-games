@@ -15,17 +15,11 @@
 //   0 E, 1 NE, 2 N, 3 NW, 4 W, 5 SW, 6 S, 7 SE
 // Orthogonal directions are the even indices, diagonal the odd ones.
 
-import { makeBoard, attachGrid } from "./graph.js";
+import { makeBoard, attachGrid, gridName } from "./graph.js";
 
 export const DIRS8 = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
 export const ORTHOGONAL = [0, 2, 4, 6];
 export const DIAGONAL = [1, 3, 5, 7];
-
-const FILES = "abcdefghijklmnopqrstuvwxyz";
-
-export function squareName(col, row) {
-  return FILES[col] + (row + 1);
-}
 
 // Build a cols x rows board.
 //
@@ -51,7 +45,7 @@ export function squareBoard({ cols, rows = cols, adjacency = "orth", style = "ce
         x, y,
         poly: [[x - 0.5, y - 0.5], [x + 0.5, y - 0.5], [x + 0.5, y + 0.5], [x - 0.5, y + 0.5]],
         coord: { col, row },
-        tags: { name: squareName(col, row), dark: (col + row) % 2 === 0, quad: (col % 2) + 2 * (row % 2), edges },
+        tags: { name: gridName(col, row), dark: (col + row) % 2 === 0, quad: (col % 2) + 2 * (row % 2), edges },
       });
     }
   }

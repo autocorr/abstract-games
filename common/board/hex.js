@@ -13,12 +13,11 @@
 // steps going round from east, so opposite(board, d) = (d + 3) % 6:
 //   0 E, 1 NE, 2 NW, 3 W, 4 SW, 5 SE
 
-import { makeBoard, attachGrid, rotatePoint } from "./graph.js";
+import { makeBoard, attachGrid, rotatePoint, gridName } from "./graph.js";
 
 export const DIRS6 = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
 
 const SQRT3 = Math.sqrt(3);
-const FILES = "abcdefghijklmnopqrstuvwxyz";
 
 function hexCell(q, r, tags) {
   const x = SQRT3 * (q + r / 2), y = 1.5 * r;
@@ -57,7 +56,7 @@ export function rhombusBoard(n, { rotate = 0 } = {}) {
       if (r === n - 1) edges.push("S");
       if (q === 0) edges.push("W");
       if (q === n - 1) edges.push("E");
-      specs.push(hexCell(q, r, { edges, name: FILES[q] + (r + 1) }));
+      specs.push(hexCell(q, r, { edges, name: gridName(q, r) }));
     }
   }
   const board = finish(specs, rotate);
@@ -77,7 +76,7 @@ export function hexHexBoard(side, { rotate = 0 } = {}) {
       const off = DIRS6.map(([dq, dr]) => !inside(q + dq, r + dr));
       const edges = [];
       for (let d = 0; d < 6; d++) if (off[d] && off[(d + 1) % 6]) edges.push(d);
-      specs.push(hexCell(q, r, { edges, name: FILES[q + m] + (r + m + 1) }));
+      specs.push(hexCell(q, r, { edges, name: gridName(q + m, r + m) }));
     }
   }
   const board = finish(specs, rotate);

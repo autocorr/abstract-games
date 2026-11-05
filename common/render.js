@@ -7,12 +7,17 @@
 // (board.dots); the cells stay as invisible-edged click targets.
 //
 // setBoard() can turn the whole drawing by a display rotation (e.g. 90
-// degrees to fit a wide board on a portrait screen, or any angle a game asks for). Rules never see it; piece
-// shadows and labels stay upright.
+// degrees to fit a wide board on a portrait screen, or any angle a game
+// asks for). Rules never see it; piece shadows and labels stay upright.
 
 import { svgEl } from "./ui/dom.js";
+import { round4, edgeKey, rotatePoint } from "./board/graph.js";
 
-const pointsAttr = (poly) => poly.map(([x, y]) => `${+x.toFixed(4)},${+y.toFixed(4)}`).join(" ");
+const pointsAttr = (poly) => poly.map(([x, y]) => `${round4(x)},${round4(y)}`).join(" ");
+
+// Path data for line segments [[[x1, y1], [x2, y2]], ...].
+const segmentsPath = (segments) =>
+  segments.map(([[x1, y1], [x2, y2]]) => `M${round4(x1)} ${round4(y1)}L${round4(x2)} ${round4(y2)}`).join("");
 
 const DEFAULT_CELL_FILL = "#ffd890";
 const CELL_STROKE = "#3a3f4a";
@@ -29,38 +34,33 @@ export function rotatedViewBox(board, deg) {
   if (!deg) return board.viewBox;
   const [vx] = board.viewBox.split(" ").map(Number);
   const pad = board.bounds.minX - vx;
-  const a = (deg * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const cell of board.cells) {
-    for (const [x, y] of cell.poly) {
-      const rx = x * c - y * s, ry = x * s + y * c;
+    for (const p of cell.poly) {
+      const [rx, ry] = rotatePoint(p, deg);
       if (rx < minX) minX = rx;
       if (ry < minY) minY = ry;
       if (rx > maxX) maxX = rx;
       if (ry > maxY) maxY = ry;
     }
   }
-  const f = (v) => +v.toFixed(4);
-  return [minX - pad, minY - pad, maxX - minX + 2 * pad, maxY - minY + 2 * pad].map(f).join(" ");
+  return [minX - pad, minY - pad, maxX - minX + 2 * pad, maxY - minY + 2 * pad].map(round4).join(" ");
 }
 
 // The board's outer edge as an SVG path: every cell edge that no other cell
 // shares.
 export function perimeterPath(board) {
-  const key = ([x, y]) => `${Math.round(x * 1e4)},${Math.round(y * 1e4)}`;
   const count = new Map();
   const edges = [];
   for (const { poly } of board.cells) {
     for (let i = 0; i < poly.length; i++) {
       const a = poly[i], b = poly[(i + 1) % poly.length];
-      const k = [key(a), key(b)].sort().join("|");
+      const k = edgeKey(a, b);
       count.set(k, (count.get(k) || 0) + 1);
       edges.push([k, a, b]);
     }
   }
-  const f = (v) => +v.toFixed(4);
-  return edges.filter(([k]) => count.get(k) === 1)
-    .map(([, [x1, y1], [x2, y2]]) => `M${f(x1)} ${f(y1)}L${f(x2)} ${f(y2)}`).join("");
+  return segmentsPath(edges.filter(([k]) => count.get(k) === 1).map(([, a, b]) => [a, b]));
 }
 
 // Width / height of a viewBox string.
@@ -105,12 +105,11 @@ export function createRenderer(svg) {
 
     // The shadow offset is in the rotated frame: turn it back so shadows
     // always fall down the screen.
-    const a = (-rotate * Math.PI) / 180;
-    const [sx, sy] = [0.03 * u, 0.09 * u];
+    const [dx, dy] = rotatePoint([0.03 * u, 0.09 * u], -rotate);
     const defs = svgEl("defs");
     const filter = svgEl("filter", { id: shadowId, x: "-60%", y: "-60%", width: "220%", height: "220%" });
     filter.appendChild(svgEl("feDropShadow", {
-      dx: +(sx * Math.cos(a) - sy * Math.sin(a)).toFixed(5), dy: +(sx * Math.sin(a) + sy * Math.cos(a)).toFixed(5),
+      dx: +dx.toFixed(5), dy: +dy.toFixed(5),
       stdDeviation: 0.1 * u, "flood-color": "#000", "flood-opacity": 0.5,
     }));
     defs.appendChild(filter);
@@ -140,11 +139,9 @@ export function createRenderer(svg) {
     // board colour rather than the page behind it.
     surface = null;
     if (points) {
-      const xs = board.cells.flatMap((c) => c.poly.map((p) => p[0]));
-      const ys = board.cells.flatMap((c) => c.poly.map((p) => p[1]));
-      const x = Math.min(...xs), y = Math.min(...ys);
+      const { minX, minY, maxX, maxY } = board.bounds;
       surface = svgEl("rect", {
-        x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y,
+        x: minX, y: minY, width: maxX - minX, height: maxY - minY,
         fill: cellFill(board.cells[0]), "pointer-events": "none",
       });
       root.appendChild(surface);
@@ -188,8 +185,7 @@ export function createRenderer(svg) {
     if (decor.length) {
       const g = svgEl("g", { "pointer-events": "none", "stroke-linecap": "round", fill: "none" });
       for (const { segments, stroke, halo, width = 0.1 } of decor) {
-        const d = segments.map(([[x1, y1], [x2, y2]]) =>
-          `M${+x1.toFixed(4)} ${+y1.toFixed(4)}L${+x2.toFixed(4)} ${+y2.toFixed(4)}`).join("");
+        const d = segmentsPath(segments);
         if (halo) g.appendChild(svgEl("path", { d, stroke: halo, "stroke-width": (width + 0.08) * u }));
         g.appendChild(svgEl("path", { d, stroke, "stroke-width": width * u }));
       }

@@ -6,14 +6,19 @@
 
 const KEY_SCALE = 1e4;
 
-// Round to 1e-4 so float noise in shared vertices coincides; adding 0 turns
-// the -0 produced by rounding tiny negatives into +0.
-function pointKey([x, y]) {
+// A coordinate rounded to 4 decimals, for viewBoxes and SVG attributes.
+export const round4 = (v) => +v.toFixed(4);
+
+// Key of a point rounded to 1e-4, so float noise in shared vertices
+// coincides; adding 0 turns the -0 produced by rounding tiny negatives
+// into +0.
+export function pointKey([x, y]) {
   const r = (v) => Math.round(v * KEY_SCALE) / KEY_SCALE + 0;
   return r(x) + "," + r(y);
 }
 
-function edgeKey(a, b) {
+// Key of the undirected edge a-b (the same either way round).
+export function edgeKey(a, b) {
   const ka = pointKey(a), kb = pointKey(b);
   return ka < kb ? ka + "|" + kb : kb + "|" + ka;
 }
@@ -80,10 +85,28 @@ export function makeBoard(cellSpecs, { neighbours, pad = 0.15 } = {}) {
     }
   }
   const p = pad * unit;
-  const f = (v) => +v.toFixed(4);
-  const viewBox = [minX - p, minY - p, maxX - minX + 2 * p, maxY - minY + 2 * p].map(f).join(" ");
+  const viewBox = [minX - p, minY - p, maxX - minX + 2 * p, maxY - minY + 2 * p].map(round4).join(" ");
 
   return { cells, neighbours: nbrs, size: cells.length, unit, bounds: { minX, minY, maxX, maxY }, viewBox };
+}
+
+// Does the cells' area fill the board's bounding box (a square grid)?
+export function fillsRectangle(board) {
+  const { minX, minY, maxX, maxY } = board.bounds;
+  let area = 0;
+  for (const { poly } of board.cells) {
+    for (let i = 0; i < poly.length; i++) {
+      const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length];
+      area += x1 * y2 - x2 * y1;
+    }
+  }
+  return Math.abs(area) / 2 >= 0.98 * (maxX - minX) * (maxY - minY);
+}
+
+// "a1"-style cell name for grid generators: file letter from `col`, rank
+// number from `row` (both from 0).
+export function gridName(col, row) {
+  return "abcdefghijklmnopqrstuvwxyz"[col] + (row + 1);
 }
 
 // Connected components of the cells for which `include(id)` is true, each as
@@ -139,7 +162,8 @@ export function validateBoard(board) {
 // The helpers below work on any board that has them.
 
 // Attach `at`, `step` and `dirs` to a board whose cells have coords that
-// `keyOf(coord)` turns into a unique string.
+// `coordKey(coord)` turns into a unique string; `coordStep(coord, dir)` is
+// the coord one step in direction `dir`.
 export function attachGrid(board, dirs, coordKey, coordStep) {
   const index = new Map(board.cells.map((c) => [coordKey(c.coord), c.id]));
   board.dirs = dirs;
