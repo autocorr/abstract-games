@@ -262,6 +262,10 @@ Dice games use the same `CHANCE` plies (`"roll:4"`, or `"roll:3-5"` for a
 pair whose order doesn't matter, with probability 2/36). A `common/dice.js`
 can sit next to `bag.js`, and `chanceView` would get a dice panel.
 
+Done for single dice with Nucleation: `common/dice.js` gives `"roll:N"`
+outcomes and a dice panel for `chanceView`. Unordered pairs (`"roll:3-5"`)
+are not needed yet.
+
 ## Per-game checklist
 
 - [ ] `games/<id>/game.js`: rules, `chances`, `chanceView`, options for open

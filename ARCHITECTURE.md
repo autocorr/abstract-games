@@ -22,6 +22,7 @@ common/
   timeline.js               the move line with a cursor: review, branching, Undo
   rng.js                    seedable RNG for reproducible playouts and tests
   bag.js                    bags of coloured marbles: draws as chance plies, refills, bagPanel()
+  dice.js                   dice: rolls as chance plies, dicePanel()
   swap.js                   withSwap(game): the swap (pie) rule for any two-player game
   board/
     graph.js                makeBoard(): polygons -> adjacency, bounds, viewBox; geometry
@@ -31,7 +32,7 @@ common/
     hex.js                  hex rhombus (Hex) and hex-hex boards
     cairo.js                Cairo pentagonal tiling patches
   render.js                 SVG renderer: cell, highlight, piece and marker layers
-  chance-view.js            bag panels shown under the board
+  chance-view.js            bag and dice panels shown in the turn card
   pieces/cburnett/          chess piece images (Cburnett, BSD; see its README)
   shell.js                  mount(game): builds the page UI around a Game
   ui/
@@ -141,7 +142,8 @@ export default {
   chances(state),                   // -> [{ move, p }] at a chance ply
   currentPlayer(state),             // whose turn a chance ply belongs to, for display
   marbles,                          // { W: { name, fill } } colours used by chanceView
-  chanceView(state),                // -> bag panels: [{ title, owner, counts, drawn, active }]
+  chanceView(state),                // -> panels: bags [{ title, owner, counts, drawn, active }]
+                                    //   or dice [{ title, owner, dice: [4 | null], active }]
 
   // added by withSwap() (common/swap.js)
   swap,                             // true
@@ -159,6 +161,7 @@ export default {
   rotatable,                        // true: the shell may turn the board 90 degrees;
                                     //   a number: by that angle (clockwise, degrees)
   piecesOf(state),                  // -> [{ id, player, label?, image? }]; default reads state.cells;
+                                    //   label: short text on the disc (e.g. a group size);
                                     //   image: URL drawn instead of a disc (e.g. a chess piece)
   markers(state, move, info),       // -> [{ id, kind, color? }] for the last move. Over pieces:
                                     //   "ring" | "dot" | "target"; under pieces: "shade" (hatched
@@ -203,10 +206,10 @@ for comparison and for the URL hash.
 
 ### Chance
 
-Random events (drawing a marble, later rolling dice) are **chance plies**:
+Random events (drawing a marble, rolling a die) are **chance plies**:
 `toMove(state)` returns `CHANCE` (0, exported from `engine.js`),
 `chances(state)` lists the outcomes as `[{ move, p }]`, and `legalMoves`
-returns the same moves. Outcomes are string moves such as `"draw:W"`. They
+returns the same moves. Outcomes are string moves such as `"draw:W"` or `"roll:4"`. They
 are applied and recorded like any other move, so a game with chance is still
 fully described by its options and move list, and replay, the URL hash, the
 AI worker and the tests work unchanged. Drawing several marbles is several
@@ -218,6 +221,12 @@ ply's outcomes, `drawMarble(bag, move)` applies one, and helpers add, remove,
 replace and return marbles. Bags are always public: `chanceView` shows their
 contents and the drawn marbles in order.
 
+`common/dice.js` does the same for dice: `rollOutcomes(sides)` gives a
+roll's outcomes (`"roll:1"` .. `"roll:6"`), `rolledValue(move)` reads one
+back, and `dicePanel(values, { owner, active })` shows the faces (null for
+a die not rolled yet). Each die is its own ply. Nucleation rolls one die a
+turn.
+
 ### Swap
 
 The swap (pie) rule is generic: `export default withSwap({ ... })` adds it
@@ -226,8 +235,10 @@ colours (they own pieces, move and win). Swapping leaves the position as it
 is and trades the two *seats* (the people, human or AI) between colours.
 By default the string move `"swap"` is offered once, at player 2's first
 decision in their own turn (`currentPlayer`, so not when player 2 acts
-inside player 1's turn); `withSwap(game, { offer })` narrows that. The
-state gains `swapped` and `swapClosed`. `seatOf(game, state, player)` in
+inside player 1's turn); `withSwap(game, { offer })` narrows that, and
+`onSwap(state)` lets a game that offers the swap at a ply of its own move on
+from it (Nucleation offers it at a decision before White's first roll, so
+it is made without knowing the die). The state gains `swapped` and `swapClosed`. `seatOf(game, state, player)` in
 `engine.js` maps a colour to its seat (the identity for games without swap):
 the shell keeps human/AI settings per seat, and MCTS credits wins to seats,
 so it values a swap for the person who makes it.
@@ -307,7 +318,7 @@ scheme)` is asked first (`before` is the position before the move, `info`
 what `applyMove` returned, `scheme` the active colour scheme or null);
 returning null falls back to the defaults: cell moves join cell names with
 "–", `"draw:X"` reads "drew red" (marble names from the scheme's or the
-game's marbles), and other string moves use their button label. Plies are
+game's marbles), `"roll:4"` reads "rolled 4", and other string moves use their button label. Plies are
 grouped into turns by `currentPlayer`, so a draw is listed with the move
 after it; plies of no player get an unnumbered line.
 
