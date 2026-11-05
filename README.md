@@ -5,20 +5,11 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 
 ## Games
 
-- [Filament](games/filament/): a placement game on the Cairo pentagonal
-  tiling where majorities fill empty cells and the player with fewer groups
-  wins.
-- [Depletion](games/depletion/): Hex on a board of colored regions, where a
-  marble drawn from a bag decides which region you must play in.
-- [Determinant](games/determinant/): a square-grid connection game where
-  diagonal cross-cuts are settled by a marble draw, and the winner of the
-  draw recolors stones until no cross-cut remains.
-- [Cliques](games/cliques/): a hex-hex majority game where each cluster of
-  touching stones goes to the player with its largest group, placements may
-  pull a friendly stone along a line, and tied clusters can be claimed.
-- [Liquefaction](games/liquefaction/): chess without Queens on a board in
-  four colors, where a marble drawn each turn names a color your King may not
-  stand on.
+- [Filament](games/filament/)
+- [Depletion](games/depletion/)
+- [Determinant](games/determinant/)
+- [Cliques](games/cliques/)
+- [Liquefaction](games/liquefaction/)
 
 ## Running locally
 
