@@ -10,13 +10,7 @@
 // degrees to fit a wide board on a portrait screen, or any angle a game asks for). Rules never see it; piece
 // shadows and labels stay upright.
 
-const NS = "http://www.w3.org/2000/svg";
-
-export function svgEl(name, attrs = {}) {
-  const node = document.createElementNS(NS, name);
-  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
-  return node;
-}
+import { svgEl } from "./ui/dom.js";
 
 const pointsAttr = (poly) => poly.map(([x, y]) => `${+x.toFixed(4)},${+y.toFixed(4)}`).join(" ");
 

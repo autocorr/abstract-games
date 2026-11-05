@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { games } from "../games.js";
 import { validateBoard } from "../common/board/graph.js";
 import {
-  newGame, replay, moveKey, parseMoveKey, piecesOf, resolveOptions, optionAllowed, sampleChance, currentPlayer, CHANCE,
+  newGame, replay, moveKey, parseMoveKey, piecesOf, resolveOptions, optionAllowed, choiceValues, sampleChance, currentPlayer, CHANCE,
 } from "../common/engine.js";
 import { describeMove } from "../common/log.js";
 import { mcts } from "../common/ai/mcts.js";
@@ -48,7 +48,7 @@ function checkChances(game, state, legal) {
 function optionSets(game) {
   let sets = [{}];
   for (const [key, spec] of Object.entries(game.options || {})) {
-    const values = spec.choices.map((c) => (typeof c === "object" ? c.value : c));
+    const values = choiceValues(spec);
     sets = sets.flatMap((s) => values.map((v) => ({ ...s, [key]: v })));
   }
   return sets.filter((s) => Object.keys(s).every((k) => optionAllowed(game, k, s[k], s)));
@@ -97,7 +97,7 @@ for (const { entry, game } of entries) {
       assert.ok(game.players[p].name && game.players[p].fill, `player ${p} needs name and fill`);
     }
     for (const [key, spec] of Object.entries(game.options || {})) {
-      const values = spec.choices.map((c) => (typeof c === "object" ? c.value : c));
+      const values = choiceValues(spec);
       assert.ok(spec.label, `option ${key} needs a label`);
       assert.ok(values.includes(spec.default), `option ${key} default is not a choice`);
     }

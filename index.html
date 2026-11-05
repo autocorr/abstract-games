@@ -34,6 +34,7 @@
   import { seededRng } from "./common/rng.js";
   import { segmented } from "./common/ui/setup.js";
   import { THEMES, loadTheme, setTheme } from "./common/theme.js";
+  import { h, svgEl } from "./common/ui/dom.js";
 
   document.getElementById("theme").append(segmented("Theme", THEMES, loadTheme(), setTheme).node);
 
@@ -57,22 +58,13 @@
   }
 
   for (const entry of games) {
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("aria-hidden", "true");
-    const card = document.createElement("a");
-    card.className = "game-card";
-    card.href = entry.path;
-    const title = document.createElement("h2");
-    title.textContent = entry.title;
-    const kind = document.createElement("div");
-    kind.className = "board-kind";
-    kind.textContent = entry.board;
-    const blurb = document.createElement("p");
-    blurb.textContent = entry.blurb;
-    card.append(svg, title, kind, blurb);
-    const item = document.createElement("li");
-    item.append(card);
-    list.append(item);
+    const svg = svgEl("svg", { "aria-hidden": "true" });
+    list.append(h("li", {},
+      h("a", { class: "game-card", href: entry.path },
+        svg,
+        h("h2", {}, entry.title),
+        h("div", { class: "board-kind" }, entry.board),
+        h("p", {}, entry.blurb))));
     thumbnail(entry, svg).catch((err) => console.error(`thumbnail for ${entry.id}:`, err));
   }
 </script>

@@ -12,21 +12,13 @@
 // scheme may override them with its own `marbles` (same shape), so marbles
 // can match recoloured cells.
 
-const MAX_DRAWN = 14;
+import { h } from "./ui/dom.js";
 
-function h(tag, cls, ...children) {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  node.append(...children.filter((c) => c !== null && c !== undefined));
-  return node;
-}
+const MAX_DRAWN = 14;
 
 function marble(marbles, colour, cls = "") {
   const spec = (marbles && marbles[colour]) || { name: colour, fill: "#888" };
-  const node = h("span", "marble" + (cls ? " " + cls : ""));
-  node.style.background = spec.fill;
-  node.title = spec.name;
-  return node;
+  return h("span", { class: "marble" + (cls ? " " + cls : ""), title: spec.name, style: `background:${spec.fill}` });
 }
 
 export function renderChance(container, game, state, marbles = game.marbles) {
@@ -35,22 +27,20 @@ export function renderChance(container, game, state, marbles = game.marbles) {
   container.hidden = !panels.length;
   for (const panel of panels) {
     const owner = panel.owner && game.players[panel.owner];
-    const head = h("div", "bag-title",
-      owner ? h("span", "turn-stone") : null,
+    const head = h("div", { class: "bag-title" },
+      owner ? h("span", { class: "turn-stone", style: `background:${owner.fill}` }) : null,
       panel.title || "Bag");
-    if (owner) head.firstChild.style.background = owner.fill;
 
-    const contents = h("div", "bag-contents");
-    for (const [colour, n] of Object.entries(panel.counts || {})) {
-      contents.append(h("span", "bag-count" + (n ? "" : " zero"), marble(marbles, colour), String(n)));
-    }
+    const contents = h("div", { class: "bag-contents" },
+      Object.entries(panel.counts || {}).map(([colour, n]) =>
+        h("span", { class: "bag-count" + (n ? "" : " zero") }, marble(marbles, colour), String(n))));
 
     const drawn = panel.drawn || [];
     const shown = drawn.slice(-MAX_DRAWN);
-    const drawnRow = h("div", "bag-drawn",
-      drawn.length > shown.length ? h("span", "bag-more", `+${drawn.length - shown.length}`) : null,
-      ...shown.map((c, i) => marble(marbles, c, i === shown.length - 1 ? "small newest" : "small")));
+    const drawnRow = h("div", { class: "bag-drawn" },
+      drawn.length > shown.length ? h("span", { class: "bag-more" }, `+${drawn.length - shown.length}`) : null,
+      shown.map((c, i) => marble(marbles, c, i === shown.length - 1 ? "small newest" : "small")));
 
-    container.append(h("div", "bag" + (panel.active ? " active" : ""), head, contents, drawn.length ? drawnRow : null));
+    container.append(h("div", { class: "bag" + (panel.active ? " active" : "") }, head, contents, drawn.length ? drawnRow : null));
   }
 }

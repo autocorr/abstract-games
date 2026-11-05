@@ -2,7 +2,7 @@
 // jumps to the position after it, plus navigation (start, back, forward,
 // end) and a button that copies a link to the position on show.
 
-import { h } from "./dom.js";
+import { h, svgEl } from "./dom.js";
 
 // Navigation icons as inline SVG (the ⏮ ◀ ▶ ⏭ characters render as colour
 // emoji on some platforms). Paths on a 16 x 16 grid, filled in currentColor.
@@ -14,13 +14,8 @@ const ICONS = {
 };
 
 function icon(name) {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 16 16");
-  svg.setAttribute("aria-hidden", "true");
-  svg.setAttribute("class", "icon");
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", ICONS[name]);
-  svg.append(path);
+  const svg = svgEl("svg", { viewBox: "0 0 16 16", "aria-hidden": "true", class: "icon" });
+  svg.append(svgEl("path", { d: ICONS[name] }));
   return svg;
 }
 

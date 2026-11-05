@@ -31,7 +31,14 @@ export function describeMove(game, before, move, info, scheme = null) {
     const name = marbles[move.slice(colon + 1)].name.toLowerCase();
     return `${action === "draw" ? "drew" : action} ${name}`;
   }
-  return (game.moveLabel && game.moveLabel(before, move)) ||
+  return moveLabel(game, before, move);
+}
+
+// Label of a string move such as "pass", for its button and the log:
+// game.moveLabel(state, move), then game.moveLabels[move], then the move
+// itself capitalised.
+export function moveLabel(game, state, move) {
+  return (game.moveLabel && game.moveLabel(state, move)) ||
     (game.moveLabels && game.moveLabels[move]) || capitalise(move);
 }
 

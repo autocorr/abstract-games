@@ -1,4 +1,4 @@
-// Small DOM helpers shared by the game page modules.
+// Small DOM helpers shared by the page modules and the renderer.
 
 export function h(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -12,10 +12,15 @@ export function h(tag, attrs = {}, ...children) {
   return node;
 }
 
+// An SVG element with attributes set as given (no event handlers).
+export function svgEl(name, attrs = {}) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  return node;
+}
+
 export const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-
-export const capitalise = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // ---- collapsible sections ------------------------------------------------
 // Which sections are open is saved for the whole site, not per game, so a

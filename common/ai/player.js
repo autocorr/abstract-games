@@ -2,8 +2,8 @@
 // page stays responsive; if a worker cannot be created or fails to load, the
 // search falls back to the main thread.
 
-import { mcts } from "./mcts.js";
-import { replay, moveKey, parseMoveKey } from "../engine.js";
+import { searchMove } from "./mcts.js";
+import { moveKey, parseMoveKey } from "../engine.js";
 
 const WORKER_URL = new URL("./worker.js", import.meta.url);
 
@@ -75,10 +75,7 @@ export class AIPlayer {
       const p = this.pending;
       if (!p || p.id !== id) return;
       try {
-        const { options, moves, timeMs } = p.request;
-        const { state } = replay(this.game, options, moves.map(parseMoveKey));
-        const move = mcts(this.game, state, { timeMs });
-        this.settle({ id, move: move === null ? null : moveKey(move) });
+        this.settle({ id, move: searchMove(this.game, p.request) });
       } catch (err) {
         this.settle({ id, error: String(err) });
       }

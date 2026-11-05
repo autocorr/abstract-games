@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mcts } from "../common/ai/mcts.js";
+import { mcts, searchMove } from "../common/ai/mcts.js";
 import { replay } from "../common/engine.js";
 import { seededRng } from "../common/rng.js";
 import ttt from "./fixtures/tictactoe.js";
@@ -85,4 +85,11 @@ test("mcts on a chance game takes an immediate win", () => {
   const { state } = replay(bagTtt, {}, ["draw:D", [0], "draw:L", [1], "draw:D", [8], "draw:L", [3], "draw:D"]);
   const move = mcts(bagTtt, state, { timeMs: 60000, iterations: 2000, rng: seededRng(1) });
   assert.deepEqual(move, [4]);
+});
+
+test("searchMove replays a request of move keys and answers with a key", () => {
+  // X to move after O took the left column's middle: X completes the top row.
+  const key = searchMove(ttt, { options: {}, moves: ["0", "3", "1", "4"], timeMs: 50 });
+  assert.equal(key, "2");
+  assert.equal(searchMove(ttt, { options: {}, moves: ["0", "3", "1", "4", "2"], timeMs: 0 }), null);
 });

@@ -65,7 +65,15 @@ export function findLegalMove(game, state, move) {
   return null;
 }
 
-const choiceValues = (spec) => spec.choices.map((c) => (typeof c === "object" ? c.value : c));
+// An option's choices are plain values or { value, label } objects.
+export const choiceValue = (c) => (typeof c === "object" ? c.value : c);
+export const choiceValues = (spec) => spec.choices.map(choiceValue);
+
+// The choice value of option `spec` written as `raw` (compared as strings,
+// as read from a URL or a control), or undefined if there is none.
+export function parseChoice(spec, raw) {
+  return choiceValues(spec).find((v) => String(v) === String(raw));
+}
 
 // Is `value` of option `key` allowed alongside the other values in `opts`?
 // Options may declare allowed(value, opts) to rule out combinations.
@@ -81,9 +89,7 @@ export function optionAllowed(game, key, value, opts) {
 export function resolveOptions(game, given = {}) {
   const out = {};
   for (const [key, spec] of Object.entries(game.options || {})) {
-    const raw = given[key];
-    const match = choiceValues(spec).find((c) => String(c) === String(raw));
-    out[key] = match !== undefined ? match : spec.default;
+    out[key] = parseChoice(spec, given[key]) ?? spec.default;
   }
   for (const [key, spec] of Object.entries(game.options || {})) {
     if (optionAllowed(game, key, out[key], out)) continue;

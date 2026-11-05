@@ -6,8 +6,7 @@
 // The position is rebuilt by replaying the move list, so no game state has
 // to be serialised across the worker boundary.
 
-import { mcts } from "./mcts.js";
-import { replay, parseMoveKey, moveKey } from "../engine.js";
+import { searchMove } from "./mcts.js";
 
 const games = new Map();
 
@@ -17,12 +16,10 @@ async function loadGame(url) {
 }
 
 self.onmessage = async (e) => {
-  const { id, gameUrl, options, moves, timeMs } = e.data;
+  const { id, gameUrl, ...request } = e.data;
   try {
     const game = await loadGame(gameUrl);
-    const { state } = replay(game, options, moves.map(parseMoveKey));
-    const move = mcts(game, state, { timeMs });
-    self.postMessage({ id, move: move === null ? null : moveKey(move) });
+    self.postMessage({ id, move: searchMove(game, request) });
   } catch (err) {
     self.postMessage({ id, error: String((err && err.stack) || err) });
   }

@@ -11,7 +11,7 @@
 // that a swap move, after which the mover plays the other colour, is valued
 // for the person who made it.
 
-import { randomPlayout, pickWeighted, moveKey, seatOf, CHANCE } from "../engine.js";
+import { randomPlayout, pickWeighted, moveKey, parseMoveKey, replay, seatOf, CHANCE } from "../engine.js";
 import { shuffle } from "../rng.js";
 
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -123,4 +123,13 @@ export function mcts(game, state, { timeMs = 1000, iterations = Infinity, c = Ma
   let best = null;
   for (const child of root.children) if (!best || child.visits > best.visits) best = child;
   return best ? best.move : null;
+}
+
+// A search request as the AI player sends it: the position is rebuilt by
+// replaying `moves` (move keys) under `options`, so no game state has to
+// cross the worker boundary. Returns the chosen move's key, or null.
+export function searchMove(game, { options, moves, timeMs }) {
+  const { state } = replay(game, options, moves.map(parseMoveKey));
+  const move = mcts(game, state, { timeMs });
+  return move === null ? null : moveKey(move);
 }

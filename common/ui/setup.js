@@ -7,10 +7,11 @@
 // { node, set(value), disable(isDisabled) }.
 
 import { h } from "./dom.js";
+import { choiceValue } from "../engine.js";
 
 export const AI_TIMES = ["0.025", "0.05", "0.1", "0.25", "0.5", "1", "2", "5", "10", "30"];
 
-const choiceValue = (c) => String(typeof c === "object" ? c.value : c);
+const choiceKey = (c) => String(choiceValue(c));
 const choiceLabel = (c) => (typeof c === "object" ? c.label : String(c));
 
 // Segmented buttons fit when there are few choices with short labels.
@@ -23,7 +24,7 @@ function fitsSegmented(choices) {
 export function segmented(label, choices, value, onChange) {
   let current = String(value);
   const buttons = choices.map((c) => {
-    const v = choiceValue(c);
+    const v = choiceKey(c);
     return h("button", {
       type: "button", class: "seg", "data-value": v,
       onclick: () => {
@@ -49,7 +50,7 @@ export function segmented(label, choices, value, onChange) {
 // A <select> with the same interface.
 export function dropdown(label, choices, value, onChange) {
   const node = h("select", { class: "btn", "aria-label": label, onchange: (e) => onChange(e.target.value) });
-  for (const c of choices) node.append(h("option", { value: choiceValue(c) }, choiceLabel(c)));
+  for (const c of choices) node.append(h("option", { value: choiceKey(c) }, choiceLabel(c)));
   node.value = String(value);
   return {
     node,

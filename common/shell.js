@@ -6,15 +6,15 @@
 import { createRenderer, rotatedViewBox, viewBoxAspect } from "./render.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
-import { h, escapeHtml, capitalise, section } from "./ui/dom.js";
+import { h, svgEl, escapeHtml, section } from "./ui/dom.js";
 import { buildSetup, choiceRow, AI_TIMES } from "./ui/setup.js";
 import { THEMES, loadTheme, setTheme } from "./theme.js";
 import { createLogView } from "./ui/move-list.js";
-import { playAndDescribe, logEntries, groupTurns } from "./log.js";
+import { playAndDescribe, logEntries, groupTurns, moveLabel } from "./log.js";
 import { timeline, isLive, jump, play, undoTarget } from "./timeline.js";
 import { games as registry } from "../games.js";
 import {
-  replay, resolveOptions, optionAllowed, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
+  replay, resolveOptions, optionAllowed, parseChoice, findLegalMove, moveKey, parseMoveKey, piecesOf, sampleChance, currentPlayer, seatOf, CHANCE,
 } from "./engine.js";
 
 // Pause before a chance ply (a marble draw) is played, so it can be seen.
@@ -42,12 +42,6 @@ function fillsRectangle(board) {
     }
   }
   return Math.abs(area) / 2 >= 0.98 * (maxX - minX) * (maxY - minY);
-}
-
-// The declared choice value of option `key` matching a control's string.
-function parseOption(game, key, text) {
-  const c = game.options[key].choices.find((x) => String(typeof x === "object" ? x.value : x) === text);
-  return typeof c === "object" ? c.value : c;
 }
 
 const startsWith = (move, prefix) => prefix.every((id, i) => move[i] === id);
@@ -151,10 +145,7 @@ export function mount(game, { root = document.body } = {}) {
     h("h1", { class: "title" }, game.title),
     blurb ? h("p", { class: "blurb" }, blurb) : null);
 
-  ui.board = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  ui.board.setAttribute("class", "board");
-  ui.board.setAttribute("role", "img");
-  ui.board.setAttribute("aria-label", `${game.title} board`);
+  ui.board = svgEl("svg", { class: "board", role: "img", "aria-label": `${game.title} board` });
   ui.boardWrap = h("div", { class: "board-wrap" }, ui.board);
   ui.boardCol = h("main", { class: "board-col" }, ui.boardWrap);
 
@@ -235,7 +226,7 @@ export function mount(game, { root = document.body } = {}) {
     persist();
     for (const [k, control] of Object.entries(ui.optionControls)) {
       control.set(opts[k]);
-      control.disable((v) => !optionAllowed(game, k, parseOption(game, k, v), opts));
+      control.disable((v) => !optionAllowed(game, k, parseChoice(game.options[k], v), opts));
     }
     // Boards depend only on the options, so rebuild only when they change.
     const key = JSON.stringify(opts);
@@ -463,9 +454,7 @@ export function mount(game, { root = document.body } = {}) {
     ui.actions.replaceChildren();
     if (isHumanTurn()) {
       for (const m of legal.filter((x) => typeof x === "string")) {
-        const label = (game.moveLabel && game.moveLabel(state, m)) ||
-          (game.moveLabels && game.moveLabels[m]) || capitalise(m);
-        ui.actions.append(h("button", { class: "btn primary", onclick: () => playMove(m) }, label));
+        ui.actions.append(h("button", { class: "btn primary", onclick: () => playMove(m) }, moveLabel(game, state, m)));
       }
     }
 
