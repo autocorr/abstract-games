@@ -170,7 +170,8 @@ for (const { entry, game } of entries) {
           }
 
           for (const p of piecesOf(game, state)) {
-            assert.ok(p.id >= 0 && p.id < state.board.size && p.player in game.players);
+            assert.ok(p.id >= 0 && p.id < state.board.size);
+            assert.ok(p.player in game.players || (p.player === null && p.fill), "a piece needs a player, or a fill if neutral");
           }
           if (game.scoreSummary) for (const p of Object.keys(game.players)) game.scoreSummary(state, Number(p));
           if (game.turnHint) assert.equal(typeof game.turnHint(state), "string");

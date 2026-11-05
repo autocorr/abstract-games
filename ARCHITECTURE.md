@@ -165,7 +165,8 @@ export default {
                                     //   a number: by that angle (clockwise, degrees)
   piecesOf(state),                  // -> [{ id, player, label?, image? }]; default reads state.cells;
                                     //   label: short text on the disc (e.g. a group size);
-                                    //   image: URL drawn instead of a disc (e.g. a chess piece)
+                                    //   image: URL drawn instead of a disc (e.g. a chess piece);
+                                    //   a neutral piece has player null and its own fill (and mark)
   markers(state, move, info),       // -> [{ id, kind, color? }] for the last move. Over pieces:
                                     //   "ring" | "dot" | "target"; under pieces: "shade" (hatched
                                     //   cell), "square" (cell outline), "check" (red glow)

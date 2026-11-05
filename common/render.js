@@ -210,6 +210,10 @@ export function createRenderer(svg) {
     });
   }
 
+  // A piece's colours: its own fill and mark (neutral pieces, which belong
+  // to no player), else its player's.
+  const pieceSpec = (p, players) => (p.fill ? p : players[p.player] || {});
+
   // Rebuild the piece layers.
   function drawPieces(pieces, players) {
     const u = board.unit;
@@ -217,7 +221,7 @@ export function createRenderer(svg) {
     layers.images.replaceChildren();
     for (const p of pieces) {
       const c = board.cells[p.id];
-      const spec = players[p.player] || {};
+      const spec = pieceSpec(p, players);
       if (p.image) {
         // A full cell, as Lichess's chessground draws its pieces (12.5% of an
         // 8x8 board, background-size: cover); the margin is in the image.
@@ -247,8 +251,9 @@ export function createRenderer(svg) {
     }
   }
 
-  // pieces:   [{ id, player, label?, image? }]; image is a URL drawn in
-  //           place of the disc (e.g. a chess piece), without a drop shadow
+  // pieces:   [{ id, player, label?, image?, fill?, mark? }]; image is a URL
+  //           drawn in place of the disc (e.g. a chess piece), without a drop
+  //           shadow; fill and mark colour a neutral piece (player null)
   // players:  game.players ({ [player]: { fill, mark } })
   // markers:  [{ id, kind, color? }]. Over the pieces: "ring" (colour follows
   //           the piece), "dot", and "target" (the highlight dot of a
@@ -259,7 +264,7 @@ export function createRenderer(svg) {
   // targets:  cell ids that would extend the partial move
   function draw({ pieces = [], players = {}, markers = [], selected = [], targets = [] }) {
     const u = board.unit;
-    const owner = new Map(pieces.map((p) => [p.id, p.player]));
+    const owner = new Map(pieces.map((p) => [p.id, pieceSpec(p, players)]));
 
     layers.highlights.replaceChildren();
     for (const m of markers) {
@@ -296,7 +301,7 @@ export function createRenderer(svg) {
       if (m.kind === "dot") {
         layers.markers.appendChild(svgEl("circle", { cx: c.x, cy: c.y, r: 0.14 * u, fill: MARKER_DOT }));
       } else if (m.kind === "ring" && owner.has(m.id)) {
-        const spec = players[owner.get(m.id)] || {};
+        const spec = owner.get(m.id);
         layers.markers.appendChild(svgEl("circle", {
           cx: c.x, cy: c.y, r: 0.26 * u, fill: "none",
           stroke: spec.mark || "#fff", "stroke-width": 0.06 * u,
