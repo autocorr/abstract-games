@@ -103,28 +103,31 @@ with a white or black marble chosen from the supply. The undrawn contents of
 the bag cannot be changed. Example: `3B 3W 1G`, then a drawn B is replaced by
 a W, giving `2B 4W 1G`.
 
-### Open questions
+### Decisions
 
-- **Marble count.** The component list says "3 white, 3 black, and 1 white",
-  and the formal rules say "three white marbles and three black marbles". The
-  setup text and figures make clear that it is 3W 3B 1G.
-- **Gray as the first draw of a new cycle.** If gray is the first draw after
-  a refill, "the last marble drawn" could mean the last marble of the
-  previous cycle, or "any checker" as at the start of the game.
-  *Provisional default:* use the last marble of the previous cycle. Only the
-  very first draw of the game is "any".
-- **Drawn colour with no legal move.** The text says that with no legal move
-  you lose. That could mean no move for the drawn colour, or no move for any
-  colour. *Provisional default:* no move for the drawn colour means a loss,
-  which is the strict reading. A pass is a possible option.
-- **Who alters the bag in the variant.** The variant rules say the *capturing
-  player's opponent* may replace a marble. The design notes say "if you
-  capture, you can alter the contents of the bag". *Provisional default:* the
-  capturer chooses, as in the notes. Make it an option.
-- **Replacement limits in the variant.** Does the replaced marble go back to
-  the supply? Can gray be replaced? Can a marble be "replaced" with its own
-  colour, i.e. no change? *Provisional default:* only drawn W or B marbles
-  may be replaced, and declining is allowed.
+The open questions in the booklet are settled as follows for the
+implementation.
+
+- **Marble count.** The bag starts as **3W 3B 1G**. The component list's
+  "3 white, 3 black, and 1 white" is a typo for 1 gray, and the formal rules'
+  "three white marbles and three black marbles" leaves out the gray.
+- **Gray as the first draw of a new cycle.** Gray takes the colour of the
+  last marble drawn, which is the last marble of the previous cycle. If that
+  marble was itself gray, gray keeps the colour it stood for. Only the very
+  first draw of the game lets you move any checker.
+- **Drawn colour with no legal move.** If you have no legal move for the drawn
+  colour, you are stalemated and lose, even if checkers of the other colour
+  could move.
+- **Back rank.** The back rank is random rather than fixed. White's 4
+  back-rank checkers go on 4 of the 8 squares of rank 1, chosen at random
+  (70 setups, each equally likely). Black's back rank is the same set turned
+  180° (a1 ↔ h8, b1 ↔ g8, ...), so each side has the same square colours.
+  Ranks 2 and 7 are always full. The booklet setup (a1, d1, e1, h1) is one
+  of the 70.
+- **Variant.** Set aside for now. Its open questions (who replaces a marble,
+  whether gray can be replaced, whether declining is allowed, and whether a
+  capture on the 7th draw comes before the refill) are not decided.
+- **Swap rule.** To be decided from MCTS self-play trials.
 
 ---
 
