@@ -83,7 +83,6 @@ test("red stones count for the mover and convert when they score", () => {
   const info = play(s, at, "d1");
   assert.deepEqual(info.points, { [WHITE]: 1, [BLACK]: 0 });
   assert.equal(s.cells[at("c1")], WHITE);
-  assert.deepEqual(info.converted, [at("c1")]);
   assert.deepEqual(s.bag.counts, { G: 5, R: 5 }, "the red marble goes back");
   assert.deepEqual(s.bag.drawn, []);
 });
@@ -121,7 +120,7 @@ test("a line through two red stones is counted once", () => {
   const { s, at } = position({ white: ["a1", "b1"], red: ["c1", "d1"], turn: WHITE });
   const info = play(s, at, "g7");
   assert.deepEqual(info.points, { [WHITE]: 1, [BLACK]: 0 });
-  assert.equal(info.lines, 1);
+  assert.equal(s.last.lines.length, 1);
   assert.equal(s.cells[at("c1")], WHITE);
   assert.equal(s.cells[at("d1")], WHITE);
   assert.equal(s.bag.counts.R, 5);

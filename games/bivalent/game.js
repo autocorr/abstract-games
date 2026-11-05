@@ -28,8 +28,8 @@
 // about 1 point, so the default gives White 1.5.
 // See docs/bag-of-tricks/rules.md.
 
-import { squareBoard } from "../../common/board/square.js";
-import { ray } from "../../common/board/graph.js";
+import { squareBoard, starPoints } from "../../common/board/square.js";
+import { ray, opposite } from "../../common/board/graph.js";
 import { makeBag, cloneBag, drawOutcomes, drawMarble, drawnColour, returnDrawn, discardDrawn, addMarbles, bagPanel } from "../../common/bag.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
 
@@ -54,17 +54,14 @@ const komiLabel = (k) => (k > 0 ? `Black +${k}` : k < 0 ? `White +${-k}` : "None
 const komiOf = (s, player) => Math.max(0, player === BLACK ? s.komi : -s.komi);
 const total = (s, player) => s.score[player] + komiOf(s, player);
 
-function buildBoard() {
-  const m = (SIZE - 1) / 2;
-  return squareBoard({ cols: SIZE, style: "points", stars: [[2, 2], [2, SIZE - 3], [SIZE - 3, 2], [SIZE - 3, SIZE - 3], [m, m]] });
-}
+const buildBoard = () => squareBoard({ cols: SIZE, style: "points", stars: starPoints(SIZE) });
 
 // ---- scoring -------------------------------------------------------------
 
 // The maximal run through `id` along direction d of cells where own() holds,
 // in order from the far end opposite d.
 function runThrough(board, id, d, own) {
-  return [...ray(board, id, d + 4, own).reverse(), id, ...ray(board, id, d, own)];
+  return [...ray(board, id, opposite(board, d), own).reverse(), id, ...ray(board, id, d, own)];
 }
 
 // Lines the mover scores now: runs of 3 or 4 through the placed stone or a
@@ -98,13 +95,11 @@ function place(s, id) {
 
   const lines = scoringLines(s, id);
   const points = { [WHITE]: 0, [BLACK]: 0 };
-  const converted = [];
   for (const line of lines) {
     points[line.scorer]++;
     for (const c of line.cells) {
       if (s.cells[c] !== RED) continue;
       s.cells[c] = s.turn;
-      converted.push(c);
       discardDrawn(s.bag, "R");
       addMarbles(s.bag, "R");
     }
@@ -120,7 +115,7 @@ function place(s, id) {
   } else {
     s.turn = 3 - s.turn;
   }
-  return { colour, points, converted, lines: lines.length };
+  return { colour, points };
 }
 
 function apply(s, move) {
@@ -197,22 +192,6 @@ export default {
     return s.over ? { winner: s.winner } : null;
   },
 
-  // Rollouts without building move lists: draw, then a random empty point.
-  playout(s, rng) {
-    const empty = [];
-    while (!s.over) {
-      if (s.colour === null) {
-        const r = s.bag.counts.R, n = r + s.bag.counts.G;
-        apply(s, rng() * n < r ? "draw:R" : "draw:G");
-      } else {
-        empty.length = 0;
-        for (let id = 0; id < s.cells.length; id++) if (!s.cells[id]) empty.push(id);
-        place(s, empty[Math.floor(rng() * empty.length)]);
-      }
-    }
-    return s.winner;
-  },
-
   chanceView(s) {
     if (s.over) return [];
     return [bagPanel(s.bag, { active: s.colour === null })];
@@ -257,4 +236,4 @@ export default {
   },
 };
 
-export const internals = { scoringLines, WHITE, BLACK, RED };
+export const internals = { WHITE, BLACK, RED };
