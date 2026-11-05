@@ -20,8 +20,10 @@
 // between two opposing checkers, which captures nothing.
 //
 // Reaching the far rank wins. A player with no legal move for the drawn
-// colour is stalemated and loses. Every move advances a checker, so games
-// always end. See docs/bag-of-tricks/rules.md.
+// colour must pass ("pass"); one with no legal move for either colour is
+// stalemated and loses. Every move advances a checker, and a player who can
+// move draws a colour they can move from with probability 1, so games end.
+// See docs/bag-of-tricks/rules.md.
 
 import { squareBoard } from "../../common/board/square.js";
 import { makeBag, cloneBag, drawOutcomes, drawMarble, drawnColour, isEmpty, returnDrawn, bagPanel } from "../../common/bag.js";
@@ -43,6 +45,7 @@ const START_BAG = { W: 3, B: 3, G: 1 };
 const SQUARE = { W: "light", B: "dark" };
 
 const SETUP = "setup:";
+const PASS = "pass";
 const FILES = "abcdefgh";
 // The 70 back ranks: 4 of the 8 files, as sorted letter strings ("adeh").
 const BACK_RANKS = [];
@@ -102,31 +105,41 @@ function captureAt(cells, player, to) {
   return left ? to - 1 : to + 1;
 }
 
-// Apply a draw: work out the colour to move from and the legal moves; with
-// none, the player is stalemated.
+// Apply a draw: work out the colour to move from and the legal moves. With
+// none, the player passes, unless no checker of theirs can move at all, which
+// is stalemate and loses.
 function applyDraw(s, move) {
   const marble = drawMarble(s.bag, move);
   if (marble !== "G") s.colour = marble;
   s.moves = generateMoves(s, s.turn, s.colour);
   s.phase = "move";
-  if (!s.moves.length) {
+  if (s.moves.length) return;
+  if (s.colour && generateMoves(s, s.turn, null).length) {
+    s.moves = [PASS];
+  } else {
     s.winner = other(s.turn);
     s.reason = "stalemate";
   }
 }
 
-function applyStep(s, [from, to]) {
+function applyStep(s, move) {
   const p = s.turn;
-  s.cells[to] = p;
-  s.cells[from] = 0;
-  s.captured = captureAt(s.cells, p, to);
-  if (s.captured >= 0) s.cells[s.captured] = 0;
-  s.last = [from, to];
-  s.moves = null;
-  if (rowOf(to) === farRow(p)) {
-    s.winner = p;
-    s.reason = "crossed";
+  if (move === PASS) {
+    s.last = null;
+    s.captured = -1;
+  } else {
+    const [from, to] = move;
+    s.cells[to] = p;
+    s.cells[from] = 0;
+    s.captured = captureAt(s.cells, p, to);
+    if (s.captured >= 0) s.cells[s.captured] = 0;
+    s.last = [from, to];
+    if (rowOf(to) === farRow(p)) {
+      s.winner = p;
+      s.reason = "crossed";
+    }
   }
+  s.moves = null;
   if (isEmpty(s.bag)) returnDrawn(s.bag);
   s.turn = other(p);
   s.phase = "draw";
@@ -136,6 +149,7 @@ function applyStep(s, [from, to]) {
 // else a random move.
 function pickPlayoutMove(s, rng) {
   const moves = s.moves, far = farRow(s.turn);
+  if (moves[0] === PASS) return PASS;
   for (const m of moves) if (rowOf(m[1]) === far) return m;
   if (rng() < 0.5) {
     const captures = moves.filter(([, to]) => captureAt(s.cells, s.turn, to) >= 0);
@@ -247,6 +261,7 @@ const game = {
   moveText(s, move) {
     const name = (id) => s.board.cells[id].tags.name;
     if (typeof move === "string") {
+      if (move === PASS) return "pass";
       if (move.startsWith(SETUP)) return `back rank ${[...move.slice(SETUP.length)].join(" ")}`;
       if (drawnColour(move) === "G") return `drew gray (${s.colour ? MARBLES[s.colour].name.toLowerCase() : "any"})`;
       return null;
@@ -270,9 +285,14 @@ const game = {
     }
     const marble = s.bag.drawn[s.bag.drawn.length - 1];
     const drew = marble === "G" ? `gray (${s.colour ? MARBLES[s.colour].name.toLowerCase() : "any"})` : MARBLES[marble].name.toLowerCase();
+    if (s.moves[0] === PASS) return `${name} drew ${drew}, but no checker on a ${colourName(s.colour)} square can move: pass.`;
     return s.colour
       ? `${name} drew ${drew}: move a checker on a ${colourName(s.colour)} square.`
       : `${name} drew ${drew}: move any checker.`;
+  },
+
+  moveLabel(s, move) {
+    return move === PASS ? `Pass (no ${colourName(s.colour)}-square move)` : null;
   },
 
   scoreSummary(s, player) {
@@ -285,7 +305,7 @@ const game = {
     const loser = PLAYERS[other(s.winner)].name;
     switch (s.reason) {
       case "crossed": return [`${PLAYERS[s.winner].name} reached the far rank.`];
-      case "stalemate": return [`${loser} has no legal move for the drawn color (stalemate loses).`];
+      case "stalemate": return [`${loser} has no legal move for either color (stalemate loses).`];
     }
     return [];
   },
@@ -294,4 +314,4 @@ const game = {
 export default game;
 
 // For tests.
-export const internals = { generateMoves, captureAt, BACK_RANKS, WHITE, BLACK };
+export const internals = { generateMoves, captureAt, BACK_RANKS, WHITE, BLACK, PASS };

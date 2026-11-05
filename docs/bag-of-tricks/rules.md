@@ -115,9 +115,14 @@ implementation.
   last marble drawn, which is the last marble of the previous cycle. If that
   marble was itself gray, gray keeps the colour it stood for. Only the very
   first draw of the game lets you move any checker.
-- **Drawn colour with no legal move.** If you have no legal move for the drawn
-  colour, you are stalemated and lose, even if checkers of the other colour
-  could move.
+- **Drawn colour with no legal move.** If none of your checkers on the
+  drawn colour can move, you must pass. Only if no checker of yours can move
+  at all, on either colour, are you stalemated, and you lose. (A full
+  lock-up can happen: White a3, c3 against Black b4, d4 blocks every
+  diagonal.) The booklet's strict reading, where no move for the drawn
+  colour loses, ended 43–51% of MCTS self-play games in stalemate (see the
+  trials below). Passing keeps cutting off a colour worth doing, through
+  lost tempo, without making it the usual way to win.
 - **Back rank.** The back rank is random rather than fixed. White's 4
   back-rank checkers go on 4 of the 8 squares of rank 1, chosen at random
   (70 setups, each equally likely). Black's back rank is the same set turned
@@ -127,24 +132,40 @@ implementation.
 - **Variant.** Set aside for now. Its open questions (who replaces a marble,
   whether gray can be replaced, whether declining is allowed, and whether a
   capture on the 7th draw comes before the refill) are not decided.
-- **Swap rule.** None. MCTS self-play found no first-player edge:
+- **Swap rule.** None for now. MCTS self-play with forced passing found a
+  small first-player edge, about 3 points:
 
   | Search per move | Games | White wins |
   | --------------- | ----- | ---------- |
-  | 2,000 iterations | 400 | 49.0% ± 2.5 |
-  | 10,000 iterations | 200 | 48.0% ± 3.5 |
+  | 2,000 iterations | 1,000 | 53.5% ± 1.6 |
+  | 10,000 iterations | 400 | 52.0% ± 2.5 |
 
-  Games last about 52 moves, and 43–51% end in stalemate, more often at the
-  stronger search.
+  Games last about 57 moves, and 1–2% end in stalemate. The loser passes
+  about once a game and the winner 0.2–0.3 times. A swap would be simple to
+  add (turning the board 180° keeps every square's colour). Under the
+  earlier lose-on-stalemate rule, White won 49.0% ± 2.5 of 400 games at
+  2,000 iterations and 48.0% ± 3.5 of 200 at 10,000; games lasted about 52
+  moves, and 43–51% ended in stalemate.
 - **Turtling** (advancing as a flat phalanx) is not a dominant strategy.
   "Turtle" takes a winning move if it has one and otherwise moves its
-  rearmost movable checker; "turtle + captures" takes a capture first.
-  Against MCTS at 2,000 iterations, turtle won 1.3% of 400 games (and 0.8%
-  of 120 at 10,000), and turtle + captures won 13.5% of 400. Against
-  heuristic players over 8,000 games each, turtle beat random play 43.8% of
-  the time and greedy play (win, else capture, else random) 18.5%, and
-  turtle + captures beat greedy 67.7%. MCTS keeps a looser formation (about 3
-  ranks from front to rear checker, against 2 for the turtles).
+  rearmost movable checker; "turtle + captures" takes a capture first. With
+  forced passing:
+
+  | Turtle player | Opponent | Games | Turtle wins | Stalemates |
+  | ------------- | -------- | ----- | ----------- | ---------- |
+  | Turtle | MCTS 2,000 | 400 | 0.8% | 4% |
+  | Turtle | MCTS 10,000 | 120 | 0% | 2% |
+  | Turtle + captures | MCTS 2,000 | 400 | 12.0% | 6.5% |
+  | Turtle | Random | 8,000 | 31.9% | 6% |
+  | Turtle | Greedy (win, else capture, else random) | 8,000 | 17.5% | 5% |
+  | Turtle + captures | Greedy | 8,000 | 52.9% | 23% |
+  | Turtle + captures | Turtle | 8,000 | 53.0% | 21% |
+
+  Each pairing is split evenly between the colours. A strict phalanx passes
+  up captures and loses even to random play. MCTS keeps a looser formation
+  (about 3 ranks from front to rear checker, against 2 for the turtles).
+  Under lose-on-stalemate the turtles did about as badly: 1.3% and 13.5%
+  against MCTS 2,000.
 
 ---
 

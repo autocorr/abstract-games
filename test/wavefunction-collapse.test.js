@@ -4,7 +4,7 @@ import game, { internals } from "../games/wavefunction-collapse/game.js";
 import { newGame, CHANCE } from "../common/engine.js";
 import { describeMove } from "../common/log.js";
 
-const { BACK_RANKS, WHITE, BLACK } = internals;
+const { BACK_RANKS, WHITE, BLACK, PASS } = internals;
 
 const sq = (s, name) => s.board.cells.find((c) => c.tags.name === name).id;
 const names = (s, player) => s.board.cells.filter((c) => s.cells[c.id] === player).map((c) => c.tags.name).sort();
@@ -98,11 +98,24 @@ test("reaching the far rank wins", () => {
   assert.deepEqual(game.legalMoves(s), []);
 });
 
-test("no move for the drawn colour loses, even with other moves", () => {
+test("no move for the drawn colour forces a pass", () => {
   const s = position({ white: ["c1", "b2"], black: ["a3", "c3"], marble: "B" });   // c1 and b2 dark; only c1-d2 is open
   assert.equal(game.legalMoves(s).length, 1);
   const t = position({ white: ["b1"], black: ["h8"], marble: "B" });   // only a light checker
-  assert.deepEqual(game.outcome(t), { winner: BLACK });
-  assert.equal(t.reason, "stalemate");
-  assert.deepEqual(game.legalMoves(t), []);
+  assert.equal(game.outcome(t), null);
+  assert.deepEqual(game.legalMoves(t), [PASS]);
+  assert.equal(describeMove(game, t, PASS), "pass");
+  game.applyMove(t, PASS);
+  assert.equal(game.toMove(t), CHANCE);
+  assert.equal(game.currentPlayer(t), BLACK);
+  assert.deepEqual(names(t, WHITE), ["b1"]);
+});
+
+test("no move for either colour is stalemate and loses", () => {
+  // White a3, c3 and Black b4, d4 are all dark: every diagonal is blocked.
+  // White's b1 (light) can't help: it is blocked by a2 and c2.
+  const s = position({ white: ["a3", "c3", "b1", "a2", "c2"], black: ["b4", "d4", "b3", "d3"], marble: "W" });
+  assert.deepEqual(game.outcome(s), { winner: BLACK });
+  assert.equal(s.reason, "stalemate");
+  assert.deepEqual(game.legalMoves(s), []);
 });
