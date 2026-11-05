@@ -140,6 +140,18 @@ test("a full board ends the game; komi decides for Black", () => {
   assert.deepEqual(game.legalMoves(s), []);
 });
 
+test("a negative komi goes to White", () => {
+  const s = newGame(game, { komi: -1.5 });
+  s.score = { [WHITE]: 9, [BLACK]: 10 };
+  s.cells.fill(BLACK);
+  s.cells[48] = 0;
+  s.empty = 1;
+  game.applyMove(s, "draw:G");
+  game.applyMove(s, [48]);
+  assert.deepEqual(game.outcome(s), { winner: WHITE });
+  assert.deepEqual(game.outcomeLines(s), ["White: 9 points + 1.5 komi = 10.5", "Black: 10 points"]);
+});
+
 test("a whole-number komi can tie", () => {
   const s = newGame(game, { komi: 0 });
   s.score = { [WHITE]: 3, [BLACK]: 3 };

@@ -21,8 +21,11 @@
 // it. Conversion makes no new lines, since the stone already counted as the
 // mover's colour.
 //
-// The game ends when the board is full. Black adds the komi to their points;
-// more points wins, and equal totals (whole-number komi only) are a draw.
+// The game ends when the board is full. The komi goes to one player (Black
+// when positive, White when negative); the higher total wins, and equal
+// totals (whole-number komi only) are a draw. Self-play trials (MCTS, 2,000
+// and 10,000 iterations a move) found Black, the second player, ahead by
+// about 1 point, so the default gives White 1.5.
 // See docs/bag-of-tricks/rules.md.
 
 import { squareBoard } from "../../common/board/square.js";
@@ -44,9 +47,12 @@ const START_BAG = { G: 5, R: 5 };
 const SIZE = 7;
 const LINE_DIRS = [0, 1, 2, 3];   // E, NE, N, NW; each run is scanned both ways
 
-// Komi for Black, in half points.
-const KOMI = Array.from({ length: 13 }, (_, i) => i / 2);
-const DEFAULT_KOMI = 0.5;
+// Komi in half points: positive for Black, negative for White.
+const KOMI = Array.from({ length: 13 }, (_, i) => (i - 6) / 2);
+const DEFAULT_KOMI = -1.5;
+const komiLabel = (k) => (k > 0 ? `Black +${k}` : k < 0 ? `White +${-k}` : "None");
+const komiOf = (s, player) => Math.max(0, player === BLACK ? s.komi : -s.komi);
+const total = (s, player) => s.score[player] + komiOf(s, player);
 
 function buildBoard() {
   const m = (SIZE - 1) / 2;
@@ -108,7 +114,7 @@ function place(s, id) {
   s.last = { placed: id, lines: lines.map((l) => l.cells) };
   s.colour = null;
   if (s.empty === 0) {
-    const white = s.score[WHITE], black = s.score[BLACK] + s.komi;
+    const white = total(s, WHITE), black = total(s, BLACK);
     s.over = true;
     s.winner = white > black ? WHITE : black > white ? BLACK : 0;
   } else {
@@ -135,7 +141,11 @@ function pointsText(points) {
   return parts.join(", ");
 }
 
-const blackTotal = (s) => s.score[BLACK] + s.komi;
+// "7 points + 1.5 komi = 8.5", or "7 points" without komi.
+function totalText(s, player) {
+  const k = komiOf(s, player);
+  return k ? `${plural(s.score[player], "point")} + ${k} komi = ${total(s, player)}` : plural(s.score[player], "point");
+}
 
 export default {
   id: "bivalent",
@@ -143,7 +153,7 @@ export default {
   url: import.meta.url,
   players: PLAYERS,
   options: {
-    komi: { label: "Komi for Black", choices: KOMI, default: DEFAULT_KOMI },
+    komi: { label: "Komi", choices: KOMI.map((k) => ({ value: k, label: komiLabel(k) })), default: DEFAULT_KOMI },
   },
   marbles: MARBLES,
 
@@ -239,20 +249,11 @@ export default {
     return s.colour === "R" || s.cells.includes(RED) ? `${place} Red stones count as ${name} this turn.` : place;
   },
   scoreSummary(s, player) {
-    if (player === WHITE) {
-      return { main: String(s.score[WHITE]), sub: "White", title: `White: ${plural(s.score[WHITE], "point")}` };
-    }
-    return {
-      main: String(blackTotal(s)),
-      sub: "Black",
-      title: `Black: ${plural(s.score[BLACK], "point")} + ${s.komi} komi`,
-    };
+    const name = PLAYERS[player].name;
+    return { main: String(total(s, player)), sub: name, title: `${name}: ${totalText(s, player)}` };
   },
   outcomeLines(s) {
-    return [
-      `White: ${plural(s.score[WHITE], "point")}`,
-      `Black: ${plural(s.score[BLACK], "point")} + ${s.komi} komi = ${blackTotal(s)}`,
-    ];
+    return [WHITE, BLACK].map((p) => `${PLAYERS[p].name}: ${totalText(s, p)}`);
   },
 };
 

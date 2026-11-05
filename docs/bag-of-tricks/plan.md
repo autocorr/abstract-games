@@ -220,8 +220,9 @@ Each game adds one new shared piece.
 
 1. **Disperse.** Adds `hex.js` (rhombus, 3-colouring, edge tags) and
    `groups.js` connectivity.
-2. **Bivalent.** Adds the points board, line scanning, and neutral stones
-   with marbles returning to the bag.
+2. **Bivalent** (done). Adds the points board, line scanning, and neutral stones
+   with marbles returning to the bag. Neutral pieces carry their own `fill`
+   (`player: null`). The rules decisions and komi trials are in `rules.md`.
 3. **Accrete.** Adds hex-hex, push-your-luck plies, and multi-placement
    turns.
 4. **Manifold.** Adds Go capture and liberties, two bags, permanent pass,

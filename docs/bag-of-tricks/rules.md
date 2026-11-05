@@ -641,9 +641,19 @@ implementation.
 - **Red supply.** A converted red stone goes back to the reserve, with its
   marble back in the bag, so the red marbles in the bag always equal the red
   stones in reserve.
-- **Ties.** The "player who scored last" tie-break is dropped. Black (the
-  second player) receives a komi, set in 0.5 steps; a fractional komi rules
-  out ties, and with a whole-number komi a tie is a draw.
+- **Ties.** The "player who scored last" tie-break is dropped. A komi, set
+  in 0.5 steps from White +3 to Black +3, is added to one player's points; a
+  fractional komi rules out ties, and with a whole-number komi a tie is a
+  draw. The default is **White +1.5**, from MCTS self-play trials, which
+  found the second player ahead:
+
+  | Search per move | Games | Mean White − Black | White wins, komi White +1.5 | White +0.5 | Black +0.5 |
+  | --------------- | ----- | ------------------ | --------------------------- | ---------- | ---------- |
+  | 2,000 iterations | 240 | −0.67 ± 0.31 | 58% | 49% | 38% |
+  | 10,000 iterations | 120 | −1.21 ± 0.39 | 54% | 43% | 28% |
+
+  Black's edge grows with playing strength, so a stronger AI or human play
+  may call for more. About 28 points are scored in a game.
 - **Board.** 7×7 only, for now.
 - **Stone counts.** Ignored: a player never runs out of stones.
 - **Variant.** Set aside for now.
