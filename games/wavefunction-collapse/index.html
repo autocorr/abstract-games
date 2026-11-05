@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wavefunction Collapse</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Get one of your checkers to the far rank: rank 8 for White, rank 1 for Black.</p>
+  <p><b>Setup.</b> Each side has 12 checkers on a chessboard. Your second rank is full, and your other 4 checkers stand on 4 of the 8 squares of your back rank, chosen at random. Black's back rank is White's turned half a turn (a1 matches h8, b1 matches g8), so both sides have the same square colors. The bag holds 3 white, 3 black and 1 gray marble. White moves first.</p>
+  <p><b>Turn.</b> Draw a marble and set it aside, in order. On white, move a checker that stands on a light square; on black, one on a dark square. Gray takes the color of the last marble drawn, even from before a refill; if gray is the first draw of the game, move any checker. Once all 7 marbles have been drawn, they all go back in the bag. The bag is see-through, so you always know what is left.</p>
+  <p><b>Move.</b> A checker moves one square diagonally forward, onto an empty square, so it always stays on its color.</p>
+  <p><b>Capture.</b> If your checker lands directly beside an opposing checker, to its left or right on the same rank, that checker is captured. Landing between two opposing checkers, one on each side, captures nothing. Squares side by side are opposite colors, so checkers only capture, and are only captured by, checkers on the other color.</p>
+  <p><b>End.</b> You win as soon as one of your checkers reaches the far rank. If you have no legal move for the color you drew, you lose, even if checkers on the other color could move.</p>
+  <p><b>Credits.</b> From <i>Bag of Tricks</i> by Brian E. Svoboda (CC BY-SA 4.0), inspired by James Ernest's <i>Hens and Chicks</i> and Dan Troyka's <i>Breakthrough</i>. Board colors from Lichess.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>

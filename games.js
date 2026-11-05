@@ -58,4 +58,12 @@ export const games = [
     path: "games/bivalent/",
     module: "games/bivalent/game.js",
   },
+  {
+    id: "wavefunction-collapse",
+    title: "Wavefunction Collapse",
+    board: "Chessboard",
+    blurb: "Race a checker to the far rank. A marble drawn from a bag says whether you move from a light or a dark square, and a checker that lands beside an enemy captures it.",
+    path: "games/wavefunction-collapse/",
+    module: "games/wavefunction-collapse/game.js",
+  },
 ];
