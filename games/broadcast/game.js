@@ -1,0 +1,351 @@
+// Broadcast: a game of Y with dice and sowing. Pure: no DOM.
+//
+// Board: a triangle of hexagons (as in Y), or a hexagon of hexagons whose six
+// sides are taken in adjacent pairs as three sides (common/board/hex.js).
+// Cells on two sides (corners) belong to both. The board starts empty and
+// Black moves first.
+//
+// Checkers stack. Each cell holds a stack, listed bottom to top; whoever has
+// the top checker controls the cell, and a player "caps" the stacks they
+// control.
+//
+// A turn: roll two dice (two chance plies, "roll:N"; see common/dice.js), then
+// one move by the roller. With k the difference of the dice:
+//   - k = 0: place a checker on a vacant cell ([id]).
+//   - k > 0: sow a stack the mover caps whose height is exactly k, or failing
+//     that the tallest height below k that they cap (down to 1). The whole
+//     stack is lifted and dropped one checker per cell along a path of as
+//     many steps as checkers ([origin, c1, ..., ch]), from the bottom of the
+//     stack to the top, so the cap lands last, on top of the path's end. Each
+//     step goes to a neighbour (vacant or occupied); the path may revisit
+//     cells, including its origin, but never steps straight back to the cell
+//     it just left.
+//   - If the mover caps no stack of height k or less, they place instead.
+//
+// At the end of every turn, whoever's controlled cells join all three sides
+// wins: the opponent too, if the mover's sow dropped their checkers to join
+// it. As in Y, the top colours of a position never connect for both players
+// at once, and a full board always connects for exactly one, so the game
+// never stalls without a vacant cell to place on.
+
+import { triangleBoard, hexHexBoard } from "../../common/board/hex.js";
+import { CHANCE, cachedBoards } from "../../common/engine.js";
+import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
+
+const BLACK = 1, WHITE = 2;
+const PLAYERS = {
+  [BLACK]: { name: "Black", fill: "#202329", mark: "#ffffff" },
+  [WHITE]: { name: "White", fill: "#f2f2f0", mark: "#0e0f13" },
+};
+const DIE = 6;
+
+const SIZES = Array.from({ length: 10 }, (_, i) => 4 + i);   // 4-13: hexagon 4-6, triangle 7-13
+const sizeAllowed = (size, { shape }) => (shape === "hexagon" ? size <= 6 : size >= 7);
+
+// Three side sets. A triangle's sides face out in two of the six directions
+// each (DIRS6 in hex.js: 0 E, 1 NE, 2 NW, 3 W, 4 SW, 5 SE); hex-hex side d
+// faces d and d + 1, and sides 2i and 2i + 1 make set i.
+const TRIANGLE_SETS = { W: 0, E: 1, S: 2 };
+const TRIANGLE_FACING = { W: [2, 3], E: [0, 1], S: [4, 5] };
+const setOf = (board, side) => (board.shape === "triangle" ? TRIANGLE_SETS[side] : side >> 1);
+const facing = (board, side) => (board.shape === "triangle" ? TRIANGLE_FACING[side] : [side, (side + 1) % 6]);
+
+// Side colours, drawn as lines along the board's edge.
+const SIDE_COLOURS = ["#c0392b", "#2471a3", "#d4a017"];
+
+const colorSchemes = {
+  brown: { name: "Brown", cellFill: () => "#f0d9b5" },
+  blue: { name: "Blue", cellFill: () => "#dee3e6" },
+};
+
+function buildBoard({ shape, size }) {
+  const board = shape === "hexagon" ? hexHexBoard(size) : triangleBoard(size);
+  board.goal = Uint8Array.from(board.cells, (c) => c.tags.edges.reduce((m, side) => m | (1 << setOf(board, side)), 0));
+  return board;
+}
+
+// The player whose controlled cells join all three side sets, or 0.
+function connector(board, tops) {
+  const seen = new Uint8Array(board.size);
+  const stack = [];
+  for (let start = 0; start < board.size; start++) {
+    // Every connecting group touches set 0, so start only from there.
+    if (seen[start] || !tops[start] || !(board.goal[start] & 1)) continue;
+    const p = tops[start];
+    let touched = 0;
+    seen[start] = 1;
+    stack.push(start);
+    while (stack.length) {
+      const id = stack.pop();
+      touched |= board.goal[id];
+      for (const n of board.neighbours[id]) {
+        if (!seen[n] && tops[n] === p) { seen[n] = 1; stack.push(n); }
+      }
+    }
+    if (touched === 7) return p;
+  }
+  return 0;
+}
+
+// ---- what the roll allows --------------------------------------------------
+
+const difference = (s) => Math.abs(s.dice[0] - s.dice[1]);
+
+// The height to sow for the player to move: k if they cap a stack that tall,
+// else the tallest below k they cap; 0 if they must place instead.
+function sowHeight(s) {
+  const k = difference(s);
+  let best = 0;
+  if (k === 0) return 0;
+  for (let id = 0; id < s.stacks.length; id++) {
+    const h = s.stacks[id].length;
+    if (h <= k && h > best && s.tops[id] === s.turn) best = h;
+  }
+  return best;
+}
+
+// Every sowing path of `h` steps from `origin`: [origin, c1, ..., ch].
+function sowPaths(board, origin, h) {
+  const out = [];
+  const path = [origin];
+  const walk = (prev) => {
+    if (path.length > h) { out.push(path.slice()); return; }
+    const cur = path[path.length - 1];
+    for (const n of board.neighbours[cur]) {
+      if (n === prev) continue;
+      path.push(n);
+      walk(cur);
+      path.pop();
+    }
+  };
+  walk(-1);
+  return out;
+}
+
+// ---- moves -----------------------------------------------------------------
+
+function endTurn(s) {
+  const winner = connector(s.board, s.tops);
+  if (winner) s.winner = winner;
+  else s.turn = 3 - s.turn;
+  s.phase = "roll";
+  s.dice = [0, 0];
+}
+
+function place(s, id) {
+  s.stacks[id].push(s.turn);
+  s.tops[id] = s.turn;
+}
+
+function sow(s, path) {
+  const { stacks, tops } = s;
+  const lifted = stacks[path[0]];
+  stacks[path[0]] = [];
+  tops[path[0]] = 0;
+  for (let i = 0; i < lifted.length; i++) {
+    const id = path[i + 1];
+    stacks[id].push(lifted[i]);
+    tops[id] = lifted[i];
+  }
+}
+
+function apply(s, move) {
+  if (s.phase === "roll") {
+    s.dice[s.dice[0] ? 1 : 0] = rolledValue(move);
+    if (s.dice[1]) s.phase = "move";
+    return null;
+  }
+  const mover = s.turn;
+  if (move.length === 1) place(s, move[0]);
+  else sow(s, move);
+  s.last = move.slice();
+  endTurn(s);
+  return { player: mover };
+}
+
+// ---- text ------------------------------------------------------------------
+
+function hint(s) {
+  const name = PLAYERS[s.turn].name;
+  if (s.phase === "roll") return `${name} rolls the dice…`;
+  const [a, b] = s.dice;
+  const k = difference(s);
+  const rolled = `${name} rolled ${a} and ${b}`;
+  if (k === 0) return `${rolled}: place a checker on a vacant cell.`;
+  const h = sowHeight(s);
+  if (h === k) return `${rolled}: sow a stack of ${k}.`;
+  if (h) return `${rolled}, but caps no stack of ${k}: sow a stack of ${h}.`;
+  return `${rolled}, but caps no stack of ${k} or less: place a checker on a vacant cell.`;
+}
+
+// Line segments along the board's edge for each side set, for boardDecor. An
+// outer edge of a corner cell between two sets is split at its midpoint.
+function sideSegments(board) {
+  const out = [[], [], []];
+  for (const c of board.cells) {
+    if (!c.tags.edges.length) continue;
+    const sides = (dir) => c.tags.edges.filter((side) => facing(board, side).includes(dir)).map((side) => setOf(board, side));
+    for (let k = 0; k < 6; k++) {
+      const dir = (6 - k) % 6;   // poly edge k faces this direction
+      if (board.step(c.id, dir) >= 0) continue;
+      const sets = [...new Set(sides(dir))];
+      if (!sets.length) continue;
+      const a = c.poly[k], b = c.poly[(k + 1) % 6];
+      if (sets.length === 1) { out[sets[0]].push([a, b]); continue; }
+      // Vertex k is shared with edge k - 1, which faces dir + 1.
+      const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      const atA = sides((dir + 1) % 6)[0] ?? sets[0];
+      out[atA].push([a, m]);
+      out[sets.find((x) => x !== atA) ?? atA].push([m, b]);
+    }
+  }
+  return out;
+}
+
+export default {
+  id: "broadcast",
+  title: "Broadcast",
+  url: import.meta.url,
+  players: PLAYERS,
+  options: {
+    shape: {
+      label: "Board",
+      choices: [{ value: "triangle", label: "Triangle" }, { value: "hexagon", label: "Hexagon" }],
+      default: "triangle",
+    },
+    size: { label: "Board side", choices: SIZES, default: 10, allowed: sizeAllowed },
+  },
+  colorSchemes,
+  pieceLabels: "Stack heights",
+
+  createBoard: cachedBoards((o) => `${o.shape}/${o.size}`, buildBoard),
+  initialState(board) {
+    return {
+      board,
+      stacks: Array.from({ length: board.size }, () => []),   // bottom to top
+      tops: new Uint8Array(board.size),                         // owner of each top checker
+      turn: BLACK,
+      phase: "roll",          // "roll" (chance, one ply per die) or "move"
+      dice: [0, 0],           // the dice of the turn in progress, 0 while unrolled
+      last: null,             // the last move's cells
+      winner: 0,
+    };
+  },
+  clone(s) {
+    return {
+      ...s,
+      stacks: s.stacks.map((st) => st.slice()),
+      tops: s.tops.slice(),
+      dice: s.dice.slice(),
+      last: s.last && s.last.slice(),
+    };
+  },
+  toMove(s) {
+    return s.phase === "roll" ? CHANCE : s.turn;
+  },
+  currentPlayer(s) {
+    return s.turn;
+  },
+  chances() {
+    return rollOutcomes(DIE);
+  },
+  legalMoves(s) {
+    if (s.winner) return [];
+    if (s.phase === "roll") return rollOutcomes(DIE).map((o) => o.move);
+    const h = sowHeight(s);
+    const out = [];
+    for (let id = 0; id < s.stacks.length; id++) {
+      if (!h) {
+        if (!s.stacks[id].length) out.push([id]);
+      } else if (s.stacks[id].length === h && s.tops[id] === s.turn) {
+        for (const path of sowPaths(s.board, id, h)) out.push(path);
+      }
+    }
+    return out;
+  },
+  applyMove: apply,
+  outcome(s) {
+    return s.winner ? { winner: s.winner } : null;
+  },
+
+  // Random rollouts without move lists: a sow is a random walk that never
+  // steps straight back (every cell has at least two neighbours).
+  playout(s, rng) {
+    const { board, stacks } = s;
+    const pick = (list) => list[Math.floor(rng() * list.length)];
+    while (!s.winner) {
+      s.dice = [1 + Math.floor(rng() * DIE), 1 + Math.floor(rng() * DIE)];
+      const h = sowHeight(s);
+      const origins = [];
+      for (let id = 0; id < stacks.length; id++) {
+        if (h ? stacks[id].length === h && s.tops[id] === s.turn : !stacks[id].length) origins.push(id);
+      }
+      const origin = pick(origins);
+      if (!h) {
+        place(s, origin);
+      } else {
+        const path = [origin];
+        let prev = -1;
+        while (path.length <= h) {
+          const cur = path[path.length - 1];
+          const next = pick(board.neighbours[cur].filter((n) => n !== prev));
+          path.push(next);
+          prev = cur;
+        }
+        sow(s, path);
+      }
+      endTurn(s);
+    }
+    return s.winner;
+  },
+
+  chanceView(s) {
+    if (s.winner) return [];
+    return [dicePanel(s.dice.map((v) => v || null), { title: "Dice", owner: s.turn, active: s.phase === "roll" })];
+  },
+  // A stack is drawn as concentric discs, bottom outermost, so every checker
+  // in it shows as a ring; the top disc carries the height.
+  piecesOf(s) {
+    const out = [];
+    s.stacks.forEach((stack, id) => {
+      const h = stack.length;
+      const step = h > 1 ? Math.min(0.12, 0.4 / (h - 1)) : 0;
+      stack.forEach((player, i) => {
+        const piece = { id, player, size: 0.84 - step * i };
+        if (h > 1 && i === h - 1) piece.label = String(h);
+        out.push(piece);
+      });
+    });
+    return out;
+  },
+  // Outlines on the cells of the last move, and dots on the stacks open to
+  // the roll when it must be sown.
+  markers(s) {
+    const out = [];
+    if (s.last) for (const id of new Set(s.last)) out.push({ id, kind: "square" });
+    if (!s.winner && s.phase === "move") {
+      const h = sowHeight(s);
+      if (h) for (let id = 0; id < s.stacks.length; id++) {
+        if (s.stacks[id].length === h && s.tops[id] === s.turn) out.push({ id, kind: "target" });
+      }
+    }
+    return out;
+  },
+  // The second die also gives the difference: "rolled 2, difference 3".
+  moveText(s, move) {
+    if (typeof move !== "string" || !s.dice[0]) return null;
+    const b = rolledValue(move);
+    return `rolled ${b}, difference ${Math.abs(s.dice[0] - b)}`;
+  },
+  boardDecor(board) {
+    return sideSegments(board).map((segments, i) => ({ segments, stroke: SIDE_COLOURS[i], halo: "#0e0f13", width: 0.14 }));
+  },
+  scoreSummary(s, player) {
+    return { sub: PLAYERS[player].name, title: `${PLAYERS[player].name} connects all three sides` };
+  },
+  turnHint(s) {
+    return s.winner ? "" : hint(s);
+  },
+};
+
+export const internals = { connector, sowHeight, sowPaths, sideSegments };
