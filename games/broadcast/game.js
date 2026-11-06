@@ -27,10 +27,16 @@
 // it. As in Y, the top colours of a position never connect for both players
 // at once, and a full board always connects for exactly one, so the game
 // never stalls without a vacant cell to place on.
+//
+// Swap (pie rule, common/swap.js, optional): after Black's first turn, White
+// may swap instead of rolling: Black's opening checker becomes White's and
+// Black rolls next. White's first turn opens with a decision ply ("keep" or
+// "swap") before the roll, so the swap is decided without knowing the dice.
 
 import { triangleBoard, hexHexBoard } from "../../common/board/hex.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
 import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
+import { withSwap } from "../../common/swap.js";
 
 const BLACK = 1, WHITE = 2;
 const PLAYERS = {
@@ -38,6 +44,7 @@ const PLAYERS = {
   [WHITE]: { name: "White", fill: "#f2f2f0", mark: "#0e0f13" },
 };
 const DIE = 6;
+const KEEP = "keep";
 
 const SIZES = Array.from({ length: 10 }, (_, i) => 4 + i);   // 4-13: hexagon 4-6, triangle 7-13
 const sizeAllowed = (size, { shape }) => (shape === "hexagon" ? size <= 6 : size >= 7);
@@ -50,7 +57,8 @@ const TRIANGLE_FACING = { W: [2, 3], E: [0, 1], S: [4, 5] };
 const setOf = (board, side) => (board.shape === "triangle" ? TRIANGLE_SETS[side] : side >> 1);
 const facing = (board, side) => (board.shape === "triangle" ? TRIANGLE_FACING[side] : [side, (side + 1) % 6]);
 
-// Side colours, drawn as lines along the board's edge.
+// Side colours, drawn as lines along a hexagon's edge (a triangle's sides
+// need no marking).
 const SIDE_COLOURS = ["#c0392b", "#2471a3", "#d4a017"];
 
 const colorSchemes = {
@@ -126,10 +134,13 @@ function sowPaths(board, origin, h) {
 
 function endTurn(s) {
   const winner = connector(s.board, s.tops);
-  if (winner) s.winner = winner;
-  else s.turn = 3 - s.turn;
-  s.phase = "roll";
+  s.turns++;
   s.dice = [0, 0];
+  s.phase = "roll";
+  if (winner) { s.winner = winner; return; }
+  s.turn = 3 - s.turn;
+  // White's first turn opens with the swap decision when the rule is on.
+  if (s.swapRule && s.turns === 1) s.phase = "ready";
 }
 
 function place(s, id) {
@@ -150,6 +161,10 @@ function sow(s, path) {
 }
 
 function apply(s, move) {
+  if (s.phase === "ready") {   // KEEP; a swap goes through swapColours
+    s.phase = "roll";
+    return null;
+  }
   if (s.phase === "roll") {
     s.dice[s.dice[0] ? 1 : 0] = rolledValue(move);
     if (s.dice[1]) s.phase = "move";
@@ -167,6 +182,7 @@ function apply(s, move) {
 
 function hint(s) {
   const name = PLAYERS[s.turn].name;
+  if (s.phase === "ready") return `${name}: roll to play on.`;
   if (s.phase === "roll") return `${name} rolls the dice…`;
   const [a, b] = s.dice;
   const k = difference(s);
@@ -202,7 +218,7 @@ function sideSegments(board) {
   return out;
 }
 
-export default {
+export default withSwap({
   id: "broadcast",
   title: "Broadcast",
   url: import.meta.url,
@@ -214,20 +230,28 @@ export default {
       default: "triangle",
     },
     size: { label: "Board side", choices: SIZES, default: 10, allowed: sizeAllowed },
+    swap: {
+      label: "Swap rule",
+      choices: [{ value: "on", label: "On" }, { value: "off", label: "Off" }],
+      default: "on",
+    },
   },
+  moveLabels: { [KEEP]: "Roll" },
   colorSchemes,
   pieceLabels: "Stack heights",
 
   createBoard: cachedBoards((o) => `${o.shape}/${o.size}`, buildBoard),
-  initialState(board) {
+  initialState(board, { swap }) {
     return {
       board,
       stacks: Array.from({ length: board.size }, () => []),   // bottom to top
       tops: new Uint8Array(board.size),                         // owner of each top checker
       turn: BLACK,
-      phase: "roll",          // "roll" (chance, one ply per die) or "move"
+      phase: "roll",          // "roll" (chance, one ply per die), "move", or "ready" (White's swap decision)
       dice: [0, 0],           // the dice of the turn in progress, 0 while unrolled
       last: null,             // the last move's cells
+      turns: 0,               // turns completed
+      swapRule: swap === "on",
       winner: 0,
     };
   },
@@ -252,6 +276,7 @@ export default {
   legalMoves(s) {
     if (s.winner) return [];
     if (s.phase === "roll") return rollOutcomes(DIE).map((o) => o.move);
+    if (s.phase === "ready") return [KEEP];
     const h = sowHeight(s);
     const out = [];
     for (let id = 0; id < s.stacks.length; id++) {
@@ -264,6 +289,16 @@ export default {
     return out;
   },
   applyMove: apply,
+  // The swap: every checker changes colour (the board and goals are
+  // symmetric), and the other player rolls next.
+  swapColours(s) {
+    for (let id = 0; id < s.stacks.length; id++) {
+      s.stacks[id] = s.stacks[id].map((p) => 3 - p);
+      if (s.tops[id]) s.tops[id] = 3 - s.tops[id];
+    }
+    s.turn = 3 - s.turn;
+    s.phase = "roll";
+  },
   outcome(s) {
     return s.winner ? { winner: s.winner } : null;
   },
@@ -274,7 +309,9 @@ export default {
     const { board, stacks } = s;
     const pick = (list) => list[Math.floor(rng() * list.length)];
     while (!s.winner) {
-      s.dice = [1 + Math.floor(rng() * DIE), 1 + Math.floor(rng() * DIE)];
+      // Keep any die already rolled; never swap.
+      const die = () => 1 + Math.floor(rng() * DIE);
+      if (s.phase !== "move") s.dice = [s.dice[0] || die(), die()];
       const h = sowHeight(s);
       const origins = [];
       for (let id = 0; id < stacks.length; id++) {
@@ -300,8 +337,9 @@ export default {
   },
 
   chanceView(s) {
-    if (s.winner) return [];
-    return [dicePanel(s.dice.map((v) => v || null), { title: "Dice", owner: s.turn, active: s.phase === "roll" })];
+    if (s.winner || s.phase === "ready") return [];
+    const result = s.dice[1] ? `difference ${difference(s)}` : null;
+    return [dicePanel(s.dice.map((v) => v || null), { title: "Dice", owner: s.turn, active: s.phase === "roll", result })];
   },
   // A stack is drawn as concentric discs, bottom outermost, so every checker
   // in it shows as a ring; the top disc carries the height.
@@ -333,11 +371,13 @@ export default {
   },
   // The second die also gives the difference: "rolled 2, difference 3".
   moveText(s, move) {
-    if (typeof move !== "string" || !s.dice[0]) return null;
+    if (move === KEEP) return "no swap";
+    if (typeof move !== "string" || s.phase !== "roll" || !s.dice[0]) return null;
     const b = rolledValue(move);
     return `rolled ${b}, difference ${Math.abs(s.dice[0] - b)}`;
   },
   boardDecor(board) {
+    if (board.shape === "triangle") return [];
     return sideSegments(board).map((segments, i) => ({ segments, stroke: SIDE_COLOURS[i], halo: "#0e0f13", width: 0.14 }));
   },
   scoreSummary(s, player) {
@@ -346,6 +386,9 @@ export default {
   turnHint(s) {
     return s.winner ? "" : hint(s);
   },
-};
+}, {
+  // Offered at White's decision before the first roll.
+  offer: (s) => s.phase === "ready",
+});
 
 export const internals = { connector, sowHeight, sowPaths, sideSegments };

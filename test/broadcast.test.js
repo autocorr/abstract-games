@@ -5,8 +5,8 @@ import { newGame, resolveOptions, moveKey } from "../common/engine.js";
 
 const { connector, sowHeight, sowPaths, sideSegments } = internals;
 
-const tri = (size = 7) => newGame(game, { shape: "triangle", size });
-const hex = (size = 4) => newGame(game, { shape: "hexagon", size });
+const tri = (size = 7, swap = "off") => newGame(game, { shape: "triangle", size, swap });
+const hex = (size = 4, swap = "off") => newGame(game, { shape: "hexagon", size, swap });
 const at = (s, name) => s.board.cells.find((c) => c.tags.name === name).id;
 
 // Roll the two dice of a turn.
@@ -36,6 +36,7 @@ test("hex-hex sides pair up into three sets; corners between sets hold two", () 
   const both = board.cells.filter((c) => [3, 5, 6].includes(board.goal[c.id]));
   assert.equal(both.length, 3);
   for (const segs of sideSegments(board)) assert.ok(segs.length > 0);
+  assert.equal(game.boardDecor(board).length, 3);
 });
 
 test("triangle sides are W, E, S; the corners hold two", () => {
@@ -44,6 +45,44 @@ test("triangle sides are W, E, S; the corners hold two", () => {
   assert.equal(two.length, 3);
   // 7 cells along each side, each drawn by 2 edges (the apex has 4 off-board edges).
   assert.deepEqual(sideSegments(board).map((x) => x.length), [14, 14, 14]);
+  // The triangle's own shape shows its sides: no lines are drawn.
+  assert.deepEqual(game.boardDecor(board), []);
+});
+
+test("White may swap before their first roll", () => {
+  const s = tri(7, "on");
+  roll(s, 4, 1);
+  game.applyMove(s, [10]);
+  assert.equal(game.toMove(s), 2);
+  assert.deepEqual(game.legalMoves(s), ["keep", "swap"]);
+  assert.deepEqual(game.chanceView(s), []);
+  game.applyMove(s, "swap");
+  assert.deepEqual(s.stacks[10], [2]);
+  assert.equal(s.tops[10], 2);
+  assert.equal(s.turn, 1);
+  assert.equal(game.toMove(s), 0);
+  // Black rolls and moves on; the swap is not offered again.
+  roll(s, 2, 2);
+  game.applyMove(s, [11]);
+  assert.equal(game.toMove(s), 0);
+});
+
+test("keeping goes on to White's roll", () => {
+  const s = tri(7, "on");
+  roll(s, 3, 3);
+  game.applyMove(s, [10]);
+  game.applyMove(s, "keep");
+  assert.equal(game.toMove(s), 0);
+  roll(s, 5, 5);
+  assert.ok(!game.legalMoves(s).includes("swap"));
+});
+
+test("the dice panel shows the difference once both dice are rolled", () => {
+  const s = tri();
+  game.applyMove(s, "roll:2");
+  assert.equal(game.chanceView(s)[0].result, undefined);
+  game.applyMove(s, "roll:6");
+  assert.equal(game.chanceView(s)[0].result, "difference 4");
 });
 
 test("a double places on any vacant cell", () => {
