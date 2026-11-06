@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tunneling</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Leave your opponent without a legal move. The player who cannot move on their turn loses.</p>
+  <p><b>Pieces.</b> Each player has four grasshoppers, drawn as upside-down Queens. White moves first.</p>
+  <p><b>Move.</b> A grasshopper moves along any of the eight lines a chess Queen uses. It passes over any number of empty squares, hops the first piece it meets, and lands on the square just beyond it. That square must be on the board and empty. Any piece may be hopped: either player&rsquo;s grasshoppers, or stones. Nothing is captured.</p>
+  <p><b>Stones.</b> The square a grasshopper leaves gets a gray stone. Stones never move, belong to neither player and stay for the rest of the game, so the board fills up until someone is stuck.</p>
+  <p><b>Options.</b> Setup offers an 8&times;8 or 10&times;10 board and three starting positions, each placed around the center so that it looks the same from both sides: <i>Ring</i> (the published start), <i>Wide ring</i> (the same pattern a square further out) and <i>Diagonals</i> (the central 2&times;2 and the corners of the square around it).</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
