@@ -66,12 +66,4 @@ export const games = [
     path: "games/wavefunction-collapse/",
     module: "games/wavefunction-collapse/game.js",
   },
-  {
-    id: "coagulate",
-    title: "Coagulate",
-    board: "Hexagon of hexagons",
-    blurb: "Roll a four-sided die, then push your luck: each re-roll that beats the last earns another stone, but a lower or equal roll loses the turn. When the board is full, the larger groups win.",
-    path: "games/coagulate/",
-    module: "games/coagulate/game.js",
-  },
 ];
