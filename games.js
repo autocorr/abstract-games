@@ -66,4 +66,12 @@ export const games = [
     path: "games/wavefunction-collapse/",
     module: "games/wavefunction-collapse/game.js",
   },
+  {
+    id: "zone-y",
+    title: "Zone Y",
+    board: "Triangle of hexagons in two zones",
+    blurb: "Join all three sides of the triangle with one group of stones. Each turn, place one stone in the dark inner zone or two in the light outer zone.",
+    path: "games/zone-y/",
+    module: "games/zone-y/game.js",
+  },
 ];
