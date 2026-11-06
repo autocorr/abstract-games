@@ -152,23 +152,25 @@ export function validateBoard(board) {
 
 // ---- connection games ------------------------------------------------------
 //
-// Players who connect two opposite sides (Hex and its relatives) list them
-// as `sides: [a, b]`, names from the cells' `edges` tags.
+// Players who connect sides of the board (two opposite sides in Hex and its
+// relatives, all three in Y) list them as `sides: [a, b, ...]`, names from
+// the cells' `edges` tags.
 
-// Per player, a mask over cell ids: bit 1 for cells on the player's first
-// side, 2 for the second. players: { [p]: { sides: [a, b] } }.
+// Per player, a mask over cell ids: bit i set for cells on the player's i-th
+// side. players: { [p]: { sides: [a, b, ...] } }.
 export function goalMasks(board, players) {
   const out = {};
-  for (const [p, { sides: [a, b] }] of Object.entries(players)) {
-    out[p] = Uint8Array.from(board.cells, (c) => (c.tags.edges.includes(a) ? 1 : 0) | (c.tags.edges.includes(b) ? 2 : 0));
+  for (const [p, { sides }] of Object.entries(players)) {
+    out[p] = Uint8Array.from(board.cells, (c) => sides.reduce((m, side, i) => m | (c.tags.edges.includes(side) ? 1 << i : 0), 0));
   }
   return out;
 }
 
-// Does the group of cells[id]'s owner containing `id` touch both sides of
-// `mask` (one of goalMasks)? Stops as soon as it does.
-export function connectsSides(board, cells, id, mask) {
+// Does the group of cells[id]'s owner containing `id` touch every one of the
+// `sides` sides of `mask` (one of goalMasks)? Stops as soon as it does.
+export function connectsSides(board, cells, id, mask, sides = 2) {
   const player = cells[id];
+  const all = (1 << sides) - 1;
   const seen = new Uint8Array(board.size);
   const stack = [id];
   seen[id] = 1;
@@ -176,7 +178,7 @@ export function connectsSides(board, cells, id, mask) {
   while (stack.length) {
     const cur = stack.pop();
     touched |= mask[cur];
-    if (touched === 3) return true;
+    if (touched === all) return true;
     for (const n of board.neighbours[cur]) {
       if (!seen[n] && cells[n] === player) {
         seen[n] = 1;

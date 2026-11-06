@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validateBoard, ray, lineLength, groupAt, liberties, opposite, gridName, fillsRectangle, goalMasks, connectsSides } from "../common/board/graph.js";
 import { squareBoard } from "../common/board/square.js";
-import { rhombusBoard, hexHexBoard } from "../common/board/hex.js";
+import { rhombusBoard, hexHexBoard, triangleBoard } from "../common/board/hex.js";
 
 test("square board: coordinates, names and colour tags", () => {
   const b = squareBoard({ cols: 8 });
@@ -118,6 +118,29 @@ test("hex-hex: a1-style names from the top-left", () => {
   assert.equal(new Set(b.cells.map((c) => c.tags.name)).size, b.size);
 });
 
+test("triangle: rows, sides, distances and names", () => {
+  for (const n of [1, 2, 9]) {
+    const b = triangleBoard(n);
+    assert.deepEqual(validateBoard(b), []);
+    assert.equal(b.size, (n * (n + 1)) / 2);
+  }
+  const b = triangleBoard(5);
+  for (const side of ["W", "E", "S"]) assert.equal(b.cells.filter((c) => c.tags.edges.includes(side)).length, 5);
+  assert.equal(b.cells.filter((c) => c.tags.edges.length === 2).length, 3);
+  for (const c of b.cells) {
+    assert.equal(c.coord.d.reduce((a, x) => a + x, 0), 4);
+    assert.ok(b.neighbours[c.id].length <= 6);
+    for (const n of b.neighbours[c.id]) assert.notEqual(b.cells[n].tags.tri, c.tags.tri);
+  }
+  const apex = b.at(0, 0);
+  assert.deepEqual(b.cells[apex].tags.edges, ["W", "E"]);
+  assert.equal(b.cells[apex].tags.name, "a1");
+  assert.equal(b.neighbours[apex].length, 2);
+  assert.equal(b.cells[b.at(-2, 4)].tags.name, "c5");   // middle of the bottom row
+  assert.deepEqual(b.cells[b.at(-2, 4)].coord.d, [2, 2, 0]);
+  assert.equal(new Set(b.cells.map((c) => c.tags.name)).size, b.size);
+});
+
 test("fillsRectangle: square grids fill their bounds, hex boards do not", () => {
   assert.equal(fillsRectangle(squareBoard({ cols: 5 })), true);
   assert.equal(fillsRectangle(squareBoard({ cols: 7, style: "points" })), true);
@@ -138,4 +161,17 @@ test("goalMasks and connectsSides: a chain between a player's two sides", () => 
   assert.equal(connectsSides(b, cells, b.at(1, 0), goal[1]), true);
   cells[b.at(1, 2)] = 2;   // cut by the other colour
   assert.equal(connectsSides(b, cells, b.at(1, 0), goal[1]), false);
+});
+
+test("goalMasks and connectsSides: three sides, as in Y", () => {
+  const b = triangleBoard(5);
+  const goal = goalMasks(b, { 1: { sides: ["W", "E", "S"] } })[1];
+  assert.equal(goal[b.at(0, 0)], 3);    // the apex: W and E
+  assert.equal(goal[b.at(-4, 4)], 5);   // bottom-left corner: W and S
+  const cells = new Uint8Array(b.size);
+  for (let r = 0; r < 5; r++) cells[b.at(0, r)] = 1;   // the right edge, from apex to corner
+  assert.equal(connectsSides(b, cells, b.at(0, 0), goal), true, "two sides suffice by default");
+  assert.equal(connectsSides(b, cells, b.at(0, 0), goal, 3), true, "the bottom-right corner touches S");
+  cells[b.at(0, 4)] = 0;
+  assert.equal(connectsSides(b, cells, b.at(0, 0), goal, 3), false);
 });

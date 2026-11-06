@@ -31,7 +31,7 @@ common/
                             helpers; groups, liberties, side-to-side connection,
                             directions (ray, lineLength)
     square.js               square grids: chess/draughts boards and Go-style points boards
-    hex.js                  hex rhombus (Hex) and hex-hex boards
+    hex.js                  hex rhombus (Hex), hex-hex and triangle (Y) boards
     cairo.js                Cairo pentagonal tiling patches
   render.js                 SVG renderer: cell, highlight, piece and marker layers
   chance-view.js            bag and dice panels shown in the turn card
@@ -85,7 +85,7 @@ Tiling generators live in `common/board/`:
 | Generator | Coord | Tags |
 | --------- | ----- | ---- |
 | `squareBoard({ cols, rows, adjacency, style, stars, grid })` | `{ col, row }`, row 0 = rank 1 at the bottom | `name` ("a1"), `dark` (a1 dark), `quad` (Dabbaba sub-grid 0-3), `edges` ("N"/"S"/"E"/"W") |
-| `rhombusBoard(n)`, `hexHexBoard(side)` | axial `{ q, r }`, pointy-top | `tri` (3-colouring), `edges` (rhombus "N"/"S"/"E"/"W"; hex-hex side 0-5), `name` ("a1": column from q, row from r, top row 1) |
+| `rhombusBoard(n)`, `hexHexBoard(side)`, `triangleBoard(n)` | axial `{ q, r }`, pointy-top; a triangle adds `d`, the distances to its sides | `tri` (3-colouring), `edges` (rhombus "N"/"S"/"E"/"W"; hex-hex side 0-5; triangle "W"/"E"/"S"), `name` ("a1": column from q, row from r, top row 1) |
 | `cairoBoard(centres, { rotate })` | (none) | `tone` (pentagon orientation), `name` ("1".."n" in reading order) |
 
 Cell names (`tags.name`) are what the move log shows, so every generator
@@ -104,9 +104,10 @@ steps for squares, 6 for hexes, listed so that the opposite of `d` is
 `opposite(board, d)`), `board.at(...coord)` and `board.step(id, d)` (both -1
 off the board). `graph.js` builds on these with `ray()` and `lineLength()`,
 and on adjacency alone with `components()`, `groupAt()` and `liberties()`.
-For connection games, `goalMasks(board, players)` marks each player's two
-`sides` (edge tags) and `connectsSides(board, cells, id, mask)` tells
-whether a group joins them.
+For connection games, `goalMasks(board, players)` marks each player's
+`sides` (edge tags) and `connectsSides(board, cells, id, mask, sides = 2)`
+tells whether a group touches all of them (two opposite sides in Hex, three
+in Y).
 
 Boards depend only on the options and are never mutated, so a game can
 build each one once with `createBoard: cachedBoards(keyOf, build)` from

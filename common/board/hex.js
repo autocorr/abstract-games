@@ -1,5 +1,5 @@
-// Hexagonal grids: rhombus boards (as in Hex) and hex-hex boards (a hexagon
-// of hexagons). Cells are pointy-topped. Pure: no DOM.
+// Hexagonal grids: rhombus boards (as in Hex), hex-hex boards (a hexagon of
+// hexagons) and triangles (as in Y). Cells are pointy-topped. Pure: no DOM.
 //
 // Cells have axial coord { q, r }; r grows downwards and q to the right.
 // Tags:
@@ -7,7 +7,9 @@
 //   edges: the board sides the cell lies on (corners lie on two)
 //          rhombus: "N" (r = 0), "S" (r = n-1), "W" (q = 0), "E" (q = n-1)
 //          hex-hex: side index d (0-5) between directions d and d+1
-//   name:  "a1"-style: column letter from q, row number from r (top row 1)
+//          triangle: "W" (left), "E" (right), "S" (bottom)
+//   name:  "a1"-style: column letter from q, row number from r (top row 1);
+//          on a triangle the letter counts from the row's left end
 //
 // The board also gets dirs/at/step (see graph.js). dirs are the 6 neighbour
 // steps going round from east, so opposite(board, d) = (d + 3) % 6:
@@ -82,6 +84,28 @@ export function hexHexBoard(side, { rotate = 0 } = {}) {
   const board = finish(specs, rotate);
   board.shape = "hexhex";
   board.side = side;
+  return board;
+}
+
+// Triangle with `n` cells along each side, apex up: row r (from 0 at the
+// top) has r + 1 cells. A cell j places from the left of row r has axial
+// coord { q: j - r, r }, so the rows are centred. coord.d holds its distances
+// in rows from the three sides: [W, E, S] = [j, r - j, n - 1 - r], which
+// always sum to n - 1.
+export function triangleBoard(n, { rotate = 0 } = {}) {
+  const specs = [];
+  for (let r = 0; r < n; r++) {
+    for (let j = 0; j <= r; j++) {
+      const d = [j, r - j, n - 1 - r];
+      const edges = ["W", "E", "S"].filter((_, k) => d[k] === 0);
+      const spec = hexCell(j - r, r, { edges, name: gridName(j, r) });
+      spec.coord.d = d;
+      specs.push(spec);
+    }
+  }
+  const board = finish(specs, rotate);
+  board.shape = "triangle";
+  board.n = n;
   return board;
 }
 
