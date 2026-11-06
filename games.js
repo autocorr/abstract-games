@@ -74,4 +74,12 @@ export const games = [
     path: "games/zone-y/",
     module: "games/zone-y/game.js",
   },
+  {
+    id: "tunneling",
+    title: "Tunneling",
+    board: "Chessboard",
+    blurb: "Four grasshoppers each hop over pieces along queen lines, leaving a stone on every square they leave. Run out of moves and you lose.",
+    path: "games/tunneling/",
+    module: "games/tunneling/game.js",
+  },
 ];
