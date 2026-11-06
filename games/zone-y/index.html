@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zone Y</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Join all three sides of the board with one unbroken group of your stones. The corner cells belong to both sides they touch.</p>
+  <p><b>Board.</b> The board is a triangle of hexagons. A smaller triangle at its center, drawn in the darker shade, is the inner zone; the lighter cells around it are the outer zone. The board starts empty, and Black moves first.</p>
+  <p><b>Turn.</b> Either place one stone of your color on an empty cell of the inner zone, or place two stones on empty cells of the outer zone. You cannot mix the zones in one turn. If the outer zone has only one empty cell left, you may place that one stone alone.</p>
+  <p><b>Swap.</b> After Black's first turn, White may swap instead of playing: Black's opening stones become White's, and Black moves next.</p>
+  <p><b>End.</b> The first player to join all three sides wins, even with the first of two stones. As in Y, the game cannot end in a draw: a full board always holds exactly one such group.</p>
+  <p><b>Options.</b> The side of the board and the side of the inner triangle can be changed in Setup. The inner triangle stays centered, so its side differs from the board's by a multiple of three.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
