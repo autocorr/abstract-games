@@ -163,19 +163,27 @@ export default {
   turnHint(state, scheme),          // status line text while the game is on (scheme: the
                                     //   active colour scheme object, or null)
   boardDecor(board),                // -> lines over the cells, e.g. goal edges
+  pieceStyles,                      // e.g. { bars: { name: "Bars" }, discs: { name: "Discs" } }:
+                                    //   Setup offers them as "Pieces" (saved, no new game; the
+                                    //   first is the default) and piecesOf gets the key
   pieceLabels,                      // e.g. "Group sizes": the pieces carry labels, and Setup
                                     //   offers Show / Hide for them (saved, no new game)
   rotatable,                        // true: the shell may turn the board 90 degrees;
                                     //   a number: by that angle (clockwise, degrees)
-  piecesOf(state),                  // -> [{ id, player, label?, image? }]; default reads state.cells;
+  piecesOf(state, style),           // -> [{ id, player, label?, image? }]; default reads state.cells;
                                     //   label: short text on the disc (e.g. a group size);
                                     //   image: URL drawn instead of a disc (e.g. a chess piece);
                                     //   a neutral piece has player null and its own fill (and mark)
                                     //   rotate: degrees to turn an image (180: upside down);
                                     //   size: disc diameter as a fraction of a cell (default 0.84);
-                                    //   shadow: false draws a disc without its drop shadow
-  markers(state, move, info),       // -> [{ id, kind, color? }] for the last move. Over pieces:
-                                    //   "ring" | "dot" | "target"; under pieces: "shade" (hatched
+                                    //   shadow: false draws a disc without its drop shadow;
+                                    //   bar: { width, height, y?, labelSize? } draws a level
+                                    //   rounded rectangle instead, centred y below the cell's
+                                    //   centre (cell units), with the label on it; stroke: its
+                                    //   outline width
+  markers(state, move, info),       // -> [{ id, kind, color?, y? }] for the last move. Over pieces:
+                                    //   "ring" | "dot" | "target" (y: cells below the centre,
+                                    //   level on screen); under pieces: "shade" (hatched
                                     //   cell), "square" (cell outline), "check" (red glow)
   scoreSummary(state, player),      // -> { main, sub, title } for the turn panel
   outcomeLines(state, outcome),     // -> HTML lines shown under the game-over verdict
@@ -286,8 +294,8 @@ flow under the board, and the head becomes a slim bar above it. Which
 sections are open is saved site-wide. Settings are saved per game in
 `localStorage` (`common/ui/settings.js`); option changes start a new game
 at once, and a link's options become the saved ones. Display settings
-(colour scheme, Show / Hide for a game's `pieceLabels`) only redraw, and
-stay out of the URL.
+(colour scheme, piece style, Show / Hide for a game's `pieceLabels`) only
+redraw, and stay out of the URL.
 
 A board whose cells fill a rectangle (square grids) sits on a framing panel;
 other shapes (hexagons, diamonds, Cairo patches) are drawn straight on the

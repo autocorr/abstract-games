@@ -152,8 +152,9 @@ export function randomPlayout(game, state, rng = Math.random, maxPlies = 100000)
 }
 
 // Default piece listing: state.cells[id] holds the owning player (0 = empty).
-export function piecesOf(game, state) {
-  if (game.piecesOf) return game.piecesOf(state);
+// `style` picks one of game.pieceStyles (default: the first).
+export function piecesOf(game, state, style = Object.keys(game.pieceStyles || {})[0]) {
+  if (game.piecesOf) return game.piecesOf(state, style);
   const out = [];
   const cells = state.cells;
   for (let id = 0; id < cells.length; id++) if (cells[id]) out.push({ id, player: cells[id] });

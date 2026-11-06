@@ -235,6 +235,10 @@ export function createRenderer(svg) {
         }));
         continue;
       }
+      if (p.bar) {
+        drawBar(p, c, spec, u);
+        continue;
+      }
       (p.shadow === false ? layers.images : layers.pieces).appendChild(svgEl("circle", {
         cx: c.x, cy: c.y, r: ((p.size || 0.84) / 2) * u,
         fill: spec.fill || "#888", stroke: "#0e0f13", "stroke-width": 0.03 * u,
@@ -254,16 +258,42 @@ export function createRenderer(svg) {
     }
   }
 
+  // A bar piece: a rounded rectangle offset from the cell's centre, kept
+  // level on screen under the display rotation, with its label on it.
+  function drawBar(p, c, spec, u) {
+    const { width, height, y = 0, labelSize = 0.4 } = p.bar;
+    const g = svgEl("g", { transform: `translate(${c.x} ${c.y})${rotation ? ` rotate(${-rotation})` : ""} scale(${u})` });
+    g.appendChild(svgEl("rect", {
+      x: -width / 2, y: y - height / 2, width, height, rx: Math.min(height / 2, 0.05),
+      fill: spec.fill || "#888", stroke: "#0e0f13", "stroke-width": p.stroke || 0.03,
+    }));
+    if (p.label) {
+      const text = svgEl("text", {
+        "font-size": LABEL_PX, "font-weight": 700, "text-anchor": "middle",
+        "dominant-baseline": "central", fill: spec.mark || "#fff",
+        transform: `translate(0 ${y}) scale(${labelSize / LABEL_PX})`,
+      });
+      text.textContent = p.label;
+      g.appendChild(text);
+    }
+    (p.shadow === false ? layers.images : layers.pieces).appendChild(g);
+  }
+
   // pieces:   [{ id, player, label?, image?, rotate?, fill?, mark?, size?,
-  //           shadow? }]; image is a URL drawn in place of the disc (e.g. a
+  //           shadow?, bar?, stroke? }]; image is a URL drawn in place of the disc (e.g. a
   //           chess piece), without a drop shadow, turned by rotate degrees;
   //           fill and mark colour a neutral piece (player null); size is the
   //           disc's diameter as a fraction of a cell (default 0.84);
-  //           shadow: false drops the disc's shadow
+  //           shadow: false drops the disc's shadow; bar: { width, height,
+  //           y?, labelSize? } draws a level rounded rectangle instead of a
+  //           disc, its centre y below the cell's (all in cells; y < 0 is
+  //           up), with the label at labelSize (default 0.4); stroke: its
+  //           outline width
   // players:  game.players ({ [player]: { fill, mark } })
-  // markers:  [{ id, kind, color? }]. Over the pieces: "ring" (colour follows
-  //           the piece), "dot", and "target" (the highlight dot of a
-  //           selectable cell). Under the pieces: "shade" (hatched cell),
+  // markers:  [{ id, kind, color?, y? }]. Over the pieces: "ring" (colour
+  //           follows the piece), "dot", and "target" (the highlight dot of a
+  //           selectable cell, y cells below the centre, e.g. clear of a
+  //           label). Under the pieces: "shade" (hatched cell),
   //           "square" (cell outline, default highlight colour) and "check"
   //           (red glow, e.g. under a King in check).
   // selected: cell ids in the current partial move
@@ -314,11 +344,13 @@ export function createRenderer(svg) {
         }));
       }
     }
-    const targetIds = [...targets, ...markers.filter((m) => m.kind === "target").map((m) => m.id)];
-    for (const id of targetIds) {
+    const targetDots = [...targets.map((id) => ({ id })), ...markers.filter((m) => m.kind === "target")];
+    for (const { id, y = 0 } of targetDots) {
       const c = board.cells[id];
+      // y: below the centre on screen, whatever the display rotation.
+      const [dx, dy] = rotatePoint([0, y * u], -rotation);
       layers.markers.appendChild(svgEl("circle", {
-        cx: c.x, cy: c.y, r: 0.12 * u, fill: HIGHLIGHT, stroke: "#0e0f13", "stroke-width": 0.02 * u,
+        cx: c.x + dx, cy: c.y + dy, r: 0.12 * u, fill: HIGHLIGHT, stroke: "#0e0f13", "stroke-width": 0.02 * u,
       }));
     }
   }

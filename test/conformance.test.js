@@ -169,9 +169,11 @@ for (const { entry, game } of entries) {
             assert.deepEqual(parseMoveKey(moveKey(m)), m);
           }
 
-          for (const p of piecesOf(game, state)) {
-            assert.ok(p.id >= 0 && p.id < state.board.size);
-            assert.ok(p.player in game.players || (p.player === null && p.fill), "a piece needs a player, or a fill if neutral");
+          for (const style of Object.keys(game.pieceStyles || { default: 0 })) {
+            for (const p of piecesOf(game, state, style)) {
+              assert.ok(p.id >= 0 && p.id < state.board.size);
+              assert.ok(p.player in game.players || (p.player === null && p.fill), "a piece needs a player, or a fill if neutral");
+            }
           }
           if (game.scoreSummary) for (const p of Object.keys(game.players)) game.scoreSummary(state, Number(p));
           if (game.turnHint) assert.equal(typeof game.turnHint(state), "string");
