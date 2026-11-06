@@ -23,4 +23,5 @@ test("roll moves round-trip and read back their value", () => {
 
 test("dicePanel describes dice for chanceView", () => {
   assert.deepEqual(dicePanel([null], { owner: 2, active: true }), { title: "Die", owner: 2, dice: [null], active: true });
+  assert.equal(dicePanel([2, 6], { result: "difference 4" }).result, "difference 4");
 });

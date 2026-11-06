@@ -147,7 +147,7 @@ export default {
   currentPlayer(state),             // whose turn a chance ply belongs to, for display
   marbles,                          // { W: { name, fill } } colours used by chanceView
   chanceView(state),                // -> panels: bags [{ title, owner, counts, drawn, active }]
-                                    //   or dice [{ title, owner, dice: [4 | null], active }]
+                                    //   or dice [{ title, owner, dice: [4 | null], active, result? }]
 
   // the swap rule: withSwap() (common/swap.js) needs swapColours and adds the rest
   swapColours(state),               // exchange the position's colours (and reflect the board)
@@ -235,7 +235,8 @@ contents and the drawn marbles in order.
 `common/dice.js` does the same for dice: `rollOutcomes(sides)` gives a
 roll's outcomes (`"roll:1"` .. `"roll:6"`), `rolledValue(move)` reads one
 back, and `dicePanel(values, { owner, active })` shows the faces (null for
-a die not rolled yet). Each die is its own ply. Nucleation rolls one die a
+a die not rolled yet), optionally followed by `result` text such as what
+the roll comes to. Each die is its own ply. Nucleation rolls one die a
 turn.
 
 ### Swap

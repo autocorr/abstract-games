@@ -23,7 +23,8 @@ export function rolledValue(move) {
 }
 
 // The chanceView panel showing dice (see chance-view.js): `values` holds
-// each die's face, or null for a die not rolled yet.
-export function dicePanel(values, { title = "Die", owner = null, active = false } = {}) {
-  return { title, owner, dice: values, active };
+// each die's face, or null for a die not rolled yet. `result` is optional
+// text shown after the faces, such as what the roll comes to.
+export function dicePanel(values, { title = "Die", owner = null, active = false, result = null } = {}) {
+  return { title, owner, dice: values, active, ...(result ? { result } : {}) };
 }

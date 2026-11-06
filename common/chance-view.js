@@ -9,7 +9,8 @@
 //      active: true }]          // optional: the bag being drawn from now
 //
 // A dice panel (dicePanel() in dice.js) has `dice: [4, null]` instead of
-// counts and drawn: each die's face, or null for one not rolled yet.
+// counts and drawn: each die's face, or null for one not rolled yet, and
+// optionally `result`, text shown after the faces (e.g. "difference 4").
 //
 // game.marbles names and colours each marble: { W: { name, fill } }. A colour
 // scheme may override them with its own `marbles` (same shape), so marbles
@@ -36,7 +37,8 @@ export function renderChance(container, game, state, marbles = game.marbles) {
 
     if (panel.dice) {
       const faces = panel.dice.map((v) => h("span", { class: "die" + (v == null ? " blank" : "") }, v == null ? "–" : String(v)));
-      container.append(h("div", { class: "bag" + (panel.active ? " active" : "") }, head, faces));
+      const result = panel.result ? h("span", { class: "dice-result" }, panel.result) : null;
+      container.append(h("div", { class: "bag" + (panel.active ? " active" : "") }, head, faces, result));
       continue;
     }
 
