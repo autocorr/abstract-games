@@ -193,7 +193,7 @@ export function createRenderer(svg) {
     layers = {
       highlights: svgEl("g", { "pointer-events": "none" }),
       pieces: svgEl("g", { filter: `url(#${shadowId})`, "pointer-events": "none" }),
-      images: svgEl("g", { "pointer-events": "none" }),   // image pieces: no shadow
+      images: svgEl("g", { "pointer-events": "none" }),   // image pieces and unshadowed discs
       markers: svgEl("g", { "pointer-events": "none" }),
     };
     root.append(layers.highlights, layers.pieces, layers.images, layers.markers);
@@ -235,7 +235,7 @@ export function createRenderer(svg) {
         }));
         continue;
       }
-      layers.pieces.appendChild(svgEl("circle", {
+      (p.shadow === false ? layers.images : layers.pieces).appendChild(svgEl("circle", {
         cx: c.x, cy: c.y, r: ((p.size || 0.84) / 2) * u,
         fill: spec.fill || "#888", stroke: "#0e0f13", "stroke-width": 0.03 * u,
       }));
@@ -254,11 +254,12 @@ export function createRenderer(svg) {
     }
   }
 
-  // pieces:   [{ id, player, label?, image?, rotate?, fill?, mark?, size? }];
-  //           image is a URL drawn in place of the disc (e.g. a chess piece),
-  //           without a drop shadow, turned by rotate degrees; fill and mark
-  //           colour a neutral piece (player null); size is the disc's
-  //           diameter as a fraction of a cell (default 0.84)
+  // pieces:   [{ id, player, label?, image?, rotate?, fill?, mark?, size?,
+  //           shadow? }]; image is a URL drawn in place of the disc (e.g. a
+  //           chess piece), without a drop shadow, turned by rotate degrees;
+  //           fill and mark colour a neutral piece (player null); size is the
+  //           disc's diameter as a fraction of a cell (default 0.84);
+  //           shadow: false drops the disc's shadow
   // players:  game.players ({ [player]: { fill, mark } })
   // markers:  [{ id, kind, color? }]. Over the pieces: "ring" (colour follows
   //           the piece), "dot", and "target" (the highlight dot of a
