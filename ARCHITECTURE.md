@@ -171,6 +171,8 @@ export default {
                                     //   label: short text on the disc (e.g. a group size);
                                     //   image: URL drawn instead of a disc (e.g. a chess piece);
                                     //   a neutral piece has player null and its own fill (and mark)
+                                    //   rotate: degrees to turn an image (180: upside down);
+                                    //   size: disc diameter as a fraction of a cell (default 0.84)
   markers(state, move, info),       // -> [{ id, kind, color? }] for the last move. Over pieces:
                                     //   "ring" | "dot" | "target"; under pieces: "shade" (hatched
                                     //   cell), "square" (cell outline), "check" (red glow)

@@ -225,15 +225,18 @@ export function createRenderer(svg) {
       if (p.image) {
         // A full cell, as Lichess's chessground draws its pieces (12.5% of an
         // 8x8 board, background-size: cover); the margin is in the image.
+        // p.rotate turns the image on the board (e.g. 180 for an upside-down
+        // piece); it stays at that angle under the display rotation.
         const s = u;
+        const turn = (p.rotate || 0) - rotation;
         layers.images.appendChild(svgEl("image", {
           href: p.image, x: c.x - s / 2, y: c.y - s / 2, width: s, height: s,
-          ...(rotation ? { transform: `rotate(${-rotation} ${c.x} ${c.y})` } : {}),
+          ...(turn ? { transform: `rotate(${turn} ${c.x} ${c.y})` } : {}),
         }));
         continue;
       }
       layers.pieces.appendChild(svgEl("circle", {
-        cx: c.x, cy: c.y, r: 0.42 * u,
+        cx: c.x, cy: c.y, r: ((p.size || 0.84) / 2) * u,
         fill: spec.fill || "#888", stroke: "#0e0f13", "stroke-width": 0.03 * u,
       }));
       if (p.label) {
@@ -251,9 +254,11 @@ export function createRenderer(svg) {
     }
   }
 
-  // pieces:   [{ id, player, label?, image?, fill?, mark? }]; image is a URL
-  //           drawn in place of the disc (e.g. a chess piece), without a drop
-  //           shadow; fill and mark colour a neutral piece (player null)
+  // pieces:   [{ id, player, label?, image?, rotate?, fill?, mark?, size? }];
+  //           image is a URL drawn in place of the disc (e.g. a chess piece),
+  //           without a drop shadow, turned by rotate degrees; fill and mark
+  //           colour a neutral piece (player null); size is the disc's
+  //           diameter as a fraction of a cell (default 0.84)
   // players:  game.players ({ [player]: { fill, mark } })
   // markers:  [{ id, kind, color? }]. Over the pieces: "ring" (colour follows
   //           the piece), "dot", and "target" (the highlight dot of a
