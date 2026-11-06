@@ -14,6 +14,7 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Bivalent](games/bivalent/)
 - [Wavefunction Collapse](games/wavefunction-collapse/)
 - [Zone Y](games/zone-y/)
+- [Tunneling](games/tunneling/)
 
 ## Running locally
 
