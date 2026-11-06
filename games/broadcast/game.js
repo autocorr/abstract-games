@@ -66,6 +66,41 @@ const colorSchemes = {
   blue: { name: "Blue", cellFill: () => "#dee3e6" },
 };
 
+// Stacks are drawn as piles of level bars, bottom checker lowest, centred on
+// the cell and kept within it (sizes in cells; a cell is a little over 1.15
+// tall). "capped": the top checker is a wider, taller bar carrying the
+// height; "plain": every bar alike, thinning as the pile grows.
+const PILE = 0.75, GAP = 0.018;
+const pieceStyles = { capped: { name: "Capped" }, plain: { name: "Plain" } };
+
+const TOP = { width: 0.76, height: 0.21 };
+const restHeight = (rest) => (rest ? Math.min(0.087, (PILE - TOP.height - GAP * rest) / rest) : 0);
+const cappedPile = (n) => TOP.height + (n - 1) * (restHeight(n - 1) + GAP);
+
+function cappedStack(id, stack) {
+  const rest = stack.length - 1;
+  const h = restHeight(rest);
+  let y = cappedPile(stack.length) / 2;   // the bottom of the pile
+  const out = [];
+  for (let i = 0; i < rest; i++) {
+    out.push({ id, player: stack[i], stroke: 0.018, bar: { width: 0.58, height: h, y: y - h / 2 } });
+    y -= h + GAP;
+  }
+  const top = { id, player: stack[rest], stroke: 0.025, bar: { ...TOP, y: y - TOP.height / 2, labelSize: 0.16 } };
+  if (rest) top.label = String(stack.length);
+  out.push(top);
+  return out;
+}
+
+function plainStack(id, stack) {
+  const n = stack.length;
+  const h = Math.min(0.115, (PILE - GAP * (n - 1)) / n);
+  const bottom = (n * h + (n - 1) * GAP) / 2;
+  return stack.map((player, i) => ({
+    id, player, stroke: 0.018, bar: { width: 0.66, height: h, y: bottom - h / 2 - i * (h + GAP) },
+  }));
+}
+
 function buildBoard({ shape, size }) {
   const board = shape === "hexagon" ? hexHexBoard(size) : triangleBoard(size);
   board.goal = Uint8Array.from(board.cells, (c) => c.tags.edges.reduce((m, side) => m | (1 << setOf(board, side)), 0));
@@ -238,6 +273,7 @@ export default withSwap({
   },
   moveLabels: { [KEEP]: "Roll" },
   colorSchemes,
+  pieceStyles,
   pieceLabels: "Stack heights",
 
   createBoard: cachedBoards((o) => `${o.shape}/${o.size}`, buildBoard),
@@ -341,18 +377,10 @@ export default withSwap({
     const result = s.dice[1] ? `difference ${difference(s)}` : null;
     return [dicePanel(s.dice.map((v) => v || null), { title: "Dice", owner: s.turn, active: s.phase === "roll", result })];
   },
-  // A stack is drawn as concentric discs, bottom outermost, so every checker
-  // in it shows as a ring; the top disc carries the height.
-  piecesOf(s) {
+  piecesOf(s, style) {
     const out = [];
     s.stacks.forEach((stack, id) => {
-      const h = stack.length;
-      const step = h > 1 ? Math.min(0.12, 0.4 / (h - 1)) : 0;
-      stack.forEach((player, i) => {
-        const piece = { id, player, size: 0.84 - step * i };
-        if (h > 1 && i === h - 1) piece.label = String(h);
-        out.push(piece);
-      });
+      if (stack.length) out.push(...(style === "plain" ? plainStack : cappedStack)(id, stack));
     });
     return out;
   },
@@ -363,8 +391,10 @@ export default withSwap({
     if (s.last) for (const id of new Set(s.last)) out.push({ id, kind: "square" });
     if (!s.winner && s.phase === "move") {
       const h = sowHeight(s);
+      // The dot goes under a short pile, clear of the height on its cap.
+      const y = h > 1 && h < 5 ? cappedPile(h) / 2 + 0.13 : 0;
       if (h) for (let id = 0; id < s.stacks.length; id++) {
-        if (s.stacks[id].length === h && s.tops[id] === s.turn) out.push({ id, kind: "target" });
+        if (s.stacks[id].length === h && s.tops[id] === s.turn) out.push({ id, kind: "target", y });
       }
     }
     return out;

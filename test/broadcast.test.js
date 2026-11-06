@@ -206,12 +206,28 @@ test("the log gives the difference with the second die", () => {
   assert.equal(game.moveText(s, "roll:2"), "rolled 2, difference 3");
 });
 
-test("stacks draw as nested discs with the height on top", () => {
+test("stacks draw as piles of bars, the top one capped with the height", () => {
   const s = tri();
   stack(s, 0, [1, 2, 1]);
-  const ps = game.piecesOf(s);
+  const ps = game.piecesOf(s, "capped");
   assert.deepEqual(ps.map((p) => p.player), [1, 2, 1]);
-  assert.ok(ps[0].size > ps[1].size && ps[1].size > ps[2].size);
+  assert.ok(ps[0].bar.y > ps[1].bar.y && ps[1].bar.y > ps[2].bar.y, "bottom checker lowest");
+  assert.ok(ps[2].bar.width > ps[1].bar.width && ps[2].bar.height > ps[1].bar.height);
   assert.equal(ps[2].label, "3");
   assert.equal(ps[0].label, undefined);
+  assert.equal(game.piecesOf(s).length, 3, "capped is the default");
+
+  const plain = game.piecesOf(s, "plain");
+  assert.ok(plain.every((p) => p.bar.width === plain[0].bar.width && !p.label));
+  assert.ok(plain[0].bar.y > plain[2].bar.y);
+});
+
+test("tall stacks stay within the cell", () => {
+  const s = tri();
+  stack(s, 0, Array.from({ length: 20 }, (_, i) => 1 + (i % 2)));
+  for (const style of ["capped", "plain"]) {
+    for (const { bar } of game.piecesOf(s, style)) {
+      assert.ok(bar.height > 0 && Math.abs(bar.y) + bar.height / 2 <= 0.4, `${style} y ${bar.y}`);
+    }
+  }
 });
