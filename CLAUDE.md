@@ -18,3 +18,9 @@ Static site of abstract strategy games: plain HTML + native ES modules, no build
 - Implement a new game on its own branch (e.g. `game/<id>`), not on `main`,
   which CI deploys. Make logical commits as you go (e.g. rules decisions,
   shared-code changes, the game itself) rather than one commit at the end.
+- Keep a game removable with a single revert:
+  - Merge shared-code changes (e.g. refactors into `common/`) to `main` on
+    their own first, so the game's merge holds only game files.
+  - Merge the game branch with `git merge --no-ff`, never a fast-forward.
+    `git revert -m 1 <merge>` then removes the whole game. To restore it
+    later, revert that revert, or rebuild the branch on the new `main`.
