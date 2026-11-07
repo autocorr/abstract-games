@@ -48,11 +48,12 @@ const KEEP = "keep";
 const UNSOWABLE = DIE;   // the largest difference is DIE - 1
 const SIZES = [3, 4, 5, 6, 7, 8, 9, 10];
 
+// The corner cells are darker (a stack's shading covers them once filled).
+const isCorner = (c) => c.tags.edges.length === 2;
 const colorSchemes = {
-  brown: { name: "Brown", cellFill: () => "#f0d9b5" },
-  blue: { name: "Blue", cellFill: () => "#dee3e6" },
+  brown: { name: "Brown", cellFill: (c) => (isCorner(c) ? "#d9a05b" : "#f0d9b5") },
+  blue: { name: "Blue", cellFill: (c) => (isCorner(c) ? "#8fb3cf" : "#dee3e6") },
 };
-const CORNER_LINE = "#c0392b";   // apart from the last move's yellow outline
 
 // Stacks are drawn as piles of level bars, bottom checker lowest, centred on
 // the cell and kept within it (sizes in cells; a cell is a little over 1.15
@@ -108,21 +109,8 @@ const STACK_DRAWERS = { shaded: shadedStack, capped: cappedStack, plain: plainSt
 
 function buildBoard({ size }) {
   const board = triangleBoard(size);
-  board.corners = board.cells.filter((c) => c.tags.edges.length === 2).map((c) => c.id);
+  board.corners = board.cells.filter(isCorner).map((c) => c.id);
   return board;
-}
-
-// The outer edges of the corner cells, for boardDecor.
-function cornerSegments(board) {
-  const out = [];
-  for (const id of board.corners) {
-    const c = board.cells[id];
-    for (let k = 0; k < 6; k++) {
-      // Poly edge k faces direction (6 - k) % 6 (DIRS6 in hex.js).
-      if (board.step(id, (6 - k) % 6) < 0) out.push([c.poly[k], c.poly[(k + 1) % 6]]);
-    }
-  }
-  return out;
 }
 
 // ---- what the roll allows --------------------------------------------------
@@ -388,10 +376,6 @@ export default withSwap({
     const b = rolledValue(move);
     return `rolled ${b}, difference ${Math.abs(s.dice[0] - b)}`;
   },
-  // The corners' outer edges, lined just outside the board.
-  boardDecor(board) {
-    return [{ segments: cornerSegments(board), stroke: CORNER_LINE, halo: "#0e0f13", width: 0.09, outside: true }];
-  },
   scoreSummary(s, player) {
     const n = cornersOf(s, player);
     return { main: String(n), sub: n === 1 ? "corner" : "corners", title: `${PLAYERS[player].name} caps ${n} of the 3 corners` };
@@ -410,4 +394,4 @@ export default withSwap({
   offer: (s) => s.phase === "ready",
 });
 
-export const internals = { turnOptions, sowPaths, cornerSegments, cornersOf };
+export const internals = { turnOptions, sowPaths, cornersOf };

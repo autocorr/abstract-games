@@ -4,7 +4,7 @@ import game, { internals } from "../games/broadcast/game.js";
 import { newGame, resolveOptions, moveKey } from "../common/engine.js";
 import { seededRng } from "../common/rng.js";
 
-const { turnOptions, sowPaths, cornerSegments, cornersOf } = internals;
+const { turnOptions, sowPaths, cornersOf } = internals;
 
 const tri = (size = 7, swap = "off") => newGame(game, { size, swap });
 const at = (s, name) => s.board.cells.find((c) => c.tags.name === name).id;
@@ -26,16 +26,18 @@ function fill(s) {
   for (let id = 0; id < s.board.size; id++) stack(s, id, [1 + (id % 2)]);
 }
 
-test("the board is a triangle with three corners, lined outside", () => {
+test("the board is a triangle with three darker corners", () => {
   assert.equal(resolveOptions(game, {}).size, 7);
   for (const size of [3, 7, 10]) {
     const { board } = tri(size);
     assert.equal(board.corners.length, 3);
-    // Each corner cell has four edges off the board.
-    assert.equal(cornerSegments(board).length, 12);
+    for (const scheme of Object.values(game.colorSchemes)) {
+      const fills = board.cells.map((c) => scheme.cellFill(c));
+      const corner = fills[board.corners[0]];
+      assert.ok(board.corners.every((id) => fills[id] === corner));
+      assert.equal(fills.filter((f) => f === corner).length, 3, "only the corners");
+    }
   }
-  const [decor] = game.boardDecor(tri().board);
-  assert.equal(decor.outside, true);
 });
 
 test("White may swap before their first roll", () => {
