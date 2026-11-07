@@ -82,4 +82,12 @@ export const games = [
     path: "games/tunneling/",
     module: "games/tunneling/game.js",
   },
+  {
+    id: "broadcast",
+    title: "Broadcast",
+    board: "Triangle or hexagon of hexagons",
+    blurb: "Roll two dice. On a double, place a checker; otherwise sow a stack you cap, as tall as the dice differ, one checker per cell along a path. Join all three sides with the stacks you top to win.",
+    path: "games/broadcast/",
+    module: "games/broadcast/game.js",
+  },
 ];

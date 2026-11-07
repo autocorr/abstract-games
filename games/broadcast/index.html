@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Broadcast</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Join all three sides of the board with one unbroken group of cells that you control. You control a cell when the top checker of its stack is yours. Cells on two sides (corners) belong to both.</p>
+  <p><b>Board.</b> A triangle of hexagons, as in Y, or a hexagon of hexagons whose six sides are taken in adjacent pairs to make three sides, each pair colored along the edge. The board starts empty, and Black moves first.</p>
+  <p><b>Turn.</b> Roll two dice and take the difference between them.</p>
+  <ul>
+    <li><b>Zero</b> (a double): place a checker of your color on a vacant cell.</li>
+    <li><b>One to five</b>: sow a stack that you cap (your checker on top) whose height equals the difference. If you cap no stack that tall, sow one of the tallest you cap below it, down to a single checker. If you cap no stack that short, place a checker instead.</li>
+  </ul>
+  <p><b>Sowing.</b> Lift the whole stack and drop its checkers one per cell along a path of as many steps as there are checkers, starting with the bottom checker on a neighbor of the stack's cell. Your capping checker is dropped last, so it lands on top at the end of the path. Each step goes to a neighboring cell, vacant or occupied; the path may come back to cells it has already passed, including the one it started from, but never steps straight back to the cell it just left. To sow, click the stack and then each cell of the path.</p>
+  <p><b>Swap.</b> After Black's first turn, White may swap instead of rolling: Black's opening checker becomes White's, and Black rolls next. The swap is decided before White sees the dice. It can be turned off in Setup.</p>
+  <p><b>End.</b> At the end of any turn, if the cells controlled by one player join all three sides, that player wins. A sow also drops any of your opponent's checkers in the stack, each on top of its cell, so it can hand them the win. As in Y, both players can never connect at once, and a full board always connects for one of them.</p>
+  <p><b>Display.</b> A stack is drawn as a pile of bars, the bottom checker lowest, on a cell shaded white or grey for the player whose checker is on top; a stack of more than three has its height beside it. Setup offers two other styles: Capped, where the top checker is a wider bar carrying the height, and Plain, bars alone. Dots mark the stacks you can sow, and outlines the cells of the last move.</p>
+  <p><b>Options.</b> The board's shape and side can be changed in Setup: a triangle of side 7 to 13, or a hexagon of side 4 to 6.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
