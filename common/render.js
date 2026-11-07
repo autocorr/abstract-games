@@ -88,9 +88,11 @@ export function createRenderer(svg) {
     clickHandler(Number(target.dataset.id));
   });
 
-  // decor: [{ segments: [[[x1, y1], [x2, y2]], ...], stroke, halo?, width? }]
-  // lines drawn over the cells (e.g. players' goal edges); width is in
-  // multiples of board.unit, and a halo is a thin outline around the line.
+  // decor: [{ segments: [[[x1, y1], [x2, y2]], ...], stroke, halo?, width?,
+  // outside? }] lines drawn over the cells (e.g. players' goal edges); width
+  // is in multiples of board.unit, and a halo is a thin outline around the
+  // line. outside: for segments on the board's edge, the line goes under the
+  // cells and only its outer half, width wide, shows.
   // rotate: display rotation in degrees (clockwise on screen).
   function setBoard(newBoard, fill, decor = [], rotate = 0) {
     board = newBoard;
@@ -160,6 +162,19 @@ export function createRenderer(svg) {
       cellsG.appendChild(poly);
       return poly;
     });
+    // Decor marked outside goes under the cells, which hide its inner half.
+    const decorGroup = (list) => {
+      const g = svgEl("g", { "pointer-events": "none", "stroke-linecap": "round", fill: "none" });
+      for (const { segments, stroke, halo, width = 0.1, outside } of list) {
+        const d = segmentsPath(segments);
+        const w = outside ? 2 * width : width;
+        if (halo) g.appendChild(svgEl("path", { d, stroke: halo, "stroke-width": (w + (outside ? 0.04 : 0.08)) * u }));
+        g.appendChild(svgEl("path", { d, stroke, "stroke-width": w * u }));
+      }
+      return g;
+    };
+    const under = decor.filter((d) => d.outside);
+    if (under.length) root.appendChild(decorGroup(under));
     root.appendChild(cellsG);
 
     if (points) {
@@ -179,24 +194,18 @@ export function createRenderer(svg) {
       }));
     }
 
-    if (decor.length) {
-      const g = svgEl("g", { "pointer-events": "none", "stroke-linecap": "round", fill: "none" });
-      for (const { segments, stroke, halo, width = 0.1 } of decor) {
-        const d = segmentsPath(segments);
-        if (halo) g.appendChild(svgEl("path", { d, stroke: halo, "stroke-width": (width + 0.08) * u }));
-        g.appendChild(svgEl("path", { d, stroke, "stroke-width": width * u }));
-      }
-      root.appendChild(g);
-    }
+    const over = decor.filter((d) => !d.outside);
+    if (over.length) root.appendChild(decorGroup(over));
 
     // Overlays never intercept clicks: they always reach the cell below.
     layers = {
+      tiles: svgEl("g", { "pointer-events": "none" }),   // shaded cells, under everything else
       highlights: svgEl("g", { "pointer-events": "none" }),
       pieces: svgEl("g", { filter: `url(#${shadowId})`, "pointer-events": "none" }),
       images: svgEl("g", { "pointer-events": "none" }),   // image pieces and unshadowed discs
       markers: svgEl("g", { "pointer-events": "none" }),
     };
-    root.append(layers.highlights, layers.pieces, layers.images, layers.markers);
+    root.append(layers.tiles, layers.highlights, layers.pieces, layers.images, layers.markers);
   }
 
   function setCellFill(fill) {
@@ -217,6 +226,7 @@ export function createRenderer(svg) {
   // Rebuild the piece layers.
   function drawPieces(pieces, players) {
     const u = board.unit;
+    layers.tiles.replaceChildren();
     layers.pieces.replaceChildren();
     layers.images.replaceChildren();
     for (const p of pieces) {
@@ -232,6 +242,13 @@ export function createRenderer(svg) {
         layers.images.appendChild(svgEl("image", {
           href: p.image, x: c.x - s / 2, y: c.y - s / 2, width: s, height: s,
           ...(turn ? { transform: `rotate(${turn} ${c.x} ${c.y})` } : {}),
+        }));
+        continue;
+      }
+      if (p.tile) {
+        layers.tiles.appendChild(svgEl("polygon", {
+          points: pointsAttr(c.poly), fill: spec.fill || "#888",
+          stroke: CELL_STROKE, "stroke-width": 0.025 * u, "stroke-linejoin": "round",
         }));
         continue;
       }
@@ -261,17 +278,17 @@ export function createRenderer(svg) {
   // A bar piece: a rounded rectangle offset from the cell's centre, kept
   // level on screen under the display rotation, with its label on it.
   function drawBar(p, c, spec, u) {
-    const { width, height, y = 0, labelSize = 0.4 } = p.bar;
+    const { width, height, x = 0, y = 0, labelSize = 0.4, labelX = x, labelY = y } = p.bar;
     const g = svgEl("g", { transform: `translate(${c.x} ${c.y})${rotation ? ` rotate(${-rotation})` : ""} scale(${u})` });
     g.appendChild(svgEl("rect", {
-      x: -width / 2, y: y - height / 2, width, height, rx: Math.min(height / 2, 0.05),
+      x: x - width / 2, y: y - height / 2, width, height, rx: Math.min(height / 2, 0.05),
       fill: spec.fill || "#888", stroke: "#0e0f13", "stroke-width": p.stroke || 0.03,
     }));
     if (p.label) {
       const text = svgEl("text", {
         "font-size": LABEL_PX, "font-weight": 700, "text-anchor": "middle",
         "dominant-baseline": "central", fill: spec.mark || "#fff",
-        transform: `translate(0 ${y}) scale(${labelSize / LABEL_PX})`,
+        transform: `translate(${labelX} ${labelY}) scale(${labelSize / LABEL_PX})`,
       });
       text.textContent = p.label;
       g.appendChild(text);
@@ -285,10 +302,12 @@ export function createRenderer(svg) {
   //           fill and mark colour a neutral piece (player null); size is the
   //           disc's diameter as a fraction of a cell (default 0.84);
   //           shadow: false drops the disc's shadow; bar: { width, height,
-  //           y?, labelSize? } draws a level rounded rectangle instead of a
-  //           disc, its centre y below the cell's (all in cells; y < 0 is
-  //           up), with the label at labelSize (default 0.4); stroke: its
-  //           outline width
+  //           x?, y?, labelSize?, labelX?, labelY? } draws a level rounded
+  //           rectangle instead of a disc, centred at (x, y) from the cell's
+  //           centre (all in cells; y < 0 is up), with the label at
+  //           labelSize (default 0.4) on the bar or at (labelX, labelY);
+  //           stroke: its outline width; tile: true fills the whole cell
+  //           with the piece's colour, under the highlights
   // players:  game.players ({ [player]: { fill, mark } })
   // markers:  [{ id, kind, color?, y? }]. Over the pieces: "ring" (colour
   //           follows the piece), "dot", and "target" (the highlight dot of a

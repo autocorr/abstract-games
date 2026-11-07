@@ -162,7 +162,8 @@ export default {
   moveText(before, move, info, scheme), // log text for a ply (see "The move log"); null for the default
   turnHint(state, scheme),          // status line text while the game is on (scheme: the
                                     //   active colour scheme object, or null)
-  boardDecor(board),                // -> lines over the cells, e.g. goal edges
+  boardDecor(board),                // -> lines over the cells, e.g. goal edges (outside: true
+                                    //   draws an edge line outside the cells instead)
   pieceStyles,                      // e.g. { bars: { name: "Bars" }, discs: { name: "Discs" } }:
                                     //   Setup offers them as "Pieces" (saved, no new game; the
                                     //   first is the default) and piecesOf gets the key
@@ -177,10 +178,12 @@ export default {
                                     //   rotate: degrees to turn an image (180: upside down);
                                     //   size: disc diameter as a fraction of a cell (default 0.84);
                                     //   shadow: false draws a disc without its drop shadow;
-                                    //   bar: { width, height, y?, labelSize? } draws a level
-                                    //   rounded rectangle instead, centred y below the cell's
-                                    //   centre (cell units), with the label on it; stroke: its
-                                    //   outline width
+                                    //   bar: { width, height, x?, y?, labelSize?, labelX?, labelY? }
+                                    //   draws a level rounded rectangle instead, centred (x, y)
+                                    //   from the cell's centre (cell units, y down), with the
+                                    //   label on it or at (labelX, labelY); stroke: its outline
+                                    //   width; tile: true shades the whole cell in the piece's
+                                    //   colour (e.g. a neutral piece with a fill)
   markers(state, move, info),       // -> [{ id, kind, color?, y? }] for the last move. Over pieces:
                                     //   "ring" | "dot" | "target" (y: cells below the centre,
                                     //   level on screen); under pieces: "shade" (hatched
