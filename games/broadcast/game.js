@@ -1,39 +1,39 @@
-// Broadcast: a game of Y with dice and sowing. Pure: no DOM.
+// Broadcast: a dice game of sowing stacks to hold the corners of a triangle.
+// Pure: no DOM.
 //
-// Board: a triangle of hexagons (as in Y), or a hexagon of hexagons whose six
-// sides are taken in adjacent pairs as three sides (common/board/hex.js).
-// Cells on two sides (corners) belong to both. The board starts empty and
-// Black moves first.
+// Board: a triangle of hexagons. Its three corner cells decide the game. The
+// board starts empty and Black moves first.
 //
 // Checkers stack. Each cell holds a stack, listed bottom to top; whoever has
 // the top checker controls the cell, and a player "caps" the stacks they
 // control.
 //
 // A turn: roll two dice (two chance plies, "roll:N"; see common/dice.js), then
-// one move by the roller. With k the difference of the dice:
-//   - k = 0: place a checker on a vacant cell ([id]).
-//   - k > 0: sow a stack the mover caps whose height is exactly k, or failing
-//     that the tallest height below k that they cap (down to 1). The whole
-//     stack is lifted and dropped one checker per cell along a path of as
-//     many steps as checkers ([origin, c1, ..., ch]), from the bottom of the
-//     stack to the top, so the cap lands last, on top of the path's end. Each
-//     step goes to a neighbour (vacant or occupied); the path may revisit
-//     cells, including its origin, but never steps straight back to the cell
-//     it just left.
-//   - If the mover caps no stack of height k or less, they place instead.
+// one move by the roller, with k the difference of the dice:
+//   - k = 0: place a new checker on a vacant cell ([id]).
+//   - k > 0: sow a stack they cap whose height is exactly k, leaving a new
+//     checker of theirs on its cell. The stack is lifted and dropped one
+//     checker per cell along a path of as many steps as checkers ([origin, c1,
+//     ..., ck]), from the bottom of the stack to the top, so the cap lands
+//     last, on top of the path's end. Each step goes to a neighbour (vacant or
+//     occupied); the path may revisit cells, including its origin, but never
+//     steps straight back to the cell it just left.
+//   - k > 0 and no stack of k to sow: cap one of their stacks with a new
+//     checker ([id]); if they cap no stack at all, place on a vacant cell.
+// A stack of six or more can never be sown.
 //
-// At the end of every turn, whoever's controlled cells join all three sides
-// wins: the opponent too, if the mover's sow dropped their checkers to join
-// it. As in Y, the top colours of a position never connect for both players
-// at once, and a full board always connects for exactly one, so the game
-// never stalls without a vacant cell to place on.
+// No cell ever empties, so the board only fills. The game ends when, once the
+// dice are rolled, the player to move has no legal move: a double with no
+// vacant cell (or, on a full board, a player capping nothing). The board is
+// then full, so all three corners are capped, and whoever caps two or three
+// of them wins.
 //
 // Swap (pie rule, common/swap.js, optional): after Black's first turn, White
 // may swap instead of rolling: Black's opening checker becomes White's and
 // Black rolls next. White's first turn opens with a decision ply ("keep" or
 // "swap") before the roll, so the swap is decided without knowing the dice.
 
-import { triangleBoard, hexHexBoard } from "../../common/board/hex.js";
+import { triangleBoard } from "../../common/board/hex.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
 import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
 import { withSwap } from "../../common/swap.js";
@@ -45,33 +45,21 @@ const PLAYERS = {
 };
 const DIE = 6;
 const KEEP = "keep";
-
-const SIZES = Array.from({ length: 10 }, (_, i) => 4 + i);   // 4-13: hexagon 4-6, triangle 7-13
-const sizeAllowed = (size, { shape }) => (shape === "hexagon" ? size <= 6 : size >= 7);
-
-// Three side sets. A triangle's sides face out in two of the six directions
-// each (DIRS6 in hex.js: 0 E, 1 NE, 2 NW, 3 W, 4 SW, 5 SE); hex-hex side d
-// faces d and d + 1, and sides 2i and 2i + 1 make set i.
-const TRIANGLE_SETS = { W: 0, E: 1, S: 2 };
-const TRIANGLE_FACING = { W: [2, 3], E: [0, 1], S: [4, 5] };
-const setOf = (board, side) => (board.shape === "triangle" ? TRIANGLE_SETS[side] : side >> 1);
-const facing = (board, side) => (board.shape === "triangle" ? TRIANGLE_FACING[side] : [side, (side + 1) % 6]);
-
-// Side colours, drawn as lines along a hexagon's edge (a triangle's sides
-// need no marking).
-const SIDE_COLOURS = ["#c0392b", "#2471a3", "#d4a017"];
+const UNSOWABLE = DIE;   // the largest difference is DIE - 1
+const SIZES = [3, 4, 5, 6, 7, 8, 9, 10];
 
 const colorSchemes = {
   brown: { name: "Brown", cellFill: () => "#f0d9b5" },
   blue: { name: "Blue", cellFill: () => "#dee3e6" },
 };
+const CORNER_LINE = "#c0392b";   // apart from the last move's yellow outline
 
 // Stacks are drawn as piles of level bars, bottom checker lowest, centred on
 // the cell and kept within it (sizes in cells; a cell is a little over 1.15
 // tall). "shaded" (the default): every bar alike, on a cell shaded for the
-// player on top, with the height beside piles of more than three;
-// "capped": the top checker is a wider, taller bar carrying the height;
-// "plain": every bar alike, thinning as the pile grows. None casts a shadow.
+// player on top; "capped": the top checker is a wider, taller bar; "plain":
+// every bar alike, thinning as the pile grows. Shaded and capped give the
+// height of a stack too tall to sow. None casts a shadow.
 const PILE = 0.75, GAP = 0.018;
 const pieceStyles = { shaded: { name: "Shaded" }, capped: { name: "Capped" }, plain: { name: "Plain" } };
 const SHADES = { [BLACK]: "#8d8a84", [WHITE]: "#fffdf8" };
@@ -90,7 +78,7 @@ function cappedStack(id, stack) {
     y -= h + GAP;
   }
   const top = { id, player: stack[rest], stroke: 0.025, bar: { ...TOP, y: y - TOP.height / 2, labelSize: 0.16 } };
-  if (rest) top.label = String(stack.length);
+  if (stack.length >= UNSOWABLE) top.label = String(stack.length);
   out.push(top);
   return out;
 }
@@ -107,7 +95,7 @@ function plainStack(id, stack, { x = 0, width = 0.66 } = {}) {
 function shadedStack(id, stack) {
   const n = stack.length;
   const tile = { id, player: null, fill: SHADES[stack[n - 1]], tile: true };
-  if (n <= 3) return [tile, ...plainStack(id, stack)];
+  if (n < UNSOWABLE) return [tile, ...plainStack(id, stack)];
   // Room for the height on the right: the pile moves left and narrows.
   const bars = plainStack(id, stack, { x: -0.1, width: 0.5 });
   const top = bars[n - 1];
@@ -118,50 +106,45 @@ function shadedStack(id, stack) {
 
 const STACK_DRAWERS = { shaded: shadedStack, capped: cappedStack, plain: plainStack };
 
-function buildBoard({ shape, size }) {
-  const board = shape === "hexagon" ? hexHexBoard(size) : triangleBoard(size);
-  board.goal = Uint8Array.from(board.cells, (c) => c.tags.edges.reduce((m, side) => m | (1 << setOf(board, side)), 0));
+function buildBoard({ size }) {
+  const board = triangleBoard(size);
+  board.corners = board.cells.filter((c) => c.tags.edges.length === 2).map((c) => c.id);
   return board;
 }
 
-// The player whose controlled cells join all three side sets, or 0.
-function connector(board, tops) {
-  const seen = new Uint8Array(board.size);
-  const stack = [];
-  for (let start = 0; start < board.size; start++) {
-    // Every connecting group touches set 0, so start only from there.
-    if (seen[start] || !tops[start] || !(board.goal[start] & 1)) continue;
-    const p = tops[start];
-    let touched = 0;
-    seen[start] = 1;
-    stack.push(start);
-    while (stack.length) {
-      const id = stack.pop();
-      touched |= board.goal[id];
-      for (const n of board.neighbours[id]) {
-        if (!seen[n] && tops[n] === p) { seen[n] = 1; stack.push(n); }
-      }
+// The outer edges of the corner cells, for boardDecor.
+function cornerSegments(board) {
+  const out = [];
+  for (const id of board.corners) {
+    const c = board.cells[id];
+    for (let k = 0; k < 6; k++) {
+      // Poly edge k faces direction (6 - k) % 6 (DIRS6 in hex.js).
+      if (board.step(id, (6 - k) % 6) < 0) out.push([c.poly[k], c.poly[(k + 1) % 6]]);
     }
-    if (touched === 7) return p;
   }
-  return 0;
+  return out;
 }
 
 // ---- what the roll allows --------------------------------------------------
 
 const difference = (s) => Math.abs(s.dice[0] - s.dice[1]);
+const caps = (s, id, player = s.turn) => s.stacks[id].length > 0 && s.tops[id] === player;
 
-// The height to sow for the player to move: k if they cap a stack that tall,
-// else the tallest below k they cap; 0 if they must place instead.
-function sowHeight(s) {
+// The mover's options for the roll: { kind: "place" | "sow" | "cap", ids }:
+// vacant cells to place on, stacks to sow, or stacks to cap. No ids: no move.
+function turnOptions(s) {
   const k = difference(s);
-  let best = 0;
-  if (k === 0) return 0;
+  const vacant = [], mine = [], sowable = [];
   for (let id = 0; id < s.stacks.length; id++) {
-    const h = s.stacks[id].length;
-    if (h <= k && h > best && s.tops[id] === s.turn) best = h;
+    if (!s.stacks[id].length) vacant.push(id);
+    else if (caps(s, id)) {
+      mine.push(id);
+      if (s.stacks[id].length === k) sowable.push(id);
+    }
   }
-  return best;
+  if (k && sowable.length) return { kind: "sow", ids: sowable };
+  if (k && mine.length) return { kind: "cap", ids: mine };
+  return { kind: "place", ids: vacant };
 }
 
 // Every sowing path of `h` steps from `origin`: [origin, c1, ..., ch].
@@ -182,29 +165,39 @@ function sowPaths(board, origin, h) {
   return out;
 }
 
+const cornersOf = (s, player) => s.board.corners.filter((id) => caps(s, id, player)).length;
+
 // ---- moves -----------------------------------------------------------------
 
+// Once both dice are rolled: with no legal move the game is over.
+function checkStuck(s) {
+  if (turnOptions(s).ids.length) return;
+  const black = cornersOf(s, BLACK), white = cornersOf(s, WHITE);
+  s.over = true;
+  s.winner = black > white ? BLACK : white > black ? WHITE : 0;
+}
+
 function endTurn(s) {
-  const winner = connector(s.board, s.tops);
   s.turns++;
   s.dice = [0, 0];
   s.phase = "roll";
-  if (winner) { s.winner = winner; return; }
   s.turn = 3 - s.turn;
   // White's first turn opens with the swap decision when the rule is on.
   if (s.swapRule && s.turns === 1) s.phase = "ready";
 }
 
-function place(s, id) {
+// A new checker for the mover: placed on a vacant cell or capping a stack.
+function put(s, id) {
   s.stacks[id].push(s.turn);
   s.tops[id] = s.turn;
 }
 
+// Lift the stack, leave a new checker on its cell, then drop the lifted ones.
 function sow(s, path) {
   const { stacks, tops } = s;
   const lifted = stacks[path[0]];
-  stacks[path[0]] = [];
-  tops[path[0]] = 0;
+  stacks[path[0]] = [s.turn];
+  tops[path[0]] = s.turn;
   for (let i = 0; i < lifted.length; i++) {
     const id = path[i + 1];
     stacks[id].push(lifted[i]);
@@ -219,11 +212,14 @@ function apply(s, move) {
   }
   if (s.phase === "roll") {
     s.dice[s.dice[0] ? 1 : 0] = rolledValue(move);
-    if (s.dice[1]) s.phase = "move";
+    if (s.dice[1]) {
+      s.phase = "move";
+      checkStuck(s);
+    }
     return null;
   }
   const mover = s.turn;
-  if (move.length === 1) place(s, move[0]);
+  if (move.length === 1) put(s, move[0]);
   else sow(s, move);
   s.last = move.slice();
   endTurn(s);
@@ -239,35 +235,11 @@ function hint(s) {
   const [a, b] = s.dice;
   const k = difference(s);
   const rolled = `${name} rolled ${a} and ${b}`;
-  if (k === 0) return `${rolled}: place a checker on a vacant cell.`;
-  const h = sowHeight(s);
-  if (h === k) return `${rolled}: sow a stack of ${k}.`;
-  if (h) return `${rolled}, but caps no stack of ${k}: sow a stack of ${h}.`;
-  return `${rolled}, but caps no stack of ${k} or less: place a checker on a vacant cell.`;
-}
-
-// Line segments along the board's edge for each side set, for boardDecor. An
-// outer edge of a corner cell between two sets is split at its midpoint.
-function sideSegments(board) {
-  const out = [[], [], []];
-  for (const c of board.cells) {
-    if (!c.tags.edges.length) continue;
-    const sides = (dir) => c.tags.edges.filter((side) => facing(board, side).includes(dir)).map((side) => setOf(board, side));
-    for (let k = 0; k < 6; k++) {
-      const dir = (6 - k) % 6;   // poly edge k faces this direction
-      if (board.step(c.id, dir) >= 0) continue;
-      const sets = [...new Set(sides(dir))];
-      if (!sets.length) continue;
-      const a = c.poly[k], b = c.poly[(k + 1) % 6];
-      if (sets.length === 1) { out[sets[0]].push([a, b]); continue; }
-      // Vertex k is shared with edge k - 1, which faces dir + 1.
-      const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-      const atA = sides((dir + 1) % 6)[0] ?? sets[0];
-      out[atA].push([a, m]);
-      out[sets.find((x) => x !== atA) ?? atA].push([m, b]);
-    }
-  }
-  return out;
+  const { kind } = turnOptions(s);
+  if (!k) return `${rolled}: place a checker on a vacant cell.`;
+  if (kind === "sow") return `${rolled}: sow a stack of ${k}, leaving a checker behind.`;
+  if (kind === "cap") return `${rolled}, but caps no stack of ${k}: cap one of your stacks.`;
+  return `${rolled}, but caps no stack: place a checker on a vacant cell.`;
 }
 
 export default withSwap({
@@ -276,12 +248,7 @@ export default withSwap({
   url: import.meta.url,
   players: PLAYERS,
   options: {
-    shape: {
-      label: "Board",
-      choices: [{ value: "triangle", label: "Triangle" }, { value: "hexagon", label: "Hexagon" }],
-      default: "triangle",
-    },
-    size: { label: "Board side", choices: SIZES, default: 10, allowed: sizeAllowed },
+    size: { label: "Board side", choices: SIZES, default: 7 },
     swap: {
       label: "Swap rule",
       choices: [{ value: "on", label: "On" }, { value: "off", label: "Off" }],
@@ -293,7 +260,7 @@ export default withSwap({
   pieceStyles,
   pieceLabels: "Stack heights",
 
-  createBoard: cachedBoards((o) => `${o.shape}/${o.size}`, buildBoard),
+  createBoard: cachedBoards((o) => String(o.size), buildBoard),
   initialState(board, { swap }) {
     return {
       board,
@@ -305,6 +272,7 @@ export default withSwap({
       last: null,             // the last move's cells
       turns: 0,               // turns completed
       swapRule: swap === "on",
+      over: false,            // set when the player to move has no legal move
       winner: 0,
     };
   },
@@ -327,23 +295,16 @@ export default withSwap({
     return rollOutcomes(DIE);
   },
   legalMoves(s) {
-    if (s.winner) return [];
+    if (s.over) return [];
     if (s.phase === "roll") return rollOutcomes(DIE).map((o) => o.move);
     if (s.phase === "ready") return [KEEP];
-    const h = sowHeight(s);
-    const out = [];
-    for (let id = 0; id < s.stacks.length; id++) {
-      if (!h) {
-        if (!s.stacks[id].length) out.push([id]);
-      } else if (s.stacks[id].length === h && s.tops[id] === s.turn) {
-        for (const path of sowPaths(s.board, id, h)) out.push(path);
-      }
-    }
-    return out;
+    const { kind, ids } = turnOptions(s);
+    if (kind === "sow") return ids.flatMap((id) => sowPaths(s.board, id, s.stacks[id].length));
+    return ids.map((id) => [id]);
   },
   applyMove: apply,
-  // The swap: every checker changes colour (the board and goals are
-  // symmetric), and the other player rolls next.
+  // The swap: every checker changes colour (the board is symmetric), and the
+  // other player rolls next.
   swapColours(s) {
     for (let id = 0; id < s.stacks.length; id++) {
       s.stacks[id] = s.stacks[id].map((p) => 3 - p);
@@ -353,7 +314,7 @@ export default withSwap({
     s.phase = "roll";
   },
   outcome(s) {
-    return s.winner ? { winner: s.winner } : null;
+    return s.over ? { winner: s.winner } : null;
   },
 
   // Random rollouts without move lists: a sow is a random walk that never
@@ -361,38 +322,39 @@ export default withSwap({
   playout(s, rng) {
     const { board, stacks } = s;
     const pick = (list) => list[Math.floor(rng() * list.length)];
-    while (!s.winner) {
+    const die = () => 1 + Math.floor(rng() * DIE);
+    while (!s.over) {
       // Keep any die already rolled; never swap.
-      const die = () => 1 + Math.floor(rng() * DIE);
-      if (s.phase !== "move") s.dice = [s.dice[0] || die(), die()];
-      const h = sowHeight(s);
-      const origins = [];
-      for (let id = 0; id < stacks.length; id++) {
-        if (h ? stacks[id].length === h && s.tops[id] === s.turn : !stacks[id].length) origins.push(id);
+      if (s.phase !== "move") {
+        s.dice = [s.dice[0] || die(), die()];
+        s.phase = "move";
+        checkStuck(s);
+        if (s.over) break;
       }
-      const origin = pick(origins);
-      if (!h) {
-        place(s, origin);
-      } else {
-        const path = [origin];
+      const { kind, ids } = turnOptions(s);
+      const id = pick(ids);
+      if (kind === "sow") {
+        const path = [id];
         let prev = -1;
-        while (path.length <= h) {
+        while (path.length <= stacks[id].length) {
           const cur = path[path.length - 1];
-          const next = pick(board.neighbours[cur].filter((n) => n !== prev));
-          path.push(next);
+          path.push(pick(board.neighbours[cur].filter((n) => n !== prev)));
           prev = cur;
         }
         sow(s, path);
+      } else {
+        put(s, id);
       }
       endTurn(s);
     }
     return s.winner;
   },
 
+  // The dice stay up at the end, showing the roll that left no move.
   chanceView(s) {
-    if (s.winner || s.phase === "ready") return [];
+    if (s.phase === "ready") return [];
     const result = s.dice[1] ? `difference ${difference(s)}` : null;
-    return [dicePanel(s.dice.map((v) => v || null), { title: "Dice", owner: s.turn, active: s.phase === "roll", result })];
+    return [dicePanel(s.dice.map((v) => v || null), { title: "Dice", owner: s.turn, active: !s.over && s.phase === "roll", result })];
   },
   piecesOf(s, style) {
     const out = [];
@@ -402,17 +364,19 @@ export default withSwap({
     // Flat on the board: no drop shadows.
     return out.map((p) => ({ ...p, shadow: false }));
   },
-  // Outlines on the cells of the last move, and dots on the stacks open to
-  // the roll when it must be sown.
+  // Outlines on the cells of the last move, and dots on the stacks the roll
+  // lets the mover sow or cap.
   markers(s) {
     const out = [];
     if (s.last) for (const id of new Set(s.last)) out.push({ id, kind: "square" });
-    if (!s.winner && s.phase === "move") {
-      const h = sowHeight(s);
-      // The dot goes under a short pile, clear of the height on its cap.
-      const y = h > 1 && h < 5 ? cappedPile(h) / 2 + 0.13 : 0;
-      if (h) for (let id = 0; id < s.stacks.length; id++) {
-        if (s.stacks[id].length === h && s.tops[id] === s.turn) out.push({ id, kind: "target", y });
+    if (!s.over && s.phase === "move") {
+      const { kind, ids } = turnOptions(s);
+      if (kind !== "place") {
+        for (const id of ids) {
+          // The dot goes under a short pile, clear of the bars.
+          const h = s.stacks[id].length;
+          out.push({ id, kind: "target", y: h > 1 && h < 5 ? cappedPile(h) / 2 + 0.13 : 0 });
+        }
       }
     }
     return out;
@@ -424,19 +388,26 @@ export default withSwap({
     const b = rolledValue(move);
     return `rolled ${b}, difference ${Math.abs(s.dice[0] - b)}`;
   },
+  // The corners' outer edges, lined just outside the board.
   boardDecor(board) {
-    if (board.shape === "triangle") return [];
-    return sideSegments(board).map((segments, i) => ({ segments, stroke: SIDE_COLOURS[i], halo: "#0e0f13", width: 0.07, outside: true }));
+    return [{ segments: cornerSegments(board), stroke: CORNER_LINE, halo: "#0e0f13", width: 0.09, outside: true }];
   },
   scoreSummary(s, player) {
-    return { sub: PLAYERS[player].name, title: `${PLAYERS[player].name} connects all three sides` };
+    const n = cornersOf(s, player);
+    return { main: String(n), sub: n === 1 ? "corner" : "corners", title: `${PLAYERS[player].name} caps ${n} of the 3 corners` };
+  },
+  outcomeLines(s) {
+    const name = PLAYERS[s.turn].name;
+    const full = s.stacks.every((st) => st.length);
+    const why = full && !difference(s) ? `The board is full and ${name} rolled a double.` : `${name} has no legal move.`;
+    return [why, ...[BLACK, WHITE].map((p) => `${PLAYERS[p].name} caps ${cornersOf(s, p)} of the 3 corners.`)];
   },
   turnHint(s) {
-    return s.winner ? "" : hint(s);
+    return s.over ? "" : hint(s);
   },
 }, {
   // Offered at White's decision before the first roll.
   offer: (s) => s.phase === "ready",
 });
 
-export const internals = { connector, sowHeight, sowPaths, sideSegments };
+export const internals = { turnOptions, sowPaths, cornerSegments, cornersOf };

@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import game, { internals } from "../games/broadcast/game.js";
 import { newGame, resolveOptions, moveKey } from "../common/engine.js";
+import { seededRng } from "../common/rng.js";
 
-const { connector, sowHeight, sowPaths, sideSegments } = internals;
+const { turnOptions, sowPaths, cornerSegments, cornersOf } = internals;
 
-const tri = (size = 7, swap = "off") => newGame(game, { shape: "triangle", size, swap });
-const hex = (size = 4, swap = "off") => newGame(game, { shape: "hexagon", size, swap });
+const tri = (size = 7, swap = "off") => newGame(game, { size, swap });
 const at = (s, name) => s.board.cells.find((c) => c.tags.name === name).id;
 
 // Roll the two dice of a turn.
@@ -21,37 +21,26 @@ function stack(s, id, players) {
   s.tops[id] = players.length ? players[players.length - 1] : 0;
 }
 
-test("board sizes depend on the shape", () => {
-  assert.equal(resolveOptions(game, {}).size, 10);
-  assert.equal(resolveOptions(game, { shape: "hexagon", size: 10 }).size, 6);
-  assert.equal(resolveOptions(game, { shape: "triangle", size: 4 }).size, 7);
-});
+// Fill every cell with one checker, alternating owners.
+function fill(s) {
+  for (let id = 0; id < s.board.size; id++) stack(s, id, [1 + (id % 2)]);
+}
 
-test("hex-hex sides pair up into three sets; corners between sets hold two", () => {
-  const s = hex(4);
-  const { board } = s;
-  const count = (bit) => board.cells.filter((c) => board.goal[c.id] & bit).length;
-  // Two sides of 4 cells sharing a corner: 7 cells per set.
-  assert.deepEqual([count(1), count(2), count(4)], [7, 7, 7]);
-  const both = board.cells.filter((c) => [3, 5, 6].includes(board.goal[c.id]));
-  assert.equal(both.length, 3);
-  for (const segs of sideSegments(board)) assert.ok(segs.length > 0);
-  assert.equal(game.boardDecor(board).length, 3);
-});
-
-test("triangle sides are W, E, S; the corners hold two", () => {
-  const { board } = tri(7);
-  const two = board.cells.filter((c) => [3, 5, 6].includes(board.goal[c.id]));
-  assert.equal(two.length, 3);
-  // 7 cells along each side, each drawn by 2 edges (the apex has 4 off-board edges).
-  assert.deepEqual(sideSegments(board).map((x) => x.length), [14, 14, 14]);
-  // The triangle's own shape shows its sides: no lines are drawn.
-  assert.deepEqual(game.boardDecor(board), []);
+test("the board is a triangle with three corners, lined outside", () => {
+  assert.equal(resolveOptions(game, {}).size, 7);
+  for (const size of [3, 7, 10]) {
+    const { board } = tri(size);
+    assert.equal(board.corners.length, 3);
+    // Each corner cell has four edges off the board.
+    assert.equal(cornerSegments(board).length, 12);
+  }
+  const [decor] = game.boardDecor(tri().board);
+  assert.equal(decor.outside, true);
 });
 
 test("White may swap before their first roll", () => {
   const s = tri(7, "on");
-  roll(s, 4, 1);
+  roll(s, 4, 4);
   game.applyMove(s, [10]);
   assert.equal(game.toMove(s), 2);
   assert.deepEqual(game.legalMoves(s), ["keep", "swap"]);
@@ -85,52 +74,62 @@ test("the dice panel shows the difference once both dice are rolled", () => {
   assert.equal(game.chanceView(s)[0].result, "difference 4");
 });
 
-test("a double places on any vacant cell", () => {
-  const s = tri();
-  roll(s, 3, 3);
+test("a double places on a vacant cell, even with stacks to sow or cap", () => {
+  const s = tri(9);
+  const a = at(s, "c5");
+  stack(s, a, [1]);
+  roll(s, 4, 4);
   assert.equal(game.toMove(s), 1);
   const legal = game.legalMoves(s);
-  assert.equal(legal.length, s.board.size);
+  assert.ok(legal.every((m) => m.length === 1 && m[0] !== a));
+  assert.equal(legal.length, s.board.size - 1);
   game.applyMove(s, [5]);
   assert.deepEqual(s.stacks[5], [1]);
   assert.equal(game.toMove(s), 0);
-  assert.equal(s.turn, 2);
+  assert.equal(s.turns, 1);
 });
 
-test("with no stack to sow, a non-double places instead", () => {
-  const s = tri();
-  roll(s, 1, 6);
-  assert.equal(sowHeight(s), 0);
-  assert.ok(game.legalMoves(s).every((m) => m.length === 1));
-  assert.match(game.turnHint(s), /place a checker/);
+test("otherwise sow a stack of exactly the difference that you cap", () => {
+  const s = tri(9);
+  const a = at(s, "c5"), b = at(s, "d7"), c = at(s, "b3"), d = at(s, "e6");
+  stack(s, a, [2, 1, 1]);     // height 3, Black caps
+  stack(s, b, [1, 1, 2]);     // height 3, White caps: not Black's
+  stack(s, c, [1, 1, 1, 1]);  // height 4: not the difference
+  stack(s, d, [1, 1]);        // height 2: not the difference
+  roll(s, 2, 5);
+  assert.deepEqual(turnOptions(s), { kind: "sow", ids: [a] });
+  const legal = game.legalMoves(s);
+  assert.ok(legal.length > 0 && legal.every((m) => m[0] === a && m.length === 4));
+  assert.match(game.turnHint(s), /sow a stack of 3/);
+  assert.deepEqual(game.markers(s).filter((m) => m.kind === "target").map((m) => m.id), [a]);
 });
 
-test("sow a stack of exactly the difference, else the tallest below it", () => {
+test("with no stack of the difference, cap one of your own stacks", () => {
   const s = tri(9);
   const a = at(s, "c5"), b = at(s, "d7"), c = at(s, "b3");
-  stack(s, a, [2, 1]);        // height 2, Black caps
-  stack(s, b, [1, 1, 1, 2]);  // White caps: not Black's
-  stack(s, c, [1, 1, 1, 1]);  // height 4: too tall for a 3
-  roll(s, 2, 5);
-  assert.equal(sowHeight(s), 2);
-  const legal = game.legalMoves(s);
-  assert.ok(legal.every((m) => m[0] === a && m.length === 3));
-  assert.match(game.turnHint(s), /caps no stack of 3: sow a stack of 2/);
+  stack(s, a, [2, 1]);
+  stack(s, b, [1, 2]);   // White's
+  stack(s, c, [1]);
+  roll(s, 1, 6);
+  const mine = [a, c].sort((x, y) => x - y);
+  assert.deepEqual(turnOptions(s), { kind: "cap", ids: mine });
+  assert.deepEqual(game.legalMoves(s).map(([id]) => id), mine);
+  assert.match(game.turnHint(s), /caps no stack of 5: cap one of your stacks/);
+  game.applyMove(s, [a]);
+  assert.deepEqual(s.stacks[a], [2, 1, 1]);
+});
 
-  const t = tri(9);
-  stack(t, c, [1, 1, 1, 1]);
-  roll(t, 2, 6);
-  assert.equal(sowHeight(t), 4);
-  // A taller stack than the difference cannot be sown: place.
-  const u = tri(9);
-  stack(u, c, [1, 1, 1, 1]);
-  roll(u, 2, 5);
-  assert.equal(sowHeight(u), 0);
+test("capping no stack at all, a non-double places", () => {
+  const s = tri();
+  roll(s, 1, 6);
+  assert.equal(turnOptions(s).kind, "place");
+  assert.equal(game.legalMoves(s).length, s.board.size);
+  assert.match(game.turnHint(s), /caps no stack: place/);
 });
 
 test("paths never step straight back but may revisit cells", () => {
-  const s = tri(13);
-  const o = at(s, "e9");   // four rows from every side
+  const s = tri(10);
+  const o = at(s, "d7");   // three rows from every side
   const paths = sowPaths(s.board, o, 3);
   assert.equal(paths.length, 6 * 5 * 5);
   for (const p of paths) for (let i = 2; i < p.length; i++) assert.notEqual(p[i], p[i - 2]);
@@ -140,62 +139,64 @@ test("paths never step straight back but may revisit cells", () => {
   assert.ok(sowPaths(s.board, at(s, "a1"), 3).every((p) => p[2] !== at(s, "a1")));
 });
 
-test("sowing drops the bottom first and the cap last", () => {
+test("sowing leaves a new checker, drops the bottom first and the cap last", () => {
   const s = tri(9);
   const [o, x, y, z] = [at(s, "c5"), at(s, "c6"), at(s, "d7"), at(s, "d6")];
   stack(s, o, [2, 2, 1]);
   stack(s, y, [2]);
-  roll(s, 1, 4);
+  roll(s, 4, 1);
   const move = [o, x, y, z];
   assert.ok(game.legalMoves(s).some((m) => moveKey(m) === moveKey(move)));
   game.applyMove(s, move);
-  assert.deepEqual(s.stacks[o], []);
+  assert.deepEqual(s.stacks[o], [1]);
   assert.deepEqual(s.stacks[x], [2]);
   assert.deepEqual(s.stacks[y], [2, 2]);
   assert.deepEqual(s.stacks[z], [1]);
-  assert.equal(s.tops[o], 0);
+  assert.equal(s.tops[o], 1);
 });
 
-test("a sow that comes back to its origin refills it", () => {
+test("a sow that comes back to its origin lands on the checker left there", () => {
   const s = tri(9);
   const o = at(s, "c5");
   stack(s, o, [2, 1, 1]);
   roll(s, 5, 2);
   const loop = sowPaths(s.board, o, 3).find((p) => p[3] === o);
   game.applyMove(s, loop);
-  assert.deepEqual(s.stacks[o], [1]);
+  assert.deepEqual(s.stacks[o], [1, 1]);
 });
 
-test("whoever connects at the end of a turn wins, even by the mover's sow", () => {
+test("a double on a full board ends the game; the corner majority wins", () => {
+  const corners = (s, owners) => s.board.corners.forEach((id, i) => stack(s, id, owners[i]));
   const s = tri(7);
-  // White holds the bottom row, which joins W, E and S, but for one gap.
-  const bottom = s.board.cells.filter((c) => c.coord.r === 6).map((c) => c.id);
-  for (const id of bottom) stack(s, id, [2]);
-  const gap = bottom[3];
-  stack(s, gap, []);
-  // Black's stack above the gap holds a White checker at the bottom.
-  const above = s.board.neighbours[gap].find((n) => s.board.cells[n].coord.r === 5);
-  stack(s, above, [2, 1]);
-  assert.equal(connector(s.board, s.tops), 0);
-  roll(s, 2, 4);
-  const move = game.legalMoves(s).find((m) => m[0] === above && m[1] === gap);
-  game.applyMove(s, move);
-  assert.deepEqual(game.outcome(s), { winner: 2 });
-  assert.deepEqual(game.legalMoves(s), []);
+  fill(s);
+  corners(s, [[1], [1, 2], [2, 2, 1]]);
+  assert.deepEqual([cornersOf(s, 1), cornersOf(s, 2)], [2, 1]);
+  // A non-double still has moves: sow or cap.
+  roll(s, 2, 3);
+  assert.equal(game.outcome(s), null);
+  assert.ok(game.legalMoves(s).length > 0);
+
+  const t = tri(7);
+  fill(t);
+  corners(t, [[2], [1, 2], [2, 2, 1]]);
+  roll(t, 3, 3);
+  assert.deepEqual(game.outcome(t), { winner: 2 });
+  assert.deepEqual(game.legalMoves(t), []);
+  assert.match(game.outcomeLines(t, game.outcome(t))[0], /full and Black rolled a double/);
+  // The final dice stay on show.
+  assert.equal(game.chanceView(t)[0].result, "difference 0");
 });
 
-test("a placement can win", () => {
-  const s = hex(4);
-  const { board } = s;
-  // A straight line through the centre from set 0's corner side to the opposite
-  // touches sets... use a row that joins all three sets instead: fill all but one.
-  const ring = board.cells.filter((c) => c.tags.edges.length).map((c) => c.id);
-  for (const id of ring) stack(s, id, [1]);
-  const gap = ring[0];
-  stack(s, gap, []);
-  roll(s, 6, 6);
-  game.applyMove(s, [gap]);
-  assert.deepEqual(game.outcome(s), { winner: 1 });
+test("random playouts fill the board and end with a winner", () => {
+  const rng = seededRng(5);
+  for (const size of [3, 5, 7]) {
+    for (let i = 0; i < 20; i++) {
+      const s = tri(size, "on");
+      const w = game.playout(s, rng);
+      assert.ok(w === 1 || w === 2, `size ${size}: winner ${w}`);
+      assert.ok(s.stacks.every((st) => st.length), "the board is full");
+    }
+  }
 });
 
 test("the log gives the difference with the second die", () => {
@@ -206,37 +207,37 @@ test("the log gives the difference with the second die", () => {
   assert.equal(game.moveText(s, "roll:2"), "rolled 2, difference 3");
 });
 
-test("stacks draw as piles of bars, the top one capped with the height", () => {
+test("stacks draw as piles of bars; the capped top is larger", () => {
   const s = tri();
   stack(s, 0, [1, 2, 1]);
   const ps = game.piecesOf(s, "capped");
   assert.deepEqual(ps.map((p) => p.player), [1, 2, 1]);
   assert.ok(ps[0].bar.y > ps[1].bar.y && ps[1].bar.y > ps[2].bar.y, "bottom checker lowest");
   assert.ok(ps[2].bar.width > ps[1].bar.width && ps[2].bar.height > ps[1].bar.height);
-  assert.equal(ps[2].label, "3");
-  assert.equal(ps[0].label, undefined);
 
   const plain = game.piecesOf(s, "plain");
   assert.ok(plain.every((p) => p.bar.width === plain[0].bar.width && !p.label));
   assert.ok(plain[0].bar.y > plain[2].bar.y);
 });
 
-test("by default the cell is shaded for its top checker, with tall heights beside the pile", () => {
+test("heights show only on stacks too tall to sow", () => {
   const s = tri();
   stack(s, 0, [1, 2, 1]);
-  stack(s, 1, [1, 1, 1, 2]);
+  stack(s, 1, [1, 1, 1, 2, 2]);
+  stack(s, 2, [1, 1, 1, 2, 2, 2]);
+  for (const style of ["shaded", "capped"]) {
+    const labelled = game.piecesOf(s, style).filter((p) => p.label);
+    assert.deepEqual(labelled.map((p) => [p.id, p.label]), [[2, "6"]], style);
+  }
   const ps = game.piecesOf(s);
   const tiles = ps.filter((p) => p.tile);
-  assert.deepEqual(tiles.map((p) => p.id), [0, 1]);
+  assert.deepEqual(tiles.map((p) => p.id), [0, 1, 2]);
   assert.notEqual(tiles[0].fill, tiles[1].fill, "shaded by owner");
-  assert.ok(ps.every((p) => p.id === 1 || !p.label), "no height on a pile of three");
-  const four = ps.filter((p) => p.id === 1 && !p.tile);
-  assert.equal(four.length, 4);
-  assert.equal(four[3].label, "4");
+  const six = ps.find((p) => p.label);
+  assert.ok(six.bar.labelX > six.bar.x + six.bar.width / 2, "the height sits to the right");
   for (const style of ["shaded", "capped", "plain"]) {
     assert.ok(game.piecesOf(s, style).every((p) => p.shadow === false), `${style}: no shadows`);
   }
-  assert.ok(four[3].bar.labelX > four[3].bar.x + four[3].bar.width / 2, "the height sits to the right");
 });
 
 test("tall stacks stay within the cell", () => {
