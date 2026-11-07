@@ -68,10 +68,13 @@ const colorSchemes = {
 
 // Stacks are drawn as piles of level bars, bottom checker lowest, centred on
 // the cell and kept within it (sizes in cells; a cell is a little over 1.15
-// tall). "capped": the top checker is a wider, taller bar carrying the
-// height; "plain": every bar alike, thinning as the pile grows.
+// tall). "shaded" (the default): every bar alike, on a cell shaded for the
+// player on top, with the height beside piles of more than three;
+// "capped": the top checker is a wider, taller bar carrying the height;
+// "plain": every bar alike, thinning as the pile grows. None casts a shadow.
 const PILE = 0.75, GAP = 0.018;
-const pieceStyles = { capped: { name: "Capped" }, plain: { name: "Plain" } };
+const pieceStyles = { shaded: { name: "Shaded" }, capped: { name: "Capped" }, plain: { name: "Plain" } };
+const SHADES = { [BLACK]: "#8d8a84", [WHITE]: "#fffdf8" };
 
 const TOP = { width: 0.76, height: 0.21 };
 const restHeight = (rest) => (rest ? Math.min(0.087, (PILE - TOP.height - GAP * rest) / rest) : 0);
@@ -92,14 +95,28 @@ function cappedStack(id, stack) {
   return out;
 }
 
-function plainStack(id, stack) {
+function plainStack(id, stack, { x = 0, width = 0.66 } = {}) {
   const n = stack.length;
   const h = Math.min(0.115, (PILE - GAP * (n - 1)) / n);
   const bottom = (n * h + (n - 1) * GAP) / 2;
   return stack.map((player, i) => ({
-    id, player, stroke: 0.018, bar: { width: 0.66, height: h, y: bottom - h / 2 - i * (h + GAP) },
+    id, player, stroke: 0.018, bar: { x, width, height: h, y: bottom - h / 2 - i * (h + GAP) },
   }));
 }
+
+function shadedStack(id, stack) {
+  const n = stack.length;
+  const tile = { id, player: null, fill: SHADES[stack[n - 1]], tile: true };
+  if (n <= 3) return [tile, ...plainStack(id, stack)];
+  // Room for the height on the right: the pile moves left and narrows.
+  const bars = plainStack(id, stack, { x: -0.1, width: 0.5 });
+  const top = bars[n - 1];
+  top.label = String(n);
+  top.bar = { ...top.bar, labelX: 0.33, labelY: 0, labelSize: 0.24 };
+  return [tile, ...bars];
+}
+
+const STACK_DRAWERS = { shaded: shadedStack, capped: cappedStack, plain: plainStack };
 
 function buildBoard({ shape, size }) {
   const board = shape === "hexagon" ? hexHexBoard(size) : triangleBoard(size);
@@ -380,9 +397,10 @@ export default withSwap({
   piecesOf(s, style) {
     const out = [];
     s.stacks.forEach((stack, id) => {
-      if (stack.length) out.push(...(style === "plain" ? plainStack : cappedStack)(id, stack));
+      if (stack.length) out.push(...(STACK_DRAWERS[style] || shadedStack)(id, stack));
     });
-    return out;
+    // Flat on the board: no drop shadows.
+    return out.map((p) => ({ ...p, shadow: false }));
   },
   // Outlines on the cells of the last move, and dots on the stacks open to
   // the roll when it must be sown.
@@ -408,7 +426,7 @@ export default withSwap({
   },
   boardDecor(board) {
     if (board.shape === "triangle") return [];
-    return sideSegments(board).map((segments, i) => ({ segments, stroke: SIDE_COLOURS[i], halo: "#0e0f13", width: 0.14 }));
+    return sideSegments(board).map((segments, i) => ({ segments, stroke: SIDE_COLOURS[i], halo: "#0e0f13", width: 0.07, outside: true }));
   },
   scoreSummary(s, player) {
     return { sub: PLAYERS[player].name, title: `${PLAYERS[player].name} connects all three sides` };

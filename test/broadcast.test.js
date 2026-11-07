@@ -215,18 +215,35 @@ test("stacks draw as piles of bars, the top one capped with the height", () => {
   assert.ok(ps[2].bar.width > ps[1].bar.width && ps[2].bar.height > ps[1].bar.height);
   assert.equal(ps[2].label, "3");
   assert.equal(ps[0].label, undefined);
-  assert.equal(game.piecesOf(s).length, 3, "capped is the default");
 
   const plain = game.piecesOf(s, "plain");
   assert.ok(plain.every((p) => p.bar.width === plain[0].bar.width && !p.label));
   assert.ok(plain[0].bar.y > plain[2].bar.y);
 });
 
+test("by default the cell is shaded for its top checker, with tall heights beside the pile", () => {
+  const s = tri();
+  stack(s, 0, [1, 2, 1]);
+  stack(s, 1, [1, 1, 1, 2]);
+  const ps = game.piecesOf(s);
+  const tiles = ps.filter((p) => p.tile);
+  assert.deepEqual(tiles.map((p) => p.id), [0, 1]);
+  assert.notEqual(tiles[0].fill, tiles[1].fill, "shaded by owner");
+  assert.ok(ps.every((p) => p.id === 1 || !p.label), "no height on a pile of three");
+  const four = ps.filter((p) => p.id === 1 && !p.tile);
+  assert.equal(four.length, 4);
+  assert.equal(four[3].label, "4");
+  for (const style of ["shaded", "capped", "plain"]) {
+    assert.ok(game.piecesOf(s, style).every((p) => p.shadow === false), `${style}: no shadows`);
+  }
+  assert.ok(four[3].bar.labelX > four[3].bar.x + four[3].bar.width / 2, "the height sits to the right");
+});
+
 test("tall stacks stay within the cell", () => {
   const s = tri();
   stack(s, 0, Array.from({ length: 20 }, (_, i) => 1 + (i % 2)));
-  for (const style of ["capped", "plain"]) {
-    for (const { bar } of game.piecesOf(s, style)) {
+  for (const style of ["shaded", "capped", "plain"]) {
+    for (const { bar } of game.piecesOf(s, style).filter((p) => p.bar)) {
       assert.ok(bar.height > 0 && Math.abs(bar.y) + bar.height / 2 <= 0.4, `${style} y ${bar.y}`);
     }
   }
