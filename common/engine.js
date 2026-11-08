@@ -76,6 +76,15 @@ export function optionAllowed(game, key, value, opts) {
   return !spec.allowed || spec.allowed(value, opts);
 }
 
+// Is option `key` in play alongside the other values in `opts`? Options
+// may declare inactive(opts) when they mean nothing with the others (e.g.
+// a choice of pieces when the pieces are drawn at random); Setup greys them
+// out, and their value is kept but ignored.
+export function optionActive(game, key, opts) {
+  const spec = game.options[key];
+  return !spec.inactive || !spec.inactive(opts);
+}
+
 // Resolve option values against the game's declared options: unknown keys are
 // dropped and missing or invalid values fall back to the default. Then, in
 // declaration order, a value not allowed alongside the others falls back to

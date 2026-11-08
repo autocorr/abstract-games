@@ -55,7 +55,10 @@ export function dropdown(label, choices, value, onChange) {
   return {
     node,
     set(v) { node.value = String(v); },
-    disable(isDisabled) { for (const o of node.options) o.disabled = isDisabled(o.value); },
+    disable(isDisabled) {
+      for (const o of node.options) o.disabled = isDisabled(o.value);
+      node.disabled = [...node.options].every((o) => o.disabled);   // e.g. an inactive option
+    },
   };
 }
 

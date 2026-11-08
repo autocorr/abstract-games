@@ -33,6 +33,11 @@ common/
     square.js               square grids: chess/draughts boards and Go-style points boards
     hex.js                  hex rhombus (Hex), hex-hex and triangle (Y) boards
     cairo.js                Cairo pentagonal tiling patches
+  chess/                    chess-like games, generic over piece movement (see "Chess variants")
+    movement.js             movement atoms (leap, ride, cannon), standard pieces, compiled tables
+    rules.js                rules specs: move generation, attacks and check, castling, en passant,
+                            promotion, notation
+    game.js                 chessGame(variant): a whole Game from a rules spec and hooks
   render.js                 SVG renderer: cell, highlight, piece and marker layers
   chance-view.js            bag and dice panels shown in the turn card
   pieces/cburnett/          chess piece images (Cburnett, BSD; see its README)
@@ -172,10 +177,12 @@ export default {
                                     //   first is the default) and piecesOf gets the key
   pieceLabels,                      // e.g. "Group sizes": the pieces carry labels, and Setup
                                     //   offers Show / Hide for them (saved, no new game)
+  pieceLabelsDefault,               // "off": the labels start hidden (default "on")
   rotatable,                        // true: the shell may turn the board 90 degrees;
                                     //   a number: by that angle (clockwise, degrees)
   piecesOf(state, style),           // -> [{ id, player, label?, image? }]; default reads state.cells;
-                                    //   label: short text on the disc (e.g. a group size);
+                                    //   label: short text on the disc (e.g. a group size), or
+                                    //   small in the corner of an image;
                                     //   image: URL drawn instead of a disc (e.g. a chess piece);
                                     //   a neutral piece has player null and its own fill (and mark)
                                     //   rotate: degrees to turn an image (180: upside down);
@@ -201,6 +208,10 @@ An option may also declare `allowed(value, opts)` to rule out combinations
 (e.g. a minimum too high for a small board): `resolveOptions()` replaces a
 disallowed value with the nearest allowed choice before it, the Setup
 section disables it, and the conformance tests skip those combinations.
+An option that means nothing alongside the others (e.g. a choice of pieces
+when the pieces are drawn at random) declares `inactive(opts)`: Setup greys
+the whole row out and keeps its value, the game ignores it, and the
+conformance tests try only its default.
 
 `applyMove` mutates in place and `clone` copies: search code clones once per
 tree node and then mutates freely, which keeps playouts fast. A turn may span
@@ -385,6 +396,33 @@ a module Web Worker (`common/ai/worker.js`) that imports the game from
 (`searchMove()` in `mcts.js`). If a worker cannot be created the same
 search runs on the main thread instead. A game
 can speed up rollouts by providing `playout(state, rng)`.
+
+## Chess variants
+
+`common/chess/` plays chess-like games without assuming standard chess.
+Pieces are data: a type lists its movement as atoms from `movement.js`
+(`leap(1, 2)` a Knight, `ride(1, 0)` a Rook, `ride(1, 2)` a Nightrider,
+`cannon(1, 0)` a Janggi Cannon; `mode` "m" or "c" for move- or capture-only,
+`relative` vectors for pawns, `initial` for a double step), plus flags:
+`royal` (the piece check is about), `becomes` (the type it turns into after
+moving, for two-faced pieces), `castler`, `pawn`, `promote`. A variant's
+rules spec adds castling (by square names, mirrored for Black; castling may
+be entered as the royal's move to its square or onto its own Rook), whether
+check applies, and whether stalemate draws or loses. `attachRules(board,
+spec)` compiles it onto the board as `board.chess`: rays from every square
+along every vector used, and an attack index that walks out from the
+attacked square, so attack tests do not depend on which pieces exist.
+
+`chessGame(variant)` (`game.js`) builds a whole Game on that: positions
+(`cells` of piece codes, `royal` squares, castling rights, en passant,
+fifty-move clock), turns of a move plus a promotion choice, algebraic
+notation with check marks, last-move and check markers, Cburnett images,
+material scores and a capture-biased playout. Hooks let a variant add state,
+chance plies before the game (`setupPly`) or before each move (`drawPly`),
+rule out moves (`allow`), act after a turn (`afterMove`) and decide what
+having no move means (`noMoves`); the returned object can be spread and its
+methods overridden. Liquefaction is built this way (a marble draw before
+each move, a colour-check in `allow`).
 
 ## Testing
 

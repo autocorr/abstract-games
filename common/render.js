@@ -243,6 +243,19 @@ export function createRenderer(svg) {
           href: p.image, x: c.x - s / 2, y: c.y - s / 2, width: s, height: s,
           ...(turn ? { transform: `rotate(${turn} ${c.x} ${c.y})` } : {}),
         }));
+        // A label goes in the cell's bottom-right corner (on screen), in the
+        // player's colours with a halo so it reads on any square.
+        if (p.label) {
+          const [dx, dy] = rotatePoint([0.44 * u, 0.42 * u], -rotation);
+          const text = svgEl("text", {
+            "font-size": LABEL_PX, "font-weight": 800, "text-anchor": "end",
+            fill: spec.fill || "#fff", stroke: spec.mark || "#000", "stroke-width": LABEL_PX * 0.16,
+            "stroke-linejoin": "round", "paint-order": "stroke",
+            transform: `translate(${c.x + dx} ${c.y + dy})${rotation ? ` rotate(${-rotation})` : ""} scale(${(0.27 * u) / LABEL_PX})`,
+          });
+          text.textContent = p.label;
+          layers.images.appendChild(text);
+        }
         continue;
       }
       if (p.tile) {
@@ -298,7 +311,8 @@ export function createRenderer(svg) {
 
   // pieces:   [{ id, player, label?, image?, rotate?, fill?, mark?, size?,
   //           shadow?, bar?, stroke? }]; image is a URL drawn in place of the disc (e.g. a
-  //           chess piece), without a drop shadow, turned by rotate degrees;
+  //           chess piece), without a drop shadow, turned by rotate degrees, with
+  //           any label small in the cell's bottom-right corner;
   //           fill and mark colour a neutral piece (player null); size is the
   //           disc's diameter as a fraction of a cell (default 0.84);
   //           shadow: false drops the disc's shadow; bar: { width, height,

@@ -16,7 +16,7 @@ import { playAndDescribe, logEntries, groupTurns, moveLabel } from "./log.js";
 import { timeline, isLive, jump, play, undoTarget } from "./timeline.js";
 import { games as registry } from "../games.js";
 import {
-  replay, resolveOptions, optionAllowed, parseChoice, findLegalMove, piecesOf, sampleChance, currentPlayer, CHANCE,
+  replay, resolveOptions, optionAllowed, optionActive, parseChoice, findLegalMove, piecesOf, sampleChance, currentPlayer, CHANCE,
 } from "./engine.js";
 
 // Pause before a chance ply (a marble draw) is played, so it can be seen.
@@ -163,7 +163,8 @@ export function mount(game, { root = document.body } = {}) {
     persist();
     for (const [k, control] of Object.entries(ui.optionControls)) {
       control.set(opts[k]);
-      control.disable((v) => !optionAllowed(game, k, parseChoice(game.options[k], v), opts));
+      const active = optionActive(game, k, opts);
+      control.disable((v) => !active || !optionAllowed(game, k, parseChoice(game.options[k], v), opts));
     }
     // Boards depend only on the options, so rebuild only when they change.
     const key = JSON.stringify(opts);
