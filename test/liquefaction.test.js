@@ -6,8 +6,10 @@ import { bagSize } from "../common/bag.js";
 import { seededRng } from "../common/rng.js";
 import { describeMove } from "../common/log.js";
 
-const { make, P, N, B, R, K, WHITE, BLACK } = internals;
-const TYPES = { P, N, B, R, K };
+const { CLASSES, pieceCode, WHITE, BLACK } = internals;
+// Piece codes by letter, from the rules compiled onto the board.
+const make = (letter, player) => pieceCode(game.createBoard({ size: 8 }).chess.byKey[letter], player);
+const cls = (board, id) => CLASSES[board.cells[id].tags.quad];
 
 // Square name -> id on an n x n board.
 const sq = (board, name) => board.cells.find((c) => c.tags.name === name).id;
@@ -22,8 +24,8 @@ function position(size, pieces, { turn = WHITE, colour = "B", castling = 0, ep =
   for (const [at, code] of Object.entries(pieces)) {
     const id = sq(s.board, at);
     const player = code[0] === "w" ? WHITE : BLACK;
-    s.cells[id] = make(TYPES[code[1]], player);
-    if (code[1] === "K") s.kings[player - 1] = id;
+    s.cells[id] = make(code[1], player);
+    if (code[1] === "K") s.royal[player] = id;
   }
   s.turn = turn;
   s.castling = castling;
@@ -39,8 +41,8 @@ const movesFrom = (s, from) => keys(s.board, game.legalMoves(s).filter((m) => Ar
 test("square classes follow the Dabbaba sub-grids", () => {
   for (const size of [6, 8]) {
     const board = game.createBoard({ size });
-    const cls = (n) => board.chess.cls[sq(board, n)];
-    assert.deepEqual(["a1", "b1", "a2", "b2", "c3", "d4"].map(cls), ["A", "B", "C", "D", "A", "D"]);
+    const at = (n) => cls(board, sq(board, n));
+    assert.deepEqual(["a1", "b1", "a2", "b2", "c3", "d4"].map(at), ["A", "B", "C", "D", "A", "D"]);
   }
 });
 
@@ -61,20 +63,19 @@ test("each colour scheme keeps the checkerboard: dark A/D, light B/C", () => {
 test("starting positions and fixed bags give each King's colour once", () => {
   for (const [size, wk, bk] of [[6, "d1", "d6"], [8, "e1", "e8"]]) {
     const s = newGame(game, { size, bag: "fixed" });
-    const geo = s.board.chess;
-    assert.equal(name(s.board, s.kings[0]), wk);
-    assert.equal(name(s.board, s.kings[1]), bk);
-    assert.equal(s.bag.counts[geo.cls[s.kings[0]]], 1);
-    assert.equal(s.bag.counts[geo.cls[s.kings[1]]], 1);
+    assert.equal(name(s.board, s.royal[WHITE]), wk);
+    assert.equal(name(s.board, s.royal[BLACK]), bk);
+    assert.equal(s.bag.counts[cls(s.board, s.royal[WHITE])], 1);
+    assert.equal(s.bag.counts[cls(s.board, s.royal[BLACK])], 1);
     assert.equal(bagSize(s.bag), 5);
     assert.equal(game.toMove(s), CHANCE);
     // No Queens, and the Queen's square is empty.
-    assert.ok(!Array.from(s.cells).some((x) => (x & 7) === 5));
+    assert.equal(s.board.chess.byKey.Q, undefined);
     assert.equal(s.cells[sq(s.board, size === 6 ? "c1" : "d1")], 0);
   }
   const small = newGame(game, { size: 6 });
   assert.deepEqual(["a1", "b1", "c1", "d1", "e1", "f1"].map((n) => small.cells[sq(small.board, n)]),
-    [make(N, WHITE), make(B, WHITE), 0, make(K, WHITE), make(B, WHITE), make(N, WHITE)]);
+    ["N", "B", 0, "K", "B", "N"].map((l) => (l ? make(l, WHITE) : 0)));
 });
 
 test("random bag: 5 fill plies from the supply before White's draw", () => {
@@ -148,7 +149,7 @@ test("promotion offers Knight, Bishop or Rook, and the marble follows the square
   assert.deepEqual(game.legalMoves(s), ["promote:N", "promote:B", "promote:R"]);
   const before = { ...s.bag.counts };
   game.applyMove(s, "promote:R");
-  assert.equal(s.cells[sq(s.board, "a6")], make(R, WHITE));
+  assert.equal(s.cells[sq(s.board, "a6")], make("R", WHITE));
   assert.equal(s.bag.counts.C, before.C + 1);   // a6: odd file, even rank
   assert.equal(game.toMove(s), CHANCE);
 });
@@ -177,7 +178,7 @@ test("8x8 castling: through the drawn colour is fine, not while colour-checked",
   // Castling moves the rook and drops the rights.
   s = position(8, pieces, { colour: "D", castling: 15 });
   game.applyMove(s, [sq(s.board, "e1"), sq(s.board, "g1")]);
-  assert.equal(s.cells[sq(s.board, "f1")], make(R, WHITE));
+  assert.equal(s.cells[sq(s.board, "f1")], make("R", WHITE));
   assert.equal(s.cells[sq(s.board, "h1")], 0);
   assert.equal(s.castling & 3, 0);
 });
@@ -230,7 +231,7 @@ test("moves round-trip through replay, including promotion choices", () => {
 
 test("the drawn colour's squares are hatched until the move is made", () => {
   const s = position(6, { d1: "wK", a3: "wN", f6: "bK" }, { colour: "A" });
-  const shaded = () => game.markers(s).filter((m) => m.kind === "shade").map((m) => s.board.chess.cls[m.id]);
+  const shaded = () => game.markers(s).filter((m) => m.kind === "shade").map((m) => cls(s.board, m.id));
   assert.deepEqual(shaded(), Array(9).fill("A"));   // a quarter of 36 squares
   game.applyMove(s, [sq(s.board, "a3"), sq(s.board, "b5")]);
   assert.deepEqual(shaded(), []);
