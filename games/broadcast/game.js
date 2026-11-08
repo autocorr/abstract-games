@@ -23,6 +23,13 @@
 //     checker ([id]); if they cap no stack at all, place on a vacant cell.
 // A stack of six or more can never be sown.
 //
+// Free sows (an option, 0-4 each, default 1): instead of the rolled move, a
+// player may spend a free sow to sow any stack they cap of height one to five.
+// The move "free" (a decision ply after the roll) commits to it; the sow
+// path follows. A free sow never stands in for a placement that cannot be
+// made: when the roll leaves no legal move (a double with no vacant cell),
+// the game is over, whatever free sows are left.
+//
 // No cell ever empties, so the board only fills. The game ends when, once the
 // dice are rolled, the player to move has no legal move: a double with no
 // vacant cell (or, on a full board, a player capping nothing). The board is
@@ -46,6 +53,8 @@ const PLAYERS = {
 };
 const DIE = 6;
 const KEEP = "keep";
+const FREE = "free";
+const FREE_CHOICES = [0, 1, 2, 3, 4];
 const UNSOWABLE = DIE;   // the largest difference is DIE - 1
 const SIZES = [3, 4, 5, 6, 7, 8, 9, 10];   // hexagon 3-6
 const sizeAllowed = (size, { shape }) => shape !== "hexagon" || size <= 6;
@@ -205,11 +214,24 @@ function sowPaths(board, origin, h) {
   return out;
 }
 
+// Stacks the mover could sow with a free sow: those they cap, one to five tall.
+function freeSowable(s) {
+  const ids = [];
+  for (let id = 0; id < s.stacks.length; id++) {
+    const h = s.stacks[id].length;
+    if (h && h < UNSOWABLE && s.tops[id] === s.turn) ids.push(id);
+  }
+  return ids;
+}
+
+const canFreeSow = (s) => !s.over && s.phase === "move" && s.free[s.turn] > 0 && freeSowable(s).length > 0;
+
 const cornersOf = (s, player) => s.board.corners.filter((id) => caps(s, id, player)).length;
 
 // ---- moves -----------------------------------------------------------------
 
-// Once both dice are rolled: with no legal move the game is over.
+// Once both dice are rolled: with no legal move for the roll the game is
+// over, whatever free sows are left.
 function checkStuck(s) {
   if (turnOptions(s).ids.length) return;
   const black = cornersOf(s, BLACK), white = cornersOf(s, WHITE);
@@ -258,7 +280,12 @@ function apply(s, move) {
     }
     return null;
   }
+  if (move === FREE) {
+    s.phase = "free";
+    return null;
+  }
   const mover = s.turn;
+  if (s.phase === "free") s.free[mover]--;
   if (move.length === 1) put(s, move[0]);
   else sow(s, move);
   s.last = move.slice();
@@ -272,14 +299,16 @@ function hint(s) {
   const name = PLAYERS[s.turn].name;
   if (s.phase === "ready") return `${name}: roll to play on.`;
   if (s.phase === "roll") return `${name} rolls the dice…`;
+  if (s.phase === "free") return `${name} spends a free sow: sow any stack of yours up to five tall, leaving a checker behind.`;
   const [a, b] = s.dice;
   const k = difference(s);
   const rolled = `${name} rolled ${a} and ${b}`;
   const { kind } = turnOptions(s);
-  if (!k) return `${rolled}: place a checker on a vacant cell.`;
-  if (kind === "sow") return `${rolled}: sow a stack of ${k}, leaving a checker behind.`;
-  if (kind === "cap") return `${rolled}, but caps no stack of ${k}: cap one of your stacks.`;
-  return `${rolled}, but caps no stack: place a checker on a vacant cell.`;
+  const or = canFreeSow(s) ? ` Or spend a free sow (${s.free[s.turn]} left).` : "";
+  if (!k) return `${rolled}: place a checker on a vacant cell.${or}`;
+  if (kind === "sow") return `${rolled}: sow a stack of ${k}, leaving a checker behind.${or}`;
+  if (kind === "cap") return `${rolled}, but caps no stack of ${k}: cap one of your stacks.${or}`;
+  return `${rolled}, but caps no stack: place a checker on a vacant cell.${or}`;
 }
 
 export default withSwap({
@@ -294,6 +323,7 @@ export default withSwap({
       default: "triangle",
     },
     size: { label: "Board side", choices: SIZES, default: 7, allowed: sizeAllowed },
+    freeSows: { label: "Free sows", choices: FREE_CHOICES, default: 1 },
     swap: {
       label: "Swap rule",
       choices: [{ value: "on", label: "On" }, { value: "off", label: "Off" }],
@@ -301,23 +331,29 @@ export default withSwap({
     },
   },
   moveLabels: { [KEEP]: "Roll" },
+  moveLabel(s, move) {
+    return move === FREE ? `Free sow (${s.free[s.turn]} left)` : null;
+  },
   colorSchemes,
   pieceStyles,
   pieceLabels: "Stack heights",
   optionalDecor: "Corner marks",
 
   createBoard: cachedBoards((o) => `${o.shape}/${o.size}`, buildBoard),
-  initialState(board, { swap }) {
+  initialState(board, { swap, freeSows }) {
     return {
       board,
       stacks: Array.from({ length: board.size }, () => []),   // bottom to top
       tops: new Uint8Array(board.size),                         // owner of each top checker
       turn: BLACK,
-      phase: "roll",          // "roll" (chance, one ply per die), "move", or "ready" (White's swap decision)
+      phase: "roll",          // "roll" (chance, one ply per die), "move", "free" (a free sow's path),
+                              // or "ready" (White's swap decision)
       dice: [0, 0],           // the dice of the turn in progress, 0 while unrolled
       last: null,             // the last move's cells
       turns: 0,               // turns completed
       swapRule: swap === "on",
+      freeSows,               // the free sows each player starts with
+      free: [0, freeSows, freeSows],   // free sows left, by player
       over: false,            // set when the player to move has no legal move
       winner: 0,
     };
@@ -328,6 +364,7 @@ export default withSwap({
       stacks: s.stacks.map((st) => st.slice()),
       tops: s.tops.slice(),
       dice: s.dice.slice(),
+      free: s.free.slice(),
       last: s.last && s.last.slice(),
     };
   },
@@ -344,9 +381,11 @@ export default withSwap({
     if (s.over) return [];
     if (s.phase === "roll") return rollOutcomes(DIE).map((o) => o.move);
     if (s.phase === "ready") return [KEEP];
+    const paths = (ids) => ids.flatMap((id) => sowPaths(s.board, id, s.stacks[id].length));
+    if (s.phase === "free") return paths(freeSowable(s));
     const { kind, ids } = turnOptions(s);
-    if (kind === "sow") return ids.flatMap((id) => sowPaths(s.board, id, s.stacks[id].length));
-    return ids.map((id) => [id]);
+    const moves = kind === "sow" ? paths(ids) : ids.map((id) => [id]);
+    return canFreeSow(s) ? [...moves, FREE] : moves;
   },
   applyMove: apply,
   // The swap: every checker changes colour (the board is symmetric), and the
@@ -358,6 +397,7 @@ export default withSwap({
     }
     s.turn = 3 - s.turn;
     s.phase = "roll";
+    s.free = [0, s.free[2], s.free[1]];
   },
   outcome(s) {
     return s.over ? { winner: s.winner } : null;
@@ -371,13 +411,20 @@ export default withSwap({
     const die = () => 1 + Math.floor(rng() * DIE);
     while (!s.over) {
       // Keep any die already rolled; never swap.
-      if (s.phase !== "move") {
+      if (s.phase === "roll" || s.phase === "ready") {
         s.dice = [s.dice[0] || die(), die()];
         s.phase = "move";
         checkStuck(s);
         if (s.over) break;
       }
-      const { kind, ids } = turnOptions(s);
+      let { kind, ids } = turnOptions(s);
+      // A free sow already chosen, or half the time when the roll only lets
+      // them cap.
+      if (s.phase === "free" || (kind === "cap" && canFreeSow(s) && rng() < 0.5)) {
+        kind = "sow";
+        ids = freeSowable(s);
+        s.free[s.turn]--;
+      }
       const id = pick(ids);
       if (kind === "sow") {
         const path = [id];
@@ -418,8 +465,8 @@ export default withSwap({
   markers(s) {
     const out = [];
     if (s.last) for (const id of new Set(s.last)) out.push({ id, kind: "square" });
-    if (!s.over && s.phase === "move") {
-      const { kind, ids } = turnOptions(s);
+    if (!s.over && (s.phase === "move" || s.phase === "free")) {
+      const { kind, ids } = s.phase === "free" ? { kind: "sow", ids: freeSowable(s) } : turnOptions(s);
       if (kind !== "place") {
         for (const id of ids) {
           // The dot goes under a short pile, clear of the bars.
@@ -433,13 +480,18 @@ export default withSwap({
   // The second die also gives the difference: "rolled 2, difference 3".
   moveText(s, move) {
     if (move === KEEP) return "no swap";
+    if (move === FREE) return "free sow";
     if (typeof move !== "string" || s.phase !== "roll" || !s.dice[0]) return null;
     const b = rolledValue(move);
     return `rolled ${b}, difference ${Math.abs(s.dice[0] - b)}`;
   },
   scoreSummary(s, player) {
     const n = cornersOf(s, player);
-    return { main: String(n), sub: n === 1 ? "corner" : "corners", title: `${PLAYERS[player].name} caps ${n} of the 3 corners` };
+    const corners = n === 1 ? "corner" : "corners";
+    const title = `${PLAYERS[player].name} caps ${n} of the 3 corners`;
+    if (!s.freeSows) return { main: String(n), sub: corners, title };
+    const f = s.free[player];
+    return { main: String(n), sub: `${f} free · ${corners}`, title: `${title}; ${f} free ${f === 1 ? "sow" : "sows"} left` };
   },
   outcomeLines(s) {
     const name = PLAYERS[s.turn].name;
@@ -455,4 +507,4 @@ export default withSwap({
   offer: (s) => s.phase === "ready",
 });
 
-export const internals = { turnOptions, sowPaths, cornersOf, cornerMarks };
+export const internals = { turnOptions, sowPaths, cornersOf, cornerMarks, freeSowable };
