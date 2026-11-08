@@ -16,6 +16,7 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Zone Y](games/zone-y/)
 - [Tunneling](games/tunneling/)
 - [Broadcast](games/broadcast/)
+- [Shaolin King](games/shaolin-king/)
 
 ## Running locally
 
