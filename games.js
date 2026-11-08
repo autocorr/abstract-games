@@ -98,4 +98,12 @@ export const games = [
     path: "games/shaolin-king/",
     module: "games/shaolin-king/game.js",
   },
+  {
+    id: "lottery-chess",
+    title: "Lottery Chess",
+    board: "Chessboard",
+    blurb: "Chess where each turn you draw from your own bag of 2 white and 5 black marbles. On white, a ten-sided die wins you a piece for your hand, from a Pawn (most often) to a Queen (rarely). Drop a piece from your hand instead of moving, as in Crazyhouse.",
+    path: "games/lottery-chess/",
+    module: "games/lottery-chess/game.js",
+  },
 ];

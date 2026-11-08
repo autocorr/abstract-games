@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lottery Chess</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Checkmate the opposing King. The pieces, moves and setup are those of chess, but each turn may win you a piece for your hand, which you can later drop onto the board.</p>
+  <p><b>The lottery.</b> Each player has their own see-through bag of 7 marbles: 2 white and 5 black. Start your turn by drawing a marble from your bag. Black wins nothing. White wins a piece: roll a ten-sided die and put the piece in your hand: 1–4 a Pawn, 5–6 a Knight, 7–8 a Bishop, 9 a Rook, 10 a Queen. Drawn marbles stay out until all 7 are drawn, and then the bag is refilled, so each player wins exactly 2 pieces every 7 turns. Only the order is left to chance.</p>
+  <p><b>Moving or dropping.</b> After the draw, either make a chess move or drop one piece from your hand onto any empty square, including a piece won this turn. Your hand is shown beside the board (Black's above, White's below), with a count on each piece you hold; click a piece there and then a square. As in Crazyhouse, a Pawn may not be dropped on the first or last rank, a drop may give check or even checkmate, and like any move it may not leave your own King in check. A Pawn dropped on its second rank may still make its double step. A dropped Rook gives no right to castle. Unlike Crazyhouse, captured pieces leave the game: only the lottery fills your hand.</p>
+  <p><b>Check and mate.</b> A player in check still draws first, and a piece won that turn may be dropped to block the check. So a checkmate is only decided once the defender has drawn: you lose if you have no legal move after your draw. A Pawn cannot block on the first or last rank.</p>
+  <p><b>Other rules.</b> Castling, en passant and promotion (to Queen, Rook, Bishop or Knight) are as in chess. Stalemate (no legal move after your draw, but not in check) is a draw, as is 50 moves each without a capture, a pawn move or a Pawn drop. There is no draw by repetition.</p>
+  <p><b>Odds.</b> The die makes each piece about as likely as the inverse of its value in Crazyhouse (Pawn 1, Knight and Bishop about 1.7, Rook about 3, Queen about 4), so each kind adds about the same material on average.</p>
+  <p><b>Credits.</b> Drops after Crazyhouse and Shogi. Chess pieces by Colin M.L. Burnett (Cburnett), from Wikimedia Commons, used under the BSD license.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
