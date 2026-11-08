@@ -84,6 +84,28 @@ function checkChanceView(game, state) {
   }
 }
 
+// Hand panels: each side once, slots with ids past the board's cells (the
+// first cell of a drop move), images and counts. Returns the slot ids.
+function checkHands(game, state) {
+  const panels = game.hands(state);
+  assert.ok(Array.isArray(panels));
+  const sides = panels.map((p) => p.side);
+  assert.equal(new Set(sides).size, sides.length, "two hands on one side");
+  const ids = new Set();
+  for (const panel of panels) {
+    assert.ok(["top", "bottom"].includes(panel.side), `hand side ${panel.side}`);
+    assert.ok(panel.player in game.players, `hand player ${panel.player}`);
+    for (const slot of panel.slots) {
+      assert.ok(Number.isInteger(slot.id) && slot.id >= state.board.size, `hand slot id ${slot.id}`);
+      assert.ok(!ids.has(slot.id), `duplicate hand slot ${slot.id}`);
+      ids.add(slot.id);
+      assert.ok(slot.image && slot.name, "a hand slot needs an image and a name");
+      assert.ok(Number.isInteger(slot.count) && slot.count >= 0, `hand count ${slot.count}`);
+    }
+  }
+  return ids;
+}
+
 const PLAYOUTS = 3;
 const MAX_PLIES = 10000;
 
@@ -167,8 +189,11 @@ for (const { entry, game } of entries) {
 
           const keys = legal.map(moveKey);
           assert.equal(new Set(keys).size, keys.length, "duplicate legal moves");
+          // A cell move may start at a hand slot (a drop); its other ids are cells.
+          const slots = game.hands ? checkHands(game, state) : new Set();
+          const isCell = (id) => Number.isInteger(id) && id >= 0 && id < state.board.size;
           for (const m of legal) {
-            assert.ok(Array.isArray(m) ? m.every((id) => Number.isInteger(id) && id >= 0 && id < state.board.size)
+            assert.ok(Array.isArray(m) ? m.every((id, i) => isCell(id) || (i === 0 && slots.has(id)))
               : typeof m === "string", `malformed move ${JSON.stringify(m)}`);
             assert.deepEqual(parseMoveKey(moveKey(m)), m);
           }

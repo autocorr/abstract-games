@@ -4,6 +4,7 @@ import { squareBoard } from "../common/board/square.js";
 import { KING, QUEEN, ROOK, KNIGHT, NIGHTRIDER, QUEEN_CANNON, pawn, images } from "../common/chess/movement.js";
 import {
   attachRules, attacked, inCheck, legalMoves, playMove, notation, pieceCode, WHITE, BLACK,
+  emptyHand, addToHand, dropSlot, handCount, material, slotOf,
 } from "../common/chess/rules.js";
 
 // A spec with one of each kind of mover; "M" is a royal that turns into "F"
@@ -26,9 +27,10 @@ const SPEC = {
   ],
 };
 
-function position(pieces, { castleMove = "king", castling = 0, turn = WHITE } = {}) {
-  const board = attachRules(squareBoard({ cols: 8, grid: false }), { ...SPEC, castleMove });
+function position(pieces, { castleMove = "king", castling = 0, turn = WHITE, drops } = {}) {
+  const board = attachRules(squareBoard({ cols: 8, grid: false }), { ...SPEC, castleMove, drops });
   const s = { board, cells: new Uint8Array(64), royal: [-1, -1, -1], castling, ep: -1, clock: 0, pending: -1, turn };
+  if (drops) s.hand = emptyHand(board);
   for (const [at, code] of Object.entries(pieces)) {
     const id = sq(board, at), player = code[0] === "w" ? WHITE : BLACK, key = code.slice(1);
     s.cells[id] = pieceCode(board.chess.byKey[key], player);
@@ -107,4 +109,62 @@ test("a two-faced royal flips when it moves, and its face decides its attacks", 
   const moves = from(s, "d8", BLACK);
   assert.ok(!["d8-d7", "d8-d6", "d8-d5"].some((m) => moves.includes(m)));
   assert.ok(moves.includes("d8-d4"));
+});
+
+const DROPS = ["P", "N", "R", "Q"];
+const drops = (s, key, player = WHITE) =>
+  legalMoves(s, player).filter((m) => m[0] === dropSlot(s, player, s.board.chess.byKey[key]))
+    .map((m) => s.board.cells[m[1]].tags.name).sort();
+
+test("hand slots are ids past the board, one per player and type", () => {
+  const s = position({ e1: "wK", e8: "bK" }, { drops: DROPS });
+  const q = s.board.chess.byKey.Q;
+  assert.ok(dropSlot(s, WHITE, q) >= 64);
+  assert.deepEqual(slotOf(s, dropSlot(s, BLACK, q)), { player: BLACK, t: q });
+  assert.equal(slotOf(s, 12), null);
+  assert.throws(() => addToHand(s, WHITE, "C"));   // not droppable
+});
+
+test("pieces in hand drop on any empty square; pawns not on the first or last rank", () => {
+  const s = position({ e1: "wK", e8: "bK" }, { drops: DROPS });
+  assert.deepEqual(legalMoves(s, WHITE).filter((m) => m[0] >= 64), []);
+  addToHand(s, WHITE, "N");
+  addToHand(s, WHITE, "P");
+  assert.equal(drops(s, "N").length, 62);
+  const pawnDrops = drops(s, "P");
+  assert.equal(pawnDrops.length, 48);
+  assert.ok(!pawnDrops.some((n) => n.endsWith("1") || n.endsWith("8")));
+  assert.equal(material(s, WHITE), 0);   // no values in this spec
+});
+
+test("a drop must not leave the royal in check, may block it, and may give check", () => {
+  // Black's rook on e8 checks the King on e1: only drops on e2..e7 help.
+  const s = position({ e1: "wK", e8: "bR", a8: "bK" }, { drops: DROPS });
+  addToHand(s, WHITE, "R");
+  assert.deepEqual(drops(s, "R"), ["e2", "e3", "e4", "e5", "e6", "e7"]);
+  const t = position({ e1: "wK", a8: "bK" }, { drops: DROPS });
+  addToHand(t, WHITE, "R");
+  const move = [dropSlot(t, WHITE, t.board.chess.byKey.R), sq(t.board, "a1")];
+  assert.equal(notation(t, move), "R@a1");
+  const info = playMove(t, move);
+  assert.equal(info.drop, t.board.chess.byKey.R);
+  assert.deepEqual(t.last, [sq(t.board, "a1")]);
+  assert.equal(handCount(t, WHITE, t.board.chess.byKey.R), 0);
+  assert.ok(inCheck(t, BLACK));
+});
+
+test("a dropped pawn on its second rank may double-step; drops clear en passant", () => {
+  const s = position({ e1: "wK", e8: "bK", d4: "bP" }, { drops: DROPS });
+  addToHand(s, WHITE, "P");
+  addToHand(s, WHITE, "N");
+  const p = dropSlot(s, WHITE, s.board.chess.byKey.P);
+  assert.equal(notation(s, [p, sq(s.board, "c2")]), "P@c2");
+  playMove(s, [p, sq(s.board, "c2")]);
+  assert.equal(s.clock, 0);
+  assert.ok(from(s, "c2").includes("c2-c4"));
+  playMove(s, [sq(s.board, "c2"), sq(s.board, "c4")]);
+  assert.equal(s.board.cells[s.ep].tags.name, "c3");
+  playMove(s, [dropSlot(s, WHITE, s.board.chess.byKey.N), sq(s.board, "h3")]);
+  assert.equal(s.ep, -1);
+  assert.equal(s.clock, 1);
 });
