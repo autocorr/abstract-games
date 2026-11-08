@@ -27,7 +27,8 @@
 //   reasons              { reason: (loserName, s) => line } outcome lines
 //
 // The returned game can be spread and its methods overridden; the methods
-// call each other directly, not through `this`.
+// call each other directly, not through `this`. Besides the contract it has
+// refresh(s), which starts the mover's turn on a position edited by hand.
 
 import { squareBoard } from "../board/square.js";
 import { CHANCE, pickWeighted, cachedBoards } from "../engine.js";
@@ -241,6 +242,14 @@ export function chessGame(v) {
     },
 
     clone,
+    // Start the mover's turn afresh on a position edited by hand (tests,
+    // puzzles): list the moves, or end the game if there are none.
+    refresh(s) {
+      s.winner = null;
+      s.reason = null;
+      startTurn(s);
+      return s;
+    },
     toMove: (s) => (s.phase === "setup" || s.phase === "draw" ? CHANCE : s.turn),
     currentPlayer: (s) => (s.phase === "setup" ? null : s.turn),
     chances,
