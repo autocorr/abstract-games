@@ -90,4 +90,12 @@ export const games = [
     path: "games/broadcast/",
     module: "games/broadcast/game.js",
   },
+  {
+    id: "shaolin-king",
+    title: "Shaolin King",
+    board: "Chessboard",
+    blurb: "Chess where each King is a Shaolin Master that turns over every time it moves: upright it moves as a Queen, turned over as a Cannon that must hop a piece. Masters can check and mate each other.",
+    path: "games/shaolin-king/",
+    module: "games/shaolin-king/game.js",
+  },
 ];
