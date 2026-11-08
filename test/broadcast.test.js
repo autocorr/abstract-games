@@ -4,9 +4,10 @@ import game, { internals } from "../games/broadcast/game.js";
 import { newGame, resolveOptions, moveKey } from "../common/engine.js";
 import { seededRng } from "../common/rng.js";
 
-const { turnOptions, sowPaths, cornersOf } = internals;
+const { turnOptions, sowPaths, cornersOf, cornerMarks } = internals;
 
-const tri = (size = 7, swap = "off") => newGame(game, { size, swap });
+const tri = (size = 7, swap = "off") => newGame(game, { shape: "triangle", size, swap });
+const hex = (size = 4, swap = "off") => newGame(game, { shape: "hexagon", size, swap });
 const at = (s, name) => s.board.cells.find((c) => c.tags.name === name).id;
 
 // Roll the two dice of a turn.
@@ -26,18 +27,50 @@ function fill(s) {
   for (let id = 0; id < s.board.size; id++) stack(s, id, [1 + (id % 2)]);
 }
 
-test("the board is a triangle with three darker corners", () => {
-  assert.equal(resolveOptions(game, {}).size, 7);
-  for (const size of [3, 7, 10]) {
-    const { board } = tri(size);
+test("board sizes depend on the shape", () => {
+  assert.deepEqual(resolveOptions(game, {}), { shape: "triangle", size: 7, swap: "on" });
+  assert.equal(resolveOptions(game, { shape: "hexagon", size: 9 }).size, 6);
+  assert.equal(resolveOptions(game, { shape: "hexagon", size: 3 }).size, 3);
+});
+
+test("three corners score, shaded darker: a triangle's all, a hexagon's every other", () => {
+  for (const s of [tri(3), tri(7), tri(10), hex(3), hex(6)]) {
+    const { board } = s;
     assert.equal(board.corners.length, 3);
     for (const scheme of Object.values(game.colorSchemes)) {
       const fills = board.cells.map((c) => scheme.cellFill(c));
       const corner = fills[board.corners[0]];
       assert.ok(board.corners.every((id) => fills[id] === corner));
-      assert.equal(fills.filter((f) => f === corner).length, 3, "only the corners");
+      assert.equal(fills.filter((f) => f === corner).length, 3, "only the scoring corners");
     }
   }
+  // Hexagon: NE, W and SE; no two of them adjacent corners.
+  const { board } = hex(4);
+  assert.deepEqual(board.corners.map((id) => board.cells[id].tags.name).sort(), ["a4", "d7", "g1"]);
+  for (const id of board.corners) assert.equal(board.cells[id].tags.edges.length, 2);
+});
+
+test("corner marks wrap the scoring corners, off the board, and are optional", () => {
+  const len = ([a, b]) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+  // Triangle: a chevron of two half edges; hexagon: three edges, the ends halved.
+  for (const [s, per] of [[tri(7), 2], [hex(4), 3]]) {
+    const segs = cornerMarks(s.board);
+    assert.equal(segs.length, 3 * per);
+    for (let i = 0; i < 3; i++) {
+      const run = segs.slice(i * per, (i + 1) * per);
+      const c = s.board.cells[s.board.corners[i]];
+      for (let j = 1; j < per; j++) assert.deepEqual(run[j][0], run[j - 1][1], "one unbroken line");
+      // A unit hexagon's edge is 1; the marks stand a little further out.
+      assert.ok(Math.abs(len(run[0]) - len(run[per - 1])) < 1e-9, "ends alike");
+      assert.ok(len(run[0]) > 0.5 && len(run[0]) < 0.7, "ends halved");
+      for (const seg of run.slice(1, -1)) assert.ok(len(seg) > 1 && len(seg) < 1.4, "middle edges whole");
+      // Every point lies outside the cell (its circumradius is 1).
+      for (const [p, q] of run) for (const [x, y] of [p, q]) assert.ok(Math.hypot(x - c.x, y - c.y) > 0.99);
+    }
+  }
+  const [decor] = game.boardDecor(hex().board);
+  assert.equal(decor.optional, true);
+  assert.equal(game.optionalDecor, "Corner marks");
 });
 
 test("White may swap before their first roll", () => {
@@ -191,9 +224,10 @@ test("a double on a full board ends the game; the corner majority wins", () => {
 
 test("random playouts fill the board and end with a winner", () => {
   const rng = seededRng(5);
-  for (const size of [3, 5, 7]) {
+  for (const make of [() => tri(3, "on"), () => tri(7, "on"), () => hex(3, "on"), () => hex(5, "on")]) {
     for (let i = 0; i < 20; i++) {
-      const s = tri(size, "on");
+      const s = make();
+      const size = `${s.board.shape} ${s.board.size}`;
       const w = game.playout(s, rng);
       assert.ok(w === 1 || w === 2, `size ${size}: winner ${w}`);
       assert.ok(s.stacks.every((st) => st.length), "the board is full");
