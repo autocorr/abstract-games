@@ -113,7 +113,7 @@ test("Master pairs per side, and random Masters dealt by chance plies", () => {
   const s = newGame(game, { white: "kn", black: "rb" });
   assert.equal(keyAt(s, "e1"), faceKey("kn", 0));
   assert.equal(keyAt(s, "e8"), faceKey("rb", 0));
-  // R/B: the Rook face is boxed in at the start.
+  // Every pair leaves White the usual 20 opening moves or more.
   for (const pair of Object.keys(PAIRS)) assert.ok(newGame(game, { white: pair }).moves.length >= 20);
 
   const same = newGame(game, { random: "same", white: "kn" });
