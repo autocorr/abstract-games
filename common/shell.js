@@ -543,15 +543,14 @@ export function mount(game, { root = document.body } = {}) {
     const top = ui.boardCol.getBoundingClientRect().top - document.documentElement.getBoundingClientRect().top;
     const below = wide ? px(getComputedStyle(root), "paddingBottom") : NARROW_RESERVE_PX;
     let availH = Math.floor(vh - top - chromeY - below);
-    // Hand panels above and below take a slot as tall as a cell (a share
-    // `cellShare` of the board's width) plus their padding, and a gap each.
-    const hands = ui.hands && !(ui.hands.top.hidden && ui.hands.bottom.hidden);
-    let cellShare = 0;
-    if (hands) {
-      const handStyle = getComputedStyle(ui.hands.top.hidden ? ui.hands.bottom : ui.hands.top);
+    // Each hand panel shown takes a slot as tall as a cell (a share of the
+    // board's width) plus its padding, and a gap.
+    const shown = ui.hands ? [ui.hands.top, ui.hands.bottom].filter((n) => !n.hidden) : [];
+    let handCells = 0;   // the shown hands' cell heights, as a share of the board's width
+    if (shown.length) {
       const gap = px(getComputedStyle(ui.boardCol), "rowGap");
-      availH -= 2 * (gap + px(handStyle, "paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"));
-      cellShare = board.unit / Number(rotatedViewBox(board, renderer.rotation).split(" ")[2]);
+      for (const n of shown) availH -= gap + px(getComputedStyle(n), "paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth");
+      handCells = shown.length * board.unit / Number(rotatedViewBox(board, renderer.rotation).split(" ")[2]);
     }
     if (availW <= 0 || availH <= 0) return;
 
@@ -571,12 +570,12 @@ export function mount(game, { root = document.body } = {}) {
     }
 
     const aspect = viewBoxAspect(rotatedViewBox(board, renderer.rotation));
-    const inner = Math.floor(Math.min(availW, availH / (1 / aspect + 2 * cellShare)));
+    const inner = Math.floor(Math.min(availW, availH / (1 / aspect + handCells)));
     const width = inner + chromeX;
     if (width === lastBoardMax) return;
     lastBoardMax = width;
     ui.boardCol.style.setProperty("--board-w", width + "px");
-    if (hands) ui.boardCol.style.setProperty("--hand-cell", Math.floor(inner * cellShare) + "px");
+    if (shown.length) ui.boardCol.style.setProperty("--hand-cell", Math.floor((inner * handCells) / shown.length) + "px");
   }
 
   window.addEventListener("resize", fitBoard);

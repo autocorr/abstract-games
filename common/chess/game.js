@@ -42,7 +42,7 @@ import { squareBoard } from "../board/square.js";
 import { CHANCE, pickWeighted, cachedBoards } from "../engine.js";
 import {
   WHITE, BLACK, other, attachRules, setupCells, findRoyals, legalMoves, playMove, promotePending, inCheck,
-  notation, material, ownerOf, typeOf, emptyHand, dropSlot, handCount,
+  notation, material, ownerOf, typeOf, emptyHand, dropSlot, handCount, isDrop,
 } from "./rules.js";
 
 export const PLAYERS = {
@@ -203,7 +203,7 @@ export function chessGame(v) {
     }
     // Drops come last in the move list.
     let boardMoves = moves.length;
-    while (boardMoves > 0 && moves[boardMoves - 1][0] >= s.board.size) boardMoves--;
+    while (boardMoves > 0 && isDrop(s, moves[boardMoves - 1])) boardMoves--;
     const drop = boardMoves < moves.length && (!boardMoves || rng() < DROP_CHANCE);
     return drop ? moves[boardMoves + Math.floor(rng() * (moves.length - boardMoves))] : moves[Math.floor(rng() * boardMoves)];
   }
