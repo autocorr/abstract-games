@@ -422,7 +422,8 @@ chance plies before the game (`setupPly`) or before each move (`drawPly`),
 rule out moves (`allow`), act after a turn (`afterMove`) and decide what
 having no move means (`noMoves`); the returned object can be spread and its
 methods overridden. Liquefaction is built this way (a marble draw before
-each move, a colour-check in `allow`).
+each move, a colour-check in `allow`), as is Shaolin King (two-faced
+royals that turn over as they move, dealt at random by `setupPly`).
 
 ## Testing
 
