@@ -200,6 +200,10 @@ export default {
                                     //   cell), "square" (cell outline), "tint" (translucent
                                     //   fill, by default Lichess's last-move green), "check"
                                     //   (Lichess's red glow over the cell)
+  hands(state),                     // -> [{ player, side: "top" | "bottom", slots: [{ id, image,
+                                    //   name, count }] }]: pieces held off the board, shown
+                                    //   above and below it; slot ids come after the cells
+                                    //   (id >= board.size) and start drop moves (see "Moves")
   scoreSummary(state, player),      // -> { main, sub, title } for the turn panel
   outcomeLines(state, outcome),     // -> HTML lines shown under the game-over verdict
   playout(state, rng),              // faster rollout for MCTS; returns a winner
@@ -231,6 +235,7 @@ A move is either an **array of cell ids** or a **string**:
 | Placement       | `[17]`           |
 | Movement        | `[17, 23]`       |
 | Multi-step jump | `[17, 23, 31]`   |
+| Drop from hand  | `[70, 28]` (70: a hand slot) |
 | Special         | `"pass"`, `"swap"` |
 
 The shell turns clicks into moves without game-specific code. It keeps the
@@ -238,7 +243,9 @@ cells clicked so far, filters `legalMoves()` by that prefix, highlights the
 valid next cells and plays the move once the selection matches a complete
 move. Clicking the last selected cell again steps the selection back (or
 commits it, if it is a complete move that is also a prefix of longer moves).
-Legal string moves are shown as buttons. `moveKey()` in
+A game with `hands` may start a move at a hand slot, an id past the
+board's cells: clicking the slot in its hand panel selects it like a cell,
+and the targets are shown on the board. Legal string moves are shown as buttons. `moveKey()` in
 `common/engine.js` gives each move a canonical string (`"17-23"`, `"pass"`)
 for comparison and for the URL hash.
 
@@ -295,6 +302,9 @@ state gains `swapClosed`.
 ```
 .page
   .board-col > .board-wrap > svg.board
+                          (with hands: a .hand panel above and below the wrap,
+                          slots a cell wide, greyed out when empty, with a
+                          count badge, as Lichess shows Crazyhouse pockets)
   aside.gutter
     header.page-head      title, the registry blurb, link back to the games
     .card.turn-card       players (score, AI tag, thinking dots), status,
@@ -419,8 +429,14 @@ attacked square, so attack tests do not depend on which pieces exist.
 (`cells` of piece codes, `royal` squares, castling rights, en passant,
 fifty-move clock), turns of a move plus a promotion choice, algebraic
 notation with check marks, last-move and check markers, Cburnett images,
-material scores and a capture-biased playout. Hooks let a variant add state,
-chance plies before the game (`setupPly`) or before each move (`drawPly`),
+material scores and a capture-biased playout. A rules spec may list
+`drops`, the types a player can hold in hand: positions then carry
+`hand` counts, drops ("N@f3") are legal moves onto empty squares (pawns not
+on the first or last rank; check rules apply), material counts the hand,
+and `hands(s)` shows Black's hand above the board and White's below.
+`addToHand(s, player, key)` gives a player a piece. Hooks let a variant add state,
+chance plies before the game (`setupPly`) or before each move (`drawPly`,
+one ply or several until its `done(s)`),
 rule out moves (`allow`), act after a turn (`afterMove`) and decide what
 having no move means (`noMoves`); the returned object can be spread and its
 methods overridden. Liquefaction is built this way (a marble draw before

@@ -61,7 +61,8 @@ export function mount(game, { root = document.body } = {}) {
   // ---- DOM ----
   // root (body.game)
   //   .page
-  //     .board-col > .board-wrap > svg.board
+  //     .board-col > .board-wrap > svg.board   (with game.hands: a .hand
+  //                                             above and below the wrap)
   //     aside.gutter
   //       header.page-head        title, blurb, link back to the games
   //       .card.turn-card         players, status, bags, move buttons, Undo
@@ -82,7 +83,9 @@ export function mount(game, { root = document.body } = {}) {
 
   ui.board = svgEl("svg", { class: "board", role: "img", "aria-label": `${game.title} board` });
   ui.boardWrap = h("div", { class: "board-wrap" }, ui.board);
-  ui.boardCol = h("main", { class: "board-col" }, ui.boardWrap);
+  // Hand panels (pieces held to drop), when the game has them.
+  ui.hands = game.hands ? { top: h("div", { class: "hand", hidden: true }), bottom: h("div", { class: "hand", hidden: true }) } : null;
+  ui.boardCol = h("main", { class: "board-col" }, ui.hands && ui.hands.top, ui.boardWrap, ui.hands && ui.hands.bottom);
 
   ui.review = h("div", { class: "review", hidden: true });
   ui.players = h("div", { class: "players" });
@@ -350,6 +353,16 @@ export function mount(game, { root = document.body } = {}) {
     render();
   }
 
+  // A hand slot: select it to drop that piece (its moves are [slot, to]),
+  // or clicked again, put it back.
+  function onHandClick(id) {
+    if (!isHumanTurn()) return;
+    if (selection.length === 1 && selection[0] === id) selection = [];
+    else if (game.legalMoves(state).some((m) => Array.isArray(m) && m[0] === id)) selection = [id];
+    else return;
+    render();
+  }
+
   // ---- rendering ----
 
   // Ring the destination of the most recent cell move (skipping draws and
@@ -385,9 +398,10 @@ export function mount(game, { root = document.body } = {}) {
       pieces: settings.labels === "off" ? pieces.map(({ label, ...p }) => p) : pieces,
       players: game.players,
       markers: lastMove === undefined ? [] : game.markers ? game.markers(state, lastMove, lastInfo) : defaultMarkers(),
-      selected: selection,
+      selected: selection.filter((id) => id < board.size),   // not hand slots
       targets,
     });
+    renderHands(legal);
     ui.board.classList.toggle("locked", !isHumanTurn());
 
     // Special (string) moves as buttons on a human turn.
@@ -410,6 +424,34 @@ export function mount(game, { root = document.body } = {}) {
       result: lineResult ? verdictText(lineResult) : "",
     });
     fitBoard();
+  }
+
+  // Each hand as a row of its slots: the piece, greyed out when none is held,
+  // with a count badge when some are; droppable slots are buttons.
+  function renderHands(legal) {
+    if (!ui.hands) return;
+    const panels = game.hands(state) || [];
+    const human = isHumanTurn();
+    const droppable = new Set(human ? legal.filter(Array.isArray).map((m) => m[0]) : []);
+    for (const side of ["top", "bottom"]) {
+      const node = ui.hands[side];
+      const panel = panels.find((p) => p.side === side);
+      node.hidden = !panel;
+      if (!panel) continue;
+      const owner = game.players[panel.player];
+      node.setAttribute("aria-label", `${owner ? owner.name : "Player"}'s hand`);
+      node.replaceChildren(...panel.slots.map((slot) => {
+        const can = droppable.has(slot.id);
+        const cls = "hand-slot" + (slot.count ? "" : " empty") + (can ? " droppable" : "") +
+          (selection[0] === slot.id ? " selected" : "");
+        return h("button", {
+          class: cls, type: "button", disabled: !can,
+          title: `${slot.name}: ${slot.count}`, onclick: () => onHandClick(slot.id),
+        },
+          h("img", { src: slot.image, alt: slot.name, draggable: "false" }),
+          slot.count ? h("span", { class: "hand-count" }, String(slot.count)) : null);
+      }));
+    }
   }
 
   // One row per player: stone, name, AI tag and score; the player to move
@@ -496,11 +538,21 @@ export function mount(game, { root = document.body } = {}) {
     let availW = ui.page.clientWidth;
     if (wide) availW -= ui.gutter.getBoundingClientRect().width + px(getComputedStyle(ui.page), "columnGap");
     availW -= chromeX;
-    // Height: from the board's top (in document coordinates) to the bottom
-    // of the viewport, less the page's bottom padding or the reserve.
-    const top = ui.boardWrap.getBoundingClientRect().top - document.documentElement.getBoundingClientRect().top;
+    // Height: from the board column's top (in document coordinates) to the
+    // bottom of the viewport, less the page's bottom padding or the reserve.
+    const top = ui.boardCol.getBoundingClientRect().top - document.documentElement.getBoundingClientRect().top;
     const below = wide ? px(getComputedStyle(root), "paddingBottom") : NARROW_RESERVE_PX;
-    const availH = Math.floor(vh - top - chromeY - below);
+    let availH = Math.floor(vh - top - chromeY - below);
+    // Hand panels above and below take a slot as tall as a cell (a share
+    // `cellShare` of the board's width) plus their padding, and a gap each.
+    const hands = ui.hands && !(ui.hands.top.hidden && ui.hands.bottom.hidden);
+    let cellShare = 0;
+    if (hands) {
+      const handStyle = getComputedStyle(ui.hands.top.hidden ? ui.hands.bottom : ui.hands.top);
+      const gap = px(getComputedStyle(ui.boardCol), "rowGap");
+      availH -= 2 * (gap + px(handStyle, "paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"));
+      cellShare = board.unit / Number(rotatedViewBox(board, renderer.rotation).split(" ")[2]);
+    }
     if (availW <= 0 || availH <= 0) return;
 
     // Turn a rotatable board if that makes it clearly bigger in the space available.
@@ -519,10 +571,12 @@ export function mount(game, { root = document.body } = {}) {
     }
 
     const aspect = viewBoxAspect(rotatedViewBox(board, renderer.rotation));
-    const width = Math.floor(Math.min(availW, availH * aspect)) + chromeX;
+    const inner = Math.floor(Math.min(availW, availH / (1 / aspect + 2 * cellShare)));
+    const width = inner + chromeX;
     if (width === lastBoardMax) return;
     lastBoardMax = width;
-    ui.boardWrap.style.setProperty("--board-w", width + "px");
+    ui.boardCol.style.setProperty("--board-w", width + "px");
+    if (hands) ui.boardCol.style.setProperty("--hand-cell", Math.floor(inner * cellShare) + "px");
   }
 
   window.addEventListener("resize", fitBoard);

@@ -15,7 +15,9 @@
 //   init(s, opts)        add variant state to the starting position
 //   clone(copy)          deepen the copy of variant state (copy is shallow)
 //   setupPly:            { chances(s), apply(s, move), done(s) }
-//   drawPly:             { chances(s), apply(s, move) }
+//   drawPly:             { chances(s), apply(s, move), done(s) }: chance
+//                           plies before every move, until done(s) (default:
+//                           one ply)
 //   allow(s, move, ctx)  rules out moves (see rules.js legalMoves)
 //   afterMove(s, landing) after a turn's last ply, before the next turn
 //   noMoves(s)           -> { winner, reason } when the mover has no move;
@@ -31,12 +33,16 @@
 // The returned game can be spread and its methods overridden; the methods
 // call each other directly, not through `this`. Besides the contract it has
 // refresh(s), which starts the mover's turn on a position edited by hand.
+//
+// With drops in the rules spec, positions carry hands (see rules.js) and
+// the game has hands(s) for the shell's hand panels: Black's above the
+// board, White's below, as Lichess shows them.
 
 import { squareBoard } from "../board/square.js";
 import { CHANCE, pickWeighted, cachedBoards } from "../engine.js";
 import {
   WHITE, BLACK, other, attachRules, setupCells, findRoyals, legalMoves, playMove, promotePending, inCheck,
-  notation, material, ownerOf, typeOf,
+  notation, material, ownerOf, typeOf, emptyHand, dropSlot, handCount,
 } from "./rules.js";
 
 export const PLAYERS = {
@@ -64,6 +70,9 @@ export const pieceImage = (player, letter) => PIECE_URLS[player + letter];
 // probability 1 / (1 + e^(-d/2)). The adjudication ends the (scratch) game.
 const PLAYOUT_MOVES = 40;
 const CAPTURE_BIAS = 0.75;
+// Otherwise, with pieces in hand, a drop this often (drops can far outnumber
+// moves, so a uniform pick would be nearly all drops).
+const DROP_CHANCE = 0.3;
 
 // The fifty-move countdown for the status line, in its last 10 moves. The
 // rule counts plies; say it as moves each, like the rules do.
@@ -129,7 +138,7 @@ export function chessGame(v) {
         return null;
       case "draw":
         v.drawPly.apply(s, move);
-        startMoves(s);
+        if (!v.drawPly.done || v.drawPly.done(s)) startMoves(s);
         return null;
       case "move": {
         const info = playMove(s, move);
@@ -165,6 +174,7 @@ export function chessGame(v) {
 
   function clone(s) {
     const copy = { ...s, cells: s.cells.slice(), royal: s.royal.slice() };
+    if (s.hand) copy.hand = s.hand.slice();
     if (v.clone) v.clone(copy);
     return copy;
   }
@@ -191,7 +201,11 @@ export function chessGame(v) {
       }
       if (bestMoves) return bestMoves[Math.floor(rng() * bestMoves.length)];
     }
-    return moves[Math.floor(rng() * moves.length)];
+    // Drops come last in the move list.
+    let boardMoves = moves.length;
+    while (boardMoves > 0 && moves[boardMoves - 1][0] >= s.board.size) boardMoves--;
+    const drop = boardMoves < moves.length && (!boardMoves || rng() < DROP_CHANCE);
+    return drop ? moves[boardMoves + Math.floor(rng() * (moves.length - boardMoves))] : moves[Math.floor(rng() * boardMoves)];
   }
 
   const reasons = {
@@ -238,6 +252,8 @@ export function chessGame(v) {
         winner: null,
         reason: null,
       };
+      const hand = emptyHand(board);
+      if (hand) s.hand = hand;
       if (v.init) v.init(s, opts);
       if (v.setupPly && !v.setupPly.done(s)) s.phase = "setup";
       else startTurn(s);
@@ -280,6 +296,22 @@ export function chessGame(v) {
         applyMove(s, pickPlayoutMove(s, rng));
       }
       return s.winner;
+    },
+
+    // Hand panels (none without drops): Black's above, White's below.
+    hands(s) {
+      if (!s.hand) return [];
+      const r = s.board.chess;
+      return [BLACK, WHITE].map((player) => ({
+        player,
+        side: player === BLACK ? "top" : "bottom",
+        slots: r.drops.map((t) => ({
+          id: dropSlot(s, player, t),
+          image: pieceImage(player, r.types[t].image),
+          name: r.types[t].name,
+          count: handCount(s, player, t),
+        })),
+      }));
     },
 
     piecesOf(s) {

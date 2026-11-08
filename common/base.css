@@ -222,7 +222,7 @@ body.game {
   max-width: 720px;
   margin-inline: auto;
 }
-.board-col { display: flex; justify-content: center; }
+.board-col { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
 .gutter { display: contents; }
 .page-head { order: -1; }
 
@@ -315,6 +315,51 @@ body.game {
   .board-wrap.frameless { --wrap-pad: 2px; }
 }
 svg.board { width: 100%; height: auto; display: block; }
+
+/* Hands (pieces held to drop) above and below the board, as Lichess shows
+   Crazyhouse pockets: one slot per piece a cell wide (shell.js sets
+   --hand-cell), greyed out when none is held, with a count badge. */
+.hand {
+  display: flex;
+  justify-content: center;
+  width: var(--board-w, min(100%, 720px));
+  max-width: 100%;
+  padding: 3px var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.hand[hidden] { display: none; }
+.hand-slot {
+  position: relative;
+  width: var(--hand-cell, 48px);
+  height: var(--hand-cell, 48px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  font: inherit;
+}
+.hand-slot img { display: block; width: 100%; height: 100%; pointer-events: none; }
+.hand-slot.empty img { opacity: 0.18; filter: grayscale(1); }
+.hand-slot.droppable { cursor: pointer; }
+.hand-slot.droppable:hover { background: var(--line); }
+.hand-slot.selected { background: rgba(255, 213, 79, 0.25); box-shadow: inset 0 0 0 2px #ffd54f; }
+.hand-slot:disabled { cursor: default; }
+.hand-count {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  min-width: 1.4em;
+  padding: 0 0.3em;
+  border-radius: 4px;
+  background: #d85000;
+  color: #fff;
+  font-size: max(11px, calc(var(--hand-cell, 48px) * 0.26));
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+}
 svg.board, .game-card svg { filter: var(--board-filter); }
 
 .cell { cursor: pointer; transition: filter 0.12s ease; }

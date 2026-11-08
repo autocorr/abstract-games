@@ -33,11 +33,20 @@
 //   check:    true (default): no move may leave the mover's royal attacked;
 //             false: royals may be captured, which wins
 //   stalemate: "draw" (default) or "loss" for the player without a move
+//   drops:    type keys a player may hold in hand and drop, in display
+//             order (e.g. ["P", "N", "B", "R", "Q"]); default none
 //
 // Positions hold: cells (Uint8Array of piece codes, 0 empty), royal
 // ([, white square, black square], -1 if none), castling (rights bits), ep
 // (en passant target or -1), clock (plies since a capture or pawn move),
-// pending (square of a pawn to promote, or -1).
+// pending (square of a pawn to promote, or -1), and with drops hand
+// (Uint8Array of counts, see handIndex).
+//
+// Drops: a piece in hand is dropped onto an empty square, as the move
+// [slot, to], where slot = board.size + handIndex(r, player, t) is an id
+// past the board's cells (the shell's hand panels use the same ids). A
+// pawn may not be dropped on the first or last rank. A drop may not leave
+// the mover's royal attacked, but may give check or mate.
 
 import { compileMoves, CAN_MOVE, CAN_CAPTURE } from "./movement.js";
 
@@ -91,6 +100,10 @@ export function attachRules(board, spec) {
     row: board.cells.map((c) => c.coord.row),
     home: types.map((t) => (t ? t.home ?? 1 : 0)),
     become: types.map((t) => (t && t.becomes ? byKey[t.becomes] : 0)),
+    drops: (spec.drops || []).map((k) => {
+      if (!byKey[k]) throw new Error(`unknown drop piece ${k}`);
+      return byKey[k];
+    }),
   };
   return board;
 }
@@ -115,6 +128,56 @@ export function setupCells(board, ranks) {
 export function findRoyals(board, cells) {
   const out = [-1, -1, -1];
   cells.forEach((x, sq) => { if (x && board.chess.types[typeOf(x)].royal) out[ownerOf(x)] = sq; });
+  return out;
+}
+
+// ---- hands and drops ----
+
+// Index into s.hand of `player`'s count of type t.
+export const handIndex = (r, player, t) => (player - 1) * r.types.length + t;
+
+// An empty hand for a board with rules attached (null without drops).
+export function emptyHand(board) {
+  const r = board.chess;
+  return r.drops.length ? new Uint8Array(2 * r.types.length) : null;
+}
+
+// The hand slot id of `player`'s type t: an id past the board's cells.
+export const dropSlot = (s, player, t) => s.board.size + handIndex(s.board.chess, player, t);
+
+// { player, t } for a hand slot id, or null for a square.
+export function slotOf(s, id) {
+  if (id < s.board.size) return null;
+  const n = s.board.chess.types.length, i = id - s.board.size;
+  return { player: Math.floor(i / n) + 1, t: i % n };
+}
+
+export const isDrop = (s, move) => move[0] >= s.board.size;
+
+export function handCount(s, player, t) {
+  return s.hand ? s.hand[handIndex(s.board.chess, player, t)] : 0;
+}
+
+// Put a piece of type key `key` into `player`'s hand.
+export function addToHand(s, player, key) {
+  const r = s.board.chess, t = r.byKey[key];
+  if (!r.drops.includes(t)) throw new Error(`${key} cannot be held in hand`);
+  s.hand[handIndex(r, player, t)]++;
+}
+
+// Drops open to `player` (not yet tested for check), appended to `out`.
+export function dropMoves(s, player, out = []) {
+  if (!s.hand) return out;
+  const r = s.board.chess, cells = s.cells;
+  for (const t of r.drops) {
+    if (!s.hand[handIndex(r, player, t)]) continue;
+    const slot = dropSlot(s, player, t), pawn = r.types[t].pawn;
+    for (let to = 0; to < cells.length; to++) {
+      if (cells[to]) continue;
+      if (pawn && (r.row[to] === 0 || r.row[to] === r.rows - 1)) continue;
+      out.push([slot, to]);
+    }
+  }
   return out;
 }
 
@@ -222,6 +285,13 @@ function epVictim(s, from, to) {
 // take it back. Used to test moves for check.
 function trial(s, move, castle, fn) {
   const cells = s.cells, [from, to] = move;
+  const slot = slotOf(s, from);
+  if (slot) {
+    cells[to] = pieceCode(slot.t, slot.player);
+    const result = fn(s.royal[slot.player]);
+    cells[to] = 0;
+    return result;
+  }
   const moving = cells[from], player = ownerOf(moving);
   const royal = s.royal[player];
   if (castle) {
@@ -258,17 +328,26 @@ function trial(s, move, castle, fn) {
   return result;
 }
 
-// Legal moves for `player`. allow(s, move, { royalTo, castle }) may rule
-// out more: it sees the position before the move, with royalTo the square
-// the mover's royal ends on and castle the castling def, if any.
+// Legal moves for `player`, drops last. allow(s, move, { royalTo, castle,
+// drop }) may rule out more: it sees the position before the move, with
+// royalTo the square the mover's royal ends on, castle the castling def, if
+// any, and drop the dropped type, if any.
 export function legalMoves(s, player, allow = null) {
   const r = s.board.chess;
   const enemy = other(player);
   const out = [];
   const candidates = castlingMoves(s, player);
   pseudoMoves(s, player, candidates);
+  dropMoves(s, player, candidates);
   for (const move of candidates) {
     const royal = s.royal[player];
+    const slot = slotOf(s, move[0]);
+    if (slot) {
+      if (allow && !allow(s, move, { royalTo: royal, castle: null, drop: slot.t })) continue;
+      if (r.check && royal >= 0 && trial(s, move, null, (to) => attacked(s, to, enemy))) continue;
+      out.push(move);
+      continue;
+    }
     const castle = move[0] === royal ? castleOf(s, move) : null;
     // A castling move by destination may duplicate a plain royal move.
     if (castle && out.some((m) => m[0] === move[0] && m[1] === move[1])) continue;
@@ -282,10 +361,24 @@ export function legalMoves(s, player, allow = null) {
 
 // Play `move` (legal for the side whose piece stands on move[0]). Updates
 // cells, royals, rights, ep and the clock; sets s.pending when a pawn
-// reaches its last rank. Returns { castle, captured, landing, promote }:
-// landing is the square the moving piece ends on (the royal's for castling).
+// reaches its last rank, or drops a piece from hand. Returns { castle,
+// captured, landing, promote, drop }: landing is the square the moving piece
+// ends on (the royal's for castling); drop is the type dropped, for a drop.
+// A pawn drop resets the clock, as a pawn move does.
 export function playMove(s, move) {
   const r = s.board.chess, cells = s.cells, [from, to] = move;
+  const slot = slotOf(s, from);
+  if (slot) {
+    const i = handIndex(r, slot.player, slot.t);
+    if (!s.hand[i]) throw new Error("no such piece in hand");
+    s.hand[i]--;
+    cells[to] = pieceCode(slot.t, slot.player);
+    s.ep = -1;
+    s.clock = r.types[slot.t].pawn ? 0 : s.clock + 1;
+    s.last = [to];
+    s.pending = -1;
+    return { castle: null, captured: 0, landing: to, promote: false, drop: slot.t };
+  }
   const moving = cells[from], player = ownerOf(moving), t = typeOf(moving);
   const type = r.types[t];
   const turned = r.become[t] ? pieceCode(r.become[t], player) : moving;
@@ -335,19 +428,23 @@ export function promotePending(s, key) {
   return sq;
 }
 
+// Material on the board and in hand.
 export function material(s, player) {
-  const types = s.board.chess.types;
+  const r = s.board.chess, types = r.types;
   let total = 0;
   for (const x of s.cells) if (x && ownerOf(x) === player) total += types[typeOf(x)].value || 0;
+  for (const t of r.drops) total += handCount(s, player, t) * (types[t].value || 0);
   return total;
 }
 
 // Algebraic notation for `move` from `s` without a check mark: "e4", "Nf3",
-// "Bxc4", "exd5", "Nbd2", "O-O". `legal` (the mover's legal moves) settles
-// which origins need naming.
+// "Bxc4", "exd5", "Nbd2", "O-O", drops "N@f3" and "P@e5". `legal` (the
+// mover's legal moves) settles which origins need naming.
 export function notation(s, move, legal = []) {
   const r = s.board.chess, [from, to] = move;
   const name = (sq) => s.board.cells[sq].tags.name;
+  const slot = slotOf(s, from);
+  if (slot) return (r.types[slot.t].letter || "P") + "@" + name(to);
   const x = s.cells[from], t = typeOf(x), type = r.types[t];
   const castle = from === s.royal[ownerOf(x)] ? castleOf(s, move) : null;
   if (castle) return castle.name;
