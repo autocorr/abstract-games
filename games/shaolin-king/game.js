@@ -84,7 +84,8 @@ const RULES = {
 };
 
 const pairChoices = PAIR_KEYS.map((value) => ({ value, label: pairName(value) }));
-const fixedOnly = (opts) => opts.random !== "off";
+// The fixed pairs mean nothing while the Masters are dealt at random.
+const dealtAtRandom = (opts) => opts.random !== "off";
 
 // Deal `pair` to `player`'s unassigned Master.
 function deal(s, player, pair) {
@@ -93,9 +94,12 @@ function deal(s, player, pair) {
   s.pairs[player] = pair;
 }
 
-const typeAt = (s, sq) => s.board.chess.types[typeOf(s.cells[sq])];
 // The movement name of `player`'s Master now (null before it is dealt).
-const masterMover = (s, player) => (s.royal[player] < 0 ? null : typeAt(s, s.royal[player]).mover || null);
+function masterMover(s, player) {
+  const sq = s.royal[player];
+  return sq < 0 ? null : s.board.chess.types[typeOf(s.cells[sq])].mover || null;
+}
+const article = (name) => (/^[AEIOU]/.test(name) ? "an " : "a ") + name;
 // Whose Master the next random draw is for.
 const nextDeal = (s) => (s.pairs[WHITE] ? BLACK : WHITE);
 
@@ -104,8 +108,8 @@ const base = chessGame({
   title: "Shaolin King",
   url: import.meta.url,
   options: {
-    white: { label: "White Master", choices: pairChoices, default: "shaolin", inactive: fixedOnly },
-    black: { label: "Black Master", choices: pairChoices, default: "shaolin", inactive: fixedOnly },
+    white: { label: "White Master", choices: pairChoices, default: "shaolin", inactive: dealtAtRandom },
+    black: { label: "Black Master", choices: pairChoices, default: "shaolin", inactive: dealtAtRandom },
     random: {
       label: "Random Masters",
       choices: [{ value: "off", label: "Off" }, { value: "same", label: "Symmetric" }, { value: "each", label: "Asymmetric" }],
@@ -158,7 +162,7 @@ const game = {
   },
 
   moveLabel(s, move) {
-    return move.startsWith(MASTER) ? pairName(move.slice(MASTER.length)) : base.moveLabels[move];
+    return move.startsWith(MASTER) ? pairName(move.slice(MASTER.length)) : base.moveLabel(s, move);
   },
 
   // The chess status, then how each Master moves now.
@@ -182,8 +186,6 @@ const game = {
     return { ...summary, sub: `${now} · next ${next}`, title: `${summary.title}; the Master moves as ${article(now)}, then ${article(next)}` };
   },
 };
-
-const article = (name) => (/^[AEIOU]/.test(name) ? "an " : "a ") + name;
 
 export default game;
 
