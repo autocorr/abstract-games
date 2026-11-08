@@ -11,7 +11,8 @@ const storageKey = (game) => `abstract-games:${game.id}`;
 
 // The saved settings for `game`, with anything missing or no longer valid
 // replaced by its default: { players: { [player]: "human" | "ai" }, aiTime,
-// options, scheme, labels: "on" | "off" (piece labels, see pieceLabels),
+// options, scheme, labels: "on" | "off" (piece labels, see pieceLabels; on
+// unless game.pieceLabelsDefault says "off"),
 // pieceStyle (a key of game.pieceStyles), decor: "on" | "off" (optional board
 // decor, see optionalDecor; off by default) }.
 export function loadSettings(game) {
@@ -28,7 +29,7 @@ export function loadSettings(game) {
     scheme: game.colorSchemes && stored.scheme in game.colorSchemes
       ? stored.scheme
       : Object.keys(game.colorSchemes || {})[0],
-    labels: stored.labels === "off" ? "off" : "on",
+    labels: stored.labels === "on" || stored.labels === "off" ? stored.labels : game.pieceLabelsDefault || "on",
     decor: stored.decor === "on" ? "on" : "off",
     pieceStyle: game.pieceStyles && stored.pieceStyle in game.pieceStyles
       ? stored.pieceStyle

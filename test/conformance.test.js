@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { games } from "../games.js";
 import { validateBoard } from "../common/board/graph.js";
 import {
-  newGame, replay, moveKey, parseMoveKey, piecesOf, resolveOptions, optionAllowed, choiceValues, sampleChance, currentPlayer, CHANCE,
+  newGame, replay, moveKey, parseMoveKey, piecesOf, resolveOptions, optionAllowed, optionActive, choiceValues, sampleChance, currentPlayer, CHANCE,
 } from "../common/engine.js";
 import { describeMove } from "../common/log.js";
 import { mcts } from "../common/ai/mcts.js";
@@ -44,14 +44,16 @@ function checkChances(game, state, legal) {
     "chances() and legalMoves() differ at a chance ply");
 }
 
-// Every allowed combination of declared option values.
+// Every allowed combination of declared option values. An inactive option
+// is ignored, so only its default is tried.
 function optionSets(game) {
   let sets = [{}];
   for (const [key, spec] of Object.entries(game.options || {})) {
     const values = choiceValues(spec);
     sets = sets.flatMap((s) => values.map((v) => ({ ...s, [key]: v })));
   }
-  return sets.filter((s) => Object.keys(s).every((k) => optionAllowed(game, k, s[k], s)));
+  return sets.filter((s) => Object.keys(s).every((k) => optionAllowed(game, k, s[k], s) &&
+    (optionActive(game, k, s) || s[k] === game.options[k].default)));
 }
 
 // Comparable snapshot of a state, excluding the shared board.
@@ -112,6 +114,7 @@ for (const { entry, game } of entries) {
     assert.deepEqual(resolveOptions(game, {}), Object.fromEntries(
       Object.entries(game.options || {}).map(([k, s]) => [k, s.default])));
     if (game.pieceLabels !== undefined) assert.equal(typeof game.pieceLabels, "string", "pieceLabels names the labels");
+    if (game.pieceLabelsDefault !== undefined) assert.ok(["on", "off"].includes(game.pieceLabelsDefault));
     if (game.optionalDecor !== undefined) assert.equal(typeof game.optionalDecor, "string", "optionalDecor names the decor");
     for (const [key, scheme] of Object.entries(game.colorSchemes || {})) {
       assert.ok(scheme.name && typeof scheme.cellFill === "function", `colour scheme ${key}`);
