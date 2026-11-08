@@ -86,7 +86,7 @@ export const games = [
     id: "broadcast",
     title: "Broadcast",
     board: "Triangle or hexagon of hexagons",
-    blurb: "Roll two dice. On a double, place a checker; otherwise sow a stack you cap, as tall as the dice differ, one checker per cell along a path. Join all three sides with the stacks you top to win.",
+    blurb: "Roll two dice. On a double, place a checker; otherwise sow a stack you cap, as tall as the dice differ, one checker per cell along a path, leaving a checker behind. Hold two of the three scoring corners when the board fills to win.",
     path: "games/broadcast/",
     module: "games/broadcast/game.js",
   },
