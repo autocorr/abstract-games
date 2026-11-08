@@ -246,12 +246,12 @@ export function createRenderer(svg) {
         // A label goes in the cell's bottom-right corner (on screen), in the
         // player's colours with a halo so it reads on any square.
         if (p.label) {
-          const [dx, dy] = rotatePoint([0.44 * u, 0.42 * u], -rotation);
+          const [dx, dy] = rotatePoint([0.47 * u, 0.46 * u], -rotation);
           const text = svgEl("text", {
             "font-size": LABEL_PX, "font-weight": 800, "text-anchor": "end",
             fill: spec.fill || "#fff", stroke: spec.mark || "#000", "stroke-width": LABEL_PX * 0.16,
             "stroke-linejoin": "round", "paint-order": "stroke",
-            transform: `translate(${c.x + dx} ${c.y + dy})${rotation ? ` rotate(${-rotation})` : ""} scale(${(0.27 * u) / LABEL_PX})`,
+            transform: `translate(${c.x + dx} ${c.y + dy})${rotation ? ` rotate(${-rotation})` : ""} scale(${(0.22 * u) / LABEL_PX})`,
           });
           text.textContent = p.label;
           layers.images.appendChild(text);
