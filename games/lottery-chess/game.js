@@ -13,8 +13,10 @@
 // last rank; a drop may give check or mate but may not leave your own King
 // in check). Captured pieces leave the game: only prizes go to the hand.
 // A dropped pawn on its second rank may double-step, and a dropped Rook
-// gives no castling rights. Checkmate wins; stalemate is a draw, as is 50
-// moves each without a capture, pawn move or pawn drop.
+// gives no castling rights. Having no legal move is judged after the draw,
+// since a piece won may block a check: so a mating move is logged "+", and
+// the game ends on the defender's draw. Checkmate wins; stalemate is a
+// draw, as is 50 moves each without a capture, pawn move or pawn drop.
 
 import { makeBag, cloneBag, drawOutcomes, drawMarble, returnDrawn, bagSize, totalCounts, bagPanel } from "../../common/bag.js";
 import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
@@ -123,7 +125,7 @@ const game = {
   turnHint(s) {
     if (s.winner !== null) return "";
     const name = PLAYERS[s.turn].name;
-    if (s.phase === "draw") return s.rolling ? `${name} drew white and rolls for a piece…` : `${name} draws a marble…`;
+    if (s.phase === "draw") return s.rolling ? `${name} drew a white marble and rolls for a piece…` : `${name} draws a marble…`;
     const hint = base.turnHint(s);
     if (s.phase !== "move" || !s.roll) return hint;
     return `${name} won ${article(NAMES[prizeOf(s.roll)])}. ${hint}`;

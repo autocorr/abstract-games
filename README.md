@@ -17,6 +17,7 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Tunneling](games/tunneling/)
 - [Broadcast](games/broadcast/)
 - [Shaolin King](games/shaolin-king/)
+- [Lottery Chess](games/lottery-chess/)
 
 ## Running locally
 

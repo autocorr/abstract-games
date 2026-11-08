@@ -441,7 +441,9 @@ rule out moves (`allow`), act after a turn (`afterMove`) and decide what
 having no move means (`noMoves`); the returned object can be spread and its
 methods overridden. Liquefaction is built this way (a marble draw before
 each move, a colour-check in `allow`), as is Shaolin King (two-faced
-royals that turn over as they move, dealt at random by `setupPly`).
+royals that turn over as they move, dealt at random by `setupPly`). So is Lottery
+Chess (drops, and a `drawPly` of one or two plies: a marble from the
+mover's bag, then on white a d10 for the piece put in hand).
 
 ## Testing
 
