@@ -68,14 +68,15 @@ export function pawn({ double = true } = {}) {
   ];
 }
 
-const MOVE = 1, CAPTURE = 2;
+// Bits of a compiled move's `can`.
+export const CAN_MOVE = 1, CAN_CAPTURE = 2;
 
 // Tables for `types` (each { moves: [atom] }, indexed as given) on `board`, a
 // grid board whose cells have coord { col, row } (square.js):
 //   vecs:   [[dx, dy]] every vector used, and its reverse
 //   rays:   rays[v][sq] the squares from sq along vecs[v] to the edge
-//   moves:  moves[player][type] [{ v, kind, can, max, initial }] (can: MOVE
-//           and CAPTURE bits)
+//   moves:  moves[player][type] [{ v, kind, can, max, initial }] (can:
+//           CAN_MOVE and CAN_CAPTURE bits)
 //   attack: attack[player] [{ rv, kind, reach }]: for walking out from an
 //           attacked square along rv (the reverse of the attacker's vector);
 //           reach[type] is how far that type attacks along it (0: not at all)
@@ -100,9 +101,9 @@ export function compileMoves(board, types) {
           const dy = a.relative && player === 2 ? -dy0 : dy0;
           const v = vec(dx, dy);
           const rv = vec(-dx, -dy);
-          const can = (a.mode.includes("m") ? MOVE : 0) | (a.mode.includes("c") ? CAPTURE : 0);
+          const can = (a.mode.includes("m") ? CAN_MOVE : 0) | (a.mode.includes("c") ? CAN_CAPTURE : 0);
           list.push({ v, kind: a.kind, can, max: a.max, initial: a.initial });
-          if (can & CAPTURE) {
+          if (can & CAN_CAPTURE) {
             const key = `${rv}:${a.kind}`;
             if (!attackMap[player].has(key)) attackMap[player].set(key, { rv, kind: a.kind, reach: new Array(types.length).fill(0) });
             const entry = attackMap[player].get(key);
@@ -126,5 +127,3 @@ export function compileMoves(board, types) {
     attack: { 1: [...attackMap[1].values()], 2: [...attackMap[2].values()] },
   };
 }
-
-export const CAN_MOVE = MOVE, CAN_CAPTURE = CAPTURE;

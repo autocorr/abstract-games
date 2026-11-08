@@ -78,9 +78,6 @@ export function chessGame(v) {
   const players = v.players || PLAYERS;
   const typesOf = (s) => s.board.chess.types;
 
-  // Everyone's promotion choices, for button labels.
-  const promotionKeys = (spec) => [...new Set(spec.types.flatMap((t) => t.promote || []))];
-
   function startTurn(s) {
     if (v.drawPly) {
       s.phase = "draw";
@@ -213,7 +210,11 @@ export function chessGame(v) {
     players,
     options: v.options || {},
     ...(v.colorSchemes !== null ? { colorSchemes: v.colorSchemes || BOARD_SCHEMES } : {}),
-    moveLabels: {},
+    // Promotion buttons name the piece: "Promote to Queen".
+    moveLabel(s, move) {
+      if (!move.startsWith(PROMOTE)) return null;
+      return `Promote to ${typesOf(s)[s.board.chess.byKey[move.slice(PROMOTE.length)]].name}`;
+    },
 
     createBoard: cachedBoards(v.boardKey || (() => ""), (opts) => {
       return attachRules(v.board ? v.board(opts) : squareBoard({ cols: 8, grid: false }), v.rules(opts));
@@ -346,29 +347,5 @@ export function chessGame(v) {
       return line ? [line(loser, s)] : [];
     },
   };
-
-  // Promotion buttons, from every rules spec the options can give.
-  const specs = optionSpecs(v);
-  for (const spec of specs) {
-    for (const key of promotionKeys(spec)) {
-      const type = spec.types.find((t) => t.key === key);
-      game.moveLabels[PROMOTE + key] = `Promote to ${type.name}`;
-    }
-  }
   return game;
-}
-
-// The rules specs for every combination of option values (promotion labels
-// need them all up front).
-function optionSpecs(v) {
-  let sets = [{}];
-  for (const [key, spec] of Object.entries(v.options || {})) {
-    sets = sets.flatMap((s) => spec.choices.map((c) => ({ ...s, [key]: typeof c === "object" ? c.value : c })));
-  }
-  const seen = new Map();
-  for (const opts of sets) {
-    const key = JSON.stringify(v.boardKey ? v.boardKey(opts) : "");
-    if (!seen.has(key)) seen.set(key, v.rules(opts));
-  }
-  return [...seen.values()];
 }

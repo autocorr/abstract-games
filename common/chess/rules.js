@@ -210,7 +210,8 @@ export function castlingMoves(s, player) {
 }
 
 export const isEnPassant = (s, [from, to]) =>
-  to === s.ep && !s.cells[to] && s.board.chess.types[typeOf(s.cells[from])].pawn;
+  to === s.ep && !s.cells[to] && s.board.chess.col[from] !== s.board.chess.col[to] &&
+  s.board.chess.types[typeOf(s.cells[from])].pawn;
 
 // The square of the pawn an en passant capture to `to` takes.
 function epVictim(s, from, to) {
@@ -258,7 +259,8 @@ function trial(s, move, castle, fn) {
 }
 
 // Legal moves for `player`. allow(s, move, { royalTo, castle }) may rule
-// out more (it sees the position before the move).
+// out more: it sees the position before the move, with royalTo the square
+// the mover's royal ends on and castle the castling def, if any.
 export function legalMoves(s, player, allow = null) {
   const r = s.board.chess;
   const enemy = other(player);
@@ -266,13 +268,14 @@ export function legalMoves(s, player, allow = null) {
   const candidates = castlingMoves(s, player);
   pseudoMoves(s, player, candidates);
   for (const move of candidates) {
-    const castle = move[0] === s.royal[player] ? castleOf(s, move) : null;
+    const royal = s.royal[player];
+    const castle = move[0] === royal ? castleOf(s, move) : null;
     // A castling move by destination may duplicate a plain royal move.
     if (castle && out.some((m) => m[0] === move[0] && m[1] === move[1])) continue;
-    const ok = trial(s, move, castle, (royalTo) =>
-      (!r.check || royalTo < 0 || !attacked(s, royalTo, enemy)) &&
-      (!allow || allow(s, move, { royalTo, castle })));
-    if (ok) out.push(move);
+    const royalTo = castle ? castle.kingTo : move[0] === royal ? move[1] : royal;
+    if (allow && !allow(s, move, { royalTo, castle })) continue;
+    if (r.check && royalTo >= 0 && trial(s, move, castle, (to) => attacked(s, to, enemy))) continue;
+    out.push(move);
   }
   return out;
 }
