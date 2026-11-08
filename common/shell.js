@@ -109,6 +109,7 @@ export function mount(game, { root = document.body } = {}) {
     },
     onPieceStyle(v) { settings.pieceStyle = v; persist(); render(); },
     onLabels(v) { settings.labels = v; persist(); render(); },
+    onDecor(v) { settings.decor = v; persist(); showBoard(renderer.rotation); render(); },
     extraRows: [choiceRow("Theme", THEMES, loadTheme(), setTheme).node],
   });
   ui.optionControls = setup.optionControls;
@@ -364,7 +365,8 @@ export function mount(game, { root = document.body } = {}) {
   // that do not fill a rectangle (hexagons, diamonds, Cairo patches) are
   // drawn straight on the page; rectangular ones keep a framing panel.
   function showBoard(rotate) {
-    renderer.setBoard(board, cellFill(), game.boardDecor ? game.boardDecor(board) : [], rotate);
+    const decor = (game.boardDecor ? game.boardDecor(board) : []).filter((d) => !d.optional || settings.decor === "on");
+    renderer.setBoard(board, cellFill(), decor, rotate);
     ui.boardWrap.classList.toggle("frameless", !fillsRectangle(board));
     lastBoardMax = -1;
   }

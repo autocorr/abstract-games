@@ -163,7 +163,10 @@ export default {
   turnHint(state, scheme),          // status line text while the game is on (scheme: the
                                     //   active colour scheme object, or null)
   boardDecor(board),                // -> lines over the cells, e.g. goal edges (outside: true
-                                    //   draws an edge line outside the cells instead)
+                                    //   draws an edge line outside the cells instead;
+                                    //   optional: true only with optionalDecor shown)
+  optionalDecor,                    // e.g. "Corner marks": Setup offers Show / Hide (saved,
+                                    //   no new game; Hide by default) for optional decor
   pieceStyles,                      // e.g. { bars: { name: "Bars" }, discs: { name: "Discs" } }:
                                     //   Setup offers them as "Pieces" (saved, no new game; the
                                     //   first is the default) and piecesOf gets the key
@@ -297,8 +300,8 @@ flow under the board, and the head becomes a slim bar above it. Which
 sections are open is saved site-wide. Settings are saved per game in
 `localStorage` (`common/ui/settings.js`); option changes start a new game
 at once, and a link's options become the saved ones. Display settings
-(colour scheme, piece style, Show / Hide for a game's `pieceLabels`) only
-redraw, and stay out of the URL.
+(colour scheme, piece style, Show / Hide for a game's `pieceLabels` and
+`optionalDecor`) only redraw, and stay out of the URL.
 
 A board whose cells fill a rectangle (square grids) sits on a framing panel;
 other shapes (hexagons, diamonds, Cairo patches) are drawn straight on the

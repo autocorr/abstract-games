@@ -112,6 +112,7 @@ for (const { entry, game } of entries) {
     assert.deepEqual(resolveOptions(game, {}), Object.fromEntries(
       Object.entries(game.options || {}).map(([k, s]) => [k, s.default])));
     if (game.pieceLabels !== undefined) assert.equal(typeof game.pieceLabels, "string", "pieceLabels names the labels");
+    if (game.optionalDecor !== undefined) assert.equal(typeof game.optionalDecor, "string", "optionalDecor names the decor");
     for (const [key, scheme] of Object.entries(game.colorSchemes || {})) {
       assert.ok(scheme.name && typeof scheme.cellFill === "function", `colour scheme ${key}`);
     }

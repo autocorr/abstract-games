@@ -70,7 +70,7 @@ export function choiceRow(label, choices, value, onChange) {
 // Returns { node, optionControls } where optionControls maps each game
 // option key to its control, so the shell can keep them in step with the
 // position.
-export function buildSetup(game, settings, { onPlayer, onAiTime, onOption, onScheme, onPieceStyle, onLabels, extraRows = [] }) {
+export function buildSetup(game, settings, { onPlayer, onAiTime, onOption, onScheme, onPieceStyle, onLabels, onDecor, extraRows = [] }) {
   const node = h("div", { class: "setup" });
   const optionControls = {};
   for (const p of Object.keys(game.players).map(Number)) {
@@ -97,6 +97,11 @@ export function buildSetup(game, settings, { onPlayer, onAiTime, onOption, onSch
   if (game.pieceLabels) {
     node.append(choiceRow(game.pieceLabels, [{ value: "on", label: "Show" }, { value: "off", label: "Hide" }],
       settings.labels, onLabels).node);
+  }
+  // Board decor marked optional (game.optionalDecor names it) can be shown.
+  if (game.optionalDecor) {
+    node.append(choiceRow(game.optionalDecor, [{ value: "on", label: "Show" }, { value: "off", label: "Hide" }],
+      settings.decor, onDecor).node);
   }
   node.append(...extraRows);
   return { node, optionControls };
