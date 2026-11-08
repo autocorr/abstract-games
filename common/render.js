@@ -24,6 +24,7 @@ const CELL_STROKE = "#3a3f4a";
 const HIGHLIGHT = "#ffd54f";
 const MARKER_DOT = "#969ca6";
 const LABEL_PX = 40;   // font size piece labels are set at before scaling (see drawPieces)
+const LAST_TINT = "rgba(155, 199, 0, 0.41)";   // Lichess's last-move green
 
 let filterSeq = 0;
 
@@ -119,11 +120,14 @@ export function createRenderer(svg) {
     });
     hatch.appendChild(svgEl("rect", { x: 0, y: 0, width: 0.07 * u, height: 0.2 * u, fill: "rgba(14, 15, 19, 0.3)" }));
     defs.appendChild(hatch);
-    const glow = svgEl("radialGradient", { id: glowId });
+    // Lichess's check glow: an ellipse out to the cell's corners, solid red
+    // in the middle, fading out before the corners.
+    const glow = svgEl("radialGradient", { id: glowId, r: Math.SQRT1_2 });
     glow.append(
-      svgEl("stop", { offset: "0%", "stop-color": "#ff1a1a", "stop-opacity": 0.95 }),
-      svgEl("stop", { offset: "45%", "stop-color": "#e41a1a", "stop-opacity": 0.75 }),
-      svgEl("stop", { offset: "100%", "stop-color": "#a90000", "stop-opacity": 0 }));
+      svgEl("stop", { offset: "0%", "stop-color": "#ff0000", "stop-opacity": 1 }),
+      svgEl("stop", { offset: "25%", "stop-color": "#e70000", "stop-opacity": 1 }),
+      svgEl("stop", { offset: "89%", "stop-color": "#a90000", "stop-opacity": 0 }),
+      svgEl("stop", { offset: "100%", "stop-color": "#9e0000", "stop-opacity": 0 }));
     defs.appendChild(glow);
     svg.appendChild(defs);
     const root = svgEl("g", rotate ? { transform: `rotate(${rotate})` } : {});
@@ -327,8 +331,10 @@ export function createRenderer(svg) {
   //           follows the piece), "dot", and "target" (the highlight dot of a
   //           selectable cell, y cells below the centre, e.g. clear of a
   //           label). Under the pieces: "shade" (hatched cell),
-  //           "square" (cell outline, default highlight colour) and "check"
-  //           (red glow, e.g. under a King in check).
+  //           "square" (cell outline, default highlight colour), "tint"
+  //           (cell filled with a translucent colour, by default Lichess's
+  //           last-move green) and "check" (red glow over the cell, as
+  //           Lichess shows a King in check).
   // selected: cell ids in the current partial move
   // targets:  cell ids that would extend the partial move
   function draw({ pieces = [], players = {}, markers = [], selected = [], targets = [] }) {
@@ -347,8 +353,10 @@ export function createRenderer(svg) {
           points: pointsAttr(inset), fill: "none", stroke: m.color || HIGHLIGHT,
           "stroke-width": 0.06 * u, "stroke-linejoin": "round",
         }));
+      } else if (m.kind === "tint") {
+        layers.highlights.appendChild(svgEl("polygon", { points: pointsAttr(c.poly), fill: m.color || LAST_TINT }));
       } else if (m.kind === "check") {
-        layers.highlights.appendChild(svgEl("circle", { cx: c.x, cy: c.y, r: 0.5 * u, fill: `url(#${glowId})` }));
+        layers.highlights.appendChild(svgEl("polygon", { points: pointsAttr(c.poly), fill: `url(#${glowId})` }));
       }
     }
     for (const id of selected) {

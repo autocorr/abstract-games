@@ -22,6 +22,8 @@
 //                           default: checkmate loses, stalemate per spec
 //                           (spec.stalemate: "draw" (default) or "loss")
 //   markers(s)           extra markers, after the last move and check
+//   lastMove             how the last move's squares are marked: "tint"
+//                           (default, Lichess's green) or "outline"
 //   fiftyMoves           plies without capture or pawn move that draw
 //                           (default 100; 0: never)
 //   reasons              { reason: (loserName, s) => line } outcome lines
@@ -293,10 +295,15 @@ export function chessGame(v) {
       return out;
     },
 
-    // The last move's squares and a royal in check (or checkmated).
+    // The last move's squares (tinted green) and a royal in check (or
+    // checkmated), glowing red.
     markers(s) {
       const out = [];
-      if (s.last) for (const id of s.last) out.push({ id, kind: "square", color: LAST_MOVE });
+      if (s.last) {
+        for (const id of s.last) {
+          out.push(v.lastMove === "outline" ? { id, kind: "square", color: LAST_MOVE } : { id, kind: "tint" });
+        }
+      }
       for (const p of [WHITE, BLACK]) {
         if (s.royal[p] < 0) continue;
         if ((s.winner === null && p === s.turn && s.phase === "move" && inCheck(s, p)) ||

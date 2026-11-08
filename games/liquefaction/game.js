@@ -98,6 +98,7 @@ const base = chessGame({
     bag: { label: "Starting bag", choices: [{ value: "fixed", label: "Fixed" }, { value: "random", label: "Random" }], default: "fixed" },
   },
   colorSchemes,
+  lastMove: "outline",   // a green tint would muddy the four square colours
   board: ({ size }) => squareBoard({ cols: size, grid: false }),
   boardKey: (o) => o.size,
   rules: ({ size }) => rules(size),

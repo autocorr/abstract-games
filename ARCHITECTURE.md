@@ -197,7 +197,9 @@ export default {
   markers(state, move, info),       // -> [{ id, kind, color?, y? }] for the last move. Over pieces:
                                     //   "ring" | "dot" | "target" (y: cells below the centre,
                                     //   level on screen); under pieces: "shade" (hatched
-                                    //   cell), "square" (cell outline), "check" (red glow)
+                                    //   cell), "square" (cell outline), "tint" (translucent
+                                    //   fill, by default Lichess's last-move green), "check"
+                                    //   (Lichess's red glow over the cell)
   scoreSummary(state, player),      // -> { main, sub, title } for the turn panel
   outcomeLines(state, outcome),     // -> HTML lines shown under the game-over verdict
   playout(state, rng),              // faster rollout for MCTS; returns a winner
