@@ -6,8 +6,8 @@ import { seededRng } from "../common/rng.js";
 
 const { turnOptions, sowPaths, cornersOf, cornerMarks } = internals;
 
-const tri = (size = 7, swap = "off") => newGame(game, { shape: "triangle", size, swap });
-const hex = (size = 4, swap = "off") => newGame(game, { shape: "hexagon", size, swap });
+const tri = (size = 7, swap = "off", freeSows = 0) => newGame(game, { shape: "triangle", size, swap, freeSows });
+const hex = (size = 4, swap = "off", freeSows = 0) => newGame(game, { shape: "hexagon", size, swap, freeSows });
 const at = (s, name) => s.board.cells.find((c) => c.tags.name === name).id;
 
 // Roll the two dice of a turn.
@@ -28,7 +28,7 @@ function fill(s) {
 }
 
 test("board sizes depend on the shape", () => {
-  assert.deepEqual(resolveOptions(game, {}), { shape: "triangle", size: 7, swap: "on" });
+  assert.deepEqual(resolveOptions(game, {}), { shape: "triangle", size: 7, freeSows: 1, swap: "on" });
   assert.equal(resolveOptions(game, { shape: "hexagon", size: 9 }).size, 6);
   assert.equal(resolveOptions(game, { shape: "hexagon", size: 3 }).size, 3);
 });
@@ -162,6 +162,73 @@ test("capping no stack at all, a non-double places", () => {
   assert.match(game.turnHint(s), /caps no stack: place/);
 });
 
+test("a free sow sows any stack you cap up to five tall, instead of the roll", () => {
+  const s = tri(9, "off", 2);
+  const a = at(s, "c5"), b = at(s, "d7"), c = at(s, "b3"), d = at(s, "e6");
+  stack(s, a, [1, 1, 1, 1, 1, 1]);   // too tall
+  stack(s, b, [2, 1, 1, 1, 1]);      // five
+  stack(s, c, [1, 2]);               // White's
+  stack(s, d, [1]);
+  roll(s, 1, 6);   // only a cap
+  assert.ok(game.legalMoves(s).includes("free"));
+  assert.equal(game.moveLabel(s, "free"), "Free sow (2 left)");
+  assert.match(game.turnHint(s), /Or spend a free sow \(2 left\)/);
+  game.applyMove(s, "free");
+  assert.equal(game.toMove(s), 1);
+  assert.match(game.turnHint(s), /free sow/);
+  const legal = game.legalMoves(s);
+  assert.deepEqual([...new Set(legal.map((m) => m[0]))].sort((x, y) => x - y), [b, d].sort((x, y) => x - y));
+  assert.ok(legal.every((m) => m.length === s.stacks[m[0]].length + 1));
+  assert.deepEqual(game.markers(s).filter((m) => m.kind === "target").map((m) => m.id).sort(), [b, d].sort());
+  const path = legal.find((m) => m[0] === d);
+  game.applyMove(s, path);
+  assert.deepEqual(s.stacks[d], [1]);
+  assert.deepEqual(s.stacks[path[1]], [1]);
+  assert.deepEqual(s.free, [0, 1, 2]);
+  assert.equal(game.toMove(s), 0);
+  assert.equal(s.turn, 2);
+  assert.equal(game.scoreSummary(s, 1).sub, "1 free · corners");
+});
+
+test("free sows run out and need a stack to sow", () => {
+  const s = tri(7, "off", 1);
+  roll(s, 1, 2);
+  assert.ok(!game.legalMoves(s).includes("free"), "no stack yet");
+  game.applyMove(s, [3]);
+  roll(s, 2, 2);
+  game.applyMove(s, [20]);
+  roll(s, 1, 5);
+  game.applyMove(s, "free");
+  game.applyMove(s, game.legalMoves(s)[0]);
+  assert.deepEqual(s.free, [0, 0, 1]);
+  roll(s, 3, 3);
+  assert.ok(game.legalMoves(s).includes("free"), "White still has one");
+  game.applyMove(s, [21]);
+  roll(s, 1, 5);
+  assert.ok(!game.legalMoves(s).includes("free"), "none left");
+  assert.equal(game.scoreSummary(s, 1).sub, "0 free · corners");
+  assert.equal(tri().free[1], 0);
+  assert.equal(game.scoreSummary(tri(), 1).sub, "corners");
+});
+
+test("a free sow cannot stand in for a placement: a double on a full board still ends it", () => {
+  const s = tri(7, "off", 3);
+  fill(s);   // Black caps every even cell, each one tall
+  assert.ok(internals.freeSowable(s).length > 0);
+  roll(s, 4, 4);
+  assert.ok(game.outcome(s));
+  assert.deepEqual(game.legalMoves(s), []);
+});
+
+test("a swap swaps the free sows left", () => {
+  const s = tri(7, "on", 2);
+  roll(s, 1, 1);
+  game.applyMove(s, [10]);
+  s.free[1] = 1;
+  game.applyMove(s, "swap");
+  assert.deepEqual(s.free, [0, 2, 1]);
+});
+
 test("paths never step straight back but may revisit cells", () => {
   const s = tri(10);
   const o = at(s, "d7");   // three rows from every side
@@ -224,7 +291,7 @@ test("a double on a full board ends the game; the corner majority wins", () => {
 
 test("random playouts fill the board and end with a winner", () => {
   const rng = seededRng(5);
-  for (const make of [() => tri(3, "on"), () => tri(7, "on"), () => hex(3, "on"), () => hex(5, "on")]) {
+  for (const make of [() => tri(3, "on"), () => tri(7, "on"), () => hex(3, "on"), () => hex(5, "on"), () => tri(7, "on", 2)]) {
     for (let i = 0; i < 20; i++) {
       const s = make();
       const size = `${s.board.shape} ${s.board.size}`;
