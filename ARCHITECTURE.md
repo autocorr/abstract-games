@@ -450,8 +450,8 @@ each move, a colour-check in `allow`), as is Shaolin King (two-faced
 royals that turn over as they move but not when castling, dealt at
 random by `setupPly`). So is Lottery
 Chess (drops, and a `drawPly` of one or two plies: a marble from the
-mover's bag, then on white a d10 for the piece put in hand). So is Reify (two-faced
-pieces whose concrete count `allow` keeps above zero and `afterMove` checks,
+mover's bag, then on white a d10 for the piece put in hand). So is Grounded Chess (two-faced
+pieces whose dark-side count `allow` keeps above zero and `afterMove` checks,
 with color schemes that recolor the Cburnett pieces and name the players).
 
 ## Testing

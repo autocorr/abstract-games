@@ -107,11 +107,11 @@ export const games = [
     module: "games/lottery-chess/game.js",
   },
   {
-    id: "reify",
-    title: "Reify",
+    id: "grounded-chess",
+    title: "Grounded Chess",
     board: "Chessboard",
-    blurb: "Chess where every piece but the pawns turns over each time it lands, from concrete to abstract and back. Keep at least one concrete piece on the board: lose your last one to a capture and you lose the game.",
-    path: "games/reify/",
-    module: "games/reify/game.js",
+    blurb: "Chess where every piece but the pawns turns over each time it lands, from dark to light and back. Keep at least one dark piece on the board: lose your last one to a capture and you lose the game.",
+    path: "games/grounded-chess/",
+    module: "games/grounded-chess/game.js",
   },
 ];
