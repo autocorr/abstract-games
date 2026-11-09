@@ -70,16 +70,22 @@ export function choiceRow(label, choices, value, onChange) {
   return { node, control };
 }
 
-// Returns { node, optionControls } where optionControls maps each game
-// option key to its control, so the shell can keep them in step with the
-// position.
+// Returns { node, optionControls, setPlayerNames } where optionControls maps
+// each game option key to its control, so the shell can keep them in step
+// with the position, and setPlayerNames(players) relabels the player rows.
 export function buildSetup(game, settings, { onPlayer, onAiTime, onOption, onScheme, onPieceStyle, onLabels, onDecor, extraRows = [] }) {
   const node = h("div", { class: "setup" });
   const optionControls = {};
+  // A colour scheme may name the players (scheme.players).
+  const scheme = game.colorSchemes && game.colorSchemes[settings.scheme];
+  const players = (scheme && scheme.players) || game.players;
+  const playerLabels = {};
   for (const p of Object.keys(game.players).map(Number)) {
-    node.append(choiceRow(game.players[p].name,
+    const row = choiceRow(players[p].name,
       [{ value: "human", label: "Human" }, { value: "ai", label: "AI" }],
-      settings.players[p], (v) => onPlayer(p, v)).node);
+      settings.players[p], (v) => onPlayer(p, v));
+    playerLabels[p] = row.node.querySelector(".label");
+    node.append(row.node);
   }
   node.append(choiceRow("AI think time", AI_TIMES.map((t) => ({ value: t, label: `${t}s` })),
     settings.aiTime, onAiTime).node);
@@ -107,5 +113,13 @@ export function buildSetup(game, settings, { onPlayer, onAiTime, onOption, onSch
       settings.decor, onDecor).node);
   }
   node.append(...extraRows);
-  return { node, optionControls };
+  // Rename the player rows (e.g. when the colour scheme changes).
+  const setPlayerNames = (named) => {
+    for (const [p, label] of Object.entries(playerLabels)) {
+      label.textContent = named[p].name;
+      const control = label.nextElementSibling;
+      if (control) control.setAttribute("aria-label", named[p].name);
+    }
+  };
+  return { node, optionControls, setPlayerNames };
 }

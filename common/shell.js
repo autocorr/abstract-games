@@ -108,7 +108,8 @@ export function mount(game, { root = document.body } = {}) {
       persist();
       renderer.setCellFill(cellFill());
       describeLine();   // marble names in the log may follow the scheme
-      render();         // and so may the bags and hints
+      setup.setPlayerNames(playersNow());
+      render();         // and so may the bags, hints and players
     },
     onPieceStyle(v) { settings.pieceStyle = v; persist(); render(); },
     onLabels(v) { settings.labels = v; persist(); render(); },
@@ -139,6 +140,8 @@ export function mount(game, { root = document.body } = {}) {
   renderer.onCellClick(onCellClick);
 
   const currentScheme = () => (game.colorSchemes && game.colorSchemes[settings.scheme]) || null;
+  // The players' names and colours: the scheme's own, if it has them.
+  const playersNow = () => (currentScheme() || {}).players || game.players;
 
   function cellFill() {
     const scheme = currentScheme();
@@ -393,10 +396,10 @@ export function mount(game, { root = document.body } = {}) {
           .map((m) => m[selection.length]))]
       : [];
     const lastMove = line.moves[line.cursor - 1];
-    const pieces = piecesOf(game, state, settings.pieceStyle);
+    const pieces = piecesOf(game, state, settings.pieceStyle, currentScheme());
     renderer.draw({
       pieces: settings.labels === "off" ? pieces.map(({ label, ...p }) => p) : pieces,
-      players: game.players,
+      players: playersNow(),
       markers: lastMove === undefined ? [] : game.markers ? game.markers(state, lastMove, lastInfo) : defaultMarkers(),
       selected: selection.filter((id) => id < board.size),   // not hand slots
       targets,
@@ -420,7 +423,7 @@ export function mount(game, { root = document.body } = {}) {
     renderChance(ui.chance, game, state, (currentScheme() || {}).marbles);
     renderStatus();
     ui.log.update({
-      turns, cursor: line.cursor, length: line.moves.length, players: game.players,
+      turns, cursor: line.cursor, length: line.moves.length, players: playersNow(),
       result: lineResult ? verdictText(lineResult) : "",
     });
     fitBoard();
@@ -438,7 +441,7 @@ export function mount(game, { root = document.body } = {}) {
       const panel = panels.find((p) => p.side === side);
       node.hidden = !panel;
       if (!panel) continue;
-      const owner = game.players[panel.player];
+      const owner = playersNow()[panel.player];
       node.setAttribute("aria-label", `${owner ? owner.name : "Player"}'s hand`);
       node.replaceChildren(...panel.slots.map((slot) => {
         const can = droppable.has(slot.id);
@@ -461,8 +464,8 @@ export function mount(game, { root = document.body } = {}) {
     ui.players.replaceChildren();
     const toMove = currentPlayer(game, state);
     for (const p of playerIds) {
-      const spec = game.players[p];
-      const summary = game.scoreSummary ? game.scoreSummary(state, p) : {};
+      const spec = playersNow()[p];
+      const summary = game.scoreSummary ? game.scoreSummary(state, p, currentScheme()) : {};
       const isAI = controller(p) === "ai";
       const active = p === toMove;
       const sub = summary.sub !== undefined && String(summary.sub) !== spec.name ? String(summary.sub) : null;
@@ -481,7 +484,7 @@ export function mount(game, { root = document.body } = {}) {
     }
   }
 
-  const playerName = (p) => (game.players[p] ? game.players[p].name : `Player ${p}`);
+  const playerName = (p) => (playersNow()[p] ? playersNow()[p].name : `Player ${p}`);
   const verdictText = (result) => (result.winner ? `${playerName(result.winner)} wins` : "Draw");
 
   // While reviewing: where we are, and a way back to the latest position.
@@ -503,7 +506,7 @@ export function mount(game, { root = document.body } = {}) {
       ui.status.innerHTML = `<b>${escapeHtml(errorText)}</b>`;
     } else if (result) {
       const verdict = `<b>${escapeHtml(verdictText(result))}</b>`;
-      const lines = game.outcomeLines ? game.outcomeLines(state, result) : [];
+      const lines = game.outcomeLines ? game.outcomeLines(state, result, currentScheme()) : [];
       ui.status.innerHTML =
         `<div class="verdict"><b>Game over</b> &nbsp;·&nbsp; ${verdict}</div>` +
         (lines.length ? `<div class="scoreline">${lines.join("<br>")}</div>` : "");

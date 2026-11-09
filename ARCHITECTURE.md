@@ -137,6 +137,8 @@ export default {
   colorSchemes: {                   // optional; first entry is the default
     sand: { name: "Sand", cellFill: (cell) => "#ffd890" },
     // optional marbles: { W: { name, fill } } recolours the bag panels
+    // optional players: { 1: { name, fill }, ... } renames and recolours the
+    //   players (player rows, log, hints); the game's own hooks get the scheme
   },
 
   createBoard(opts),                // -> Board
@@ -180,7 +182,7 @@ export default {
   pieceLabelsDefault,               // "off": the labels start hidden (default "on")
   rotatable,                        // true: the shell may turn the board 90 degrees;
                                     //   a number: by that angle (clockwise, degrees)
-  piecesOf(state, style),           // -> [{ id, player, label?, image? }]; default reads state.cells;
+  piecesOf(state, style, scheme),   // -> [{ id, player, label?, image? }]; default reads state.cells;
                                     //   label: short text on the disc (e.g. a group size), or
                                     //   small in the corner of an image;
                                     //   image: URL drawn instead of a disc (e.g. a chess piece);
@@ -204,8 +206,8 @@ export default {
                                     //   name, count }] }]: pieces held off the board, shown
                                     //   above and below it; slot ids come after the cells
                                     //   (id >= board.size) and start drop moves (see "Moves")
-  scoreSummary(state, player),      // -> { main, sub, title } for the turn panel
-  outcomeLines(state, outcome),     // -> HTML lines shown under the game-over verdict
+  scoreSummary(state, player, scheme), // -> { main, sub, title } for the turn panel
+  outcomeLines(state, outcome, scheme), // -> HTML lines shown under the game-over verdict
   playout(state, rng),              // faster rollout for MCTS; returns a winner
 };
 ```
@@ -417,7 +419,8 @@ Pieces are data: a type lists its movement as atoms from `movement.js`
 `cannon(1, 0)` a Janggi Cannon; `mode` "m" or "c" for move- or capture-only,
 `relative` vectors for pawns, `initial` for a double step), plus flags:
 `royal` (the piece check is about), `becomes` (the type it turns into after
-moving, for two-faced pieces), `castler`, `pawn`, `promote`. A variant's
+moving, for two-faced pieces; castling turns both the royal and its
+castler), `castler`, `pawn`, `promote`. A variant's
 rules spec adds castling (by square names, mirrored for Black; castling may
 be entered as the royal's move to its square or onto its own Rook), whether
 check applies, and whether stalemate draws or loses. `attachRules(board,
@@ -437,8 +440,10 @@ and `hands(s)` shows Black's hand above the board and White's below.
 `addToHand(s, player, key)` gives a player a piece. Hooks let a variant add state,
 chance plies before the game (`setupPly`) or before each move (`drawPly`,
 one ply or several until its `done(s)`),
-rule out moves (`allow`), act after a turn (`afterMove`) and decide what
-having no move means (`noMoves`); the returned object can be spread and its
+rule out moves (`allow`), act after a turn (`afterMove`, which may also
+end the game) and decide what having no move means (`noMoves`). A variant
+sets `repetition: 3` for the threefold rule (positions since the last
+capture or pawn move are kept in `s.history`); the returned object can be spread and its
 methods overridden. Liquefaction is built this way (a marble draw before
 each move, a colour-check in `allow`), as is Shaolin King (two-faced
 royals that turn over as they move, dealt at random by `setupPly`). So is Lottery

@@ -19,7 +19,8 @@
 //                           plies before every move, until done(s) (default:
 //                           one ply)
 //   allow(s, move, ctx)  rules out moves (see rules.js legalMoves)
-//   afterMove(s, landing) after a turn's last ply, before the next turn
+//   afterMove(s, landing) after a turn's last ply, before the next turn;
+//                           may return { winner, reason } to end the game
 //   noMoves(s)           -> { winner, reason } when the mover has no move;
 //                           default: checkmate loses, stalemate per spec
 //                           (spec.stalemate: "draw" (default) or "loss")
@@ -28,6 +29,10 @@
 //                           (default, Lichess's green) or "outline"
 //   fiftyMoves           plies without capture or pawn move that draw
 //                           (default 100; 0: never)
+//   repetition           occurrences of a position that draw (3: the
+//                           threefold rule; default 0: never). A position is
+//                           the pieces, the player to move, castling rights
+//                           and the en passant square, and hands with drops.
 //   reasons              { reason: (loserName, s) => line } outcome lines
 //
 // The returned game can be spread and its methods overridden; the methods
@@ -82,9 +87,19 @@ export function fiftyHint(s, plies = 100) {
   return left <= 10 ? `Draw in ${left} ${left === 1 ? "move" : "moves"} each without a capture or pawn move.` : "";
 }
 
+// A string naming a position for the repetition rule.
+export function positionKey(s) {
+  let key = String.fromCharCode(...s.cells) + "|" + s.turn + "|" + s.castling + "|" + s.ep;
+  if (s.hand) key += "|" + s.hand.join(",");
+  return key;
+}
+
 export function chessGame(v) {
   const fifty = v.fiftyMoves ?? 100;
+  const repetition = v.repetition || 0;
   const players = v.players || PLAYERS;
+  // Player names: a colour scheme may rename the players (scheme.players).
+  const named = (scheme) => (scheme && scheme.players) || players;
   const typesOf = (s) => s.board.chess.types;
 
   function startTurn(s) {
@@ -114,9 +129,14 @@ export function chessGame(v) {
   }
 
   function endTurn(s, landing) {
-    if (v.afterMove) v.afterMove(s, landing);
+    const end = v.afterMove ? v.afterMove(s, landing) : null;
     s.moves = null;
     s.turn = other(s.turn);
+    if (end) {
+      s.winner = end.winner;
+      s.reason = end.reason;
+      return;
+    }
     if (!s.board.chess.check && s.royal[s.turn] < 0) {
       s.winner = other(s.turn);
       s.reason = "royal";
@@ -127,7 +147,24 @@ export function chessGame(v) {
       s.reason = "fifty";
       return;
     }
+    if (repetition && seen(s) >= repetition) {
+      s.winner = 0;
+      s.reason = "repetition";
+      return;
+    }
     startTurn(s);
+  }
+
+  // Record the position (the turn just passed) in s.history and return how
+  // often it has occurred. A capture or pawn move (the clock reset) makes
+  // earlier positions unreachable, so the history restarts there. The
+  // history array is replaced, never changed, so clones may share it.
+  function seen(s) {
+    const key = positionKey(s);
+    s.history = s.clock === 0 ? [key] : [...s.history, key];
+    let n = 0;
+    for (const k of s.history) if (k === key) n++;
+    return n;
   }
 
   function applyMove(s, move) {
@@ -212,6 +249,7 @@ export function chessGame(v) {
     checkmate: (loser) => `${loser} is checkmated.`,
     stalemate: (loser, s) => (s.winner ? `${loser} has no legal move (stalemate loses).` : "Stalemate."),
     fifty: () => "50 moves each without a capture or pawn move.",
+    repetition: () => `The same position occurred ${repetition === 3 ? "three" : repetition} times.`,
     adjudicated: () => "Adjudicated on material.",
     royal: (loser) => `${loser}'s royal piece was captured.`,
     ...(v.reasons || {}),
@@ -255,6 +293,7 @@ export function chessGame(v) {
       const hand = emptyHand(board);
       if (hand) s.hand = hand;
       if (v.init) v.init(s, opts);
+      if (repetition) s.history = [positionKey(s)];
       if (v.setupPly && !v.setupPly.done(s)) s.phase = "setup";
       else startTurn(s);
       return s;
@@ -266,6 +305,7 @@ export function chessGame(v) {
     refresh(s) {
       s.winner = null;
       s.reason = null;
+      if (repetition) s.history = [positionKey(s)];
       startTurn(s);
       return s;
     },
@@ -358,9 +398,9 @@ export function chessGame(v) {
     },
 
     // "White to move. Check!", and the fifty-move countdown near its end.
-    turnHint(s) {
+    turnHint(s, scheme) {
       if (s.winner !== null || s.phase === "setup" || s.phase === "draw") return "";
-      const name = players[s.turn].name;
+      const name = named(scheme)[s.turn].name;
       if (s.phase === "promote") return `${name}: choose a piece to promote to.`;
       const parts = [`${name} to move.`];
       if (inCheck(s, s.turn)) parts.push("Check!");
@@ -369,12 +409,13 @@ export function chessGame(v) {
       return parts.join(" ");
     },
 
-    scoreSummary(s, player) {
-      return { sub: players[player].name, title: `${players[player].name}: material ${material(s, player)}` };
+    scoreSummary(s, player, scheme) {
+      const name = named(scheme)[player].name;
+      return { sub: name, title: `${name}: material ${material(s, player)}` };
     },
 
-    outcomeLines(s) {
-      const loser = s.winner ? players[other(s.winner)].name : "";
+    outcomeLines(s, result, scheme) {
+      const loser = s.winner ? named(scheme)[other(s.winner)].name : "";
       const line = reasons[s.reason];
       return line ? [line(loser, s)] : [];
     },
