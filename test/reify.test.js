@@ -102,7 +102,7 @@ test("schemes name the players and draw pieces as data URLs", () => {
   assert.equal(pieces.length, 32);
   assert.ok(pieces.every((p) => p.image.startsWith("data:image/svg+xml")));
   assert.match(game.turnHint(s, COLOR_SCHEMES.amberIndigo), /^Amber to move/);
-  assert.equal(game.turnHint(s), "Vermillion to move.");
+  assert.equal(game.turnHint(s), "Vermilion to move.");
   // Concrete and abstract Knights and the pawns differ.
   const img = (at) => pieces.find((p) => p.id === sq(s.board, at)).image;
   play(s, "g1-f3");

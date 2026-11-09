@@ -48,9 +48,9 @@ const RULES = {
 // Palettes: the first player's color, then the second's, each a dark
 // (concrete) and light (abstract) shade. The first is the default.
 const PALETTES = {
-  okabeIto: ["Okabe-Ito Vermillion & Blue", ["Vermillion", "#d55e00", "#f7c09a"], ["Blue", "#0072b2", "#a6d3f0"]],
-  teal: ["Vermillion & Teal", ["Vermillion", "#b8360f", "#f5a58a"], ["Teal", "#0b6466", "#86d2cd"]],
-  okabeItoPure: ["Okabe-Ito Pure", ["Vermillion", "#d55e00", "#e69f00"], ["Blue", "#0072b2", "#56b4e9"]],
+  okabeIto: ["Okabe-Ito Vermilion & Blue", ["Vermilion", "#d55e00", "#f7c09a"], ["Blue", "#0072b2", "#a6d3f0"]],
+  teal: ["Vermilion & Teal", ["Vermilion", "#b8360f", "#f5a58a"], ["Teal", "#0b6466", "#86d2cd"]],
+  okabeItoPure: ["Okabe-Ito Pure", ["Vermilion", "#d55e00", "#e69f00"], ["Blue", "#0072b2", "#56b4e9"]],
   greenPurple: ["Okabe-Ito Green & Purple", ["Green", "#007a59", "#8fd9c0"], ["Purple", "#9c4a7a", "#ecbcd6"]],
   amberIndigo: ["Amber & Indigo", ["Amber", "#a86400", "#f6cf7f"], ["Indigo", "#33388f", "#b6b9ee"]],
   crimsonSlate: ["Crimson & Slate", ["Crimson", "#9e1b32", "#eba3ae"], ["Slate", "#3a4a5c", "#b9c6d4"]],
