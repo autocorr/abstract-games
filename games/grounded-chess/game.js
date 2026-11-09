@@ -10,14 +10,15 @@
 // moves each without a capture or pawn move, or a position occurring three
 // times, draws. Pure: no DOM; the chess comes from common/chess.
 //
-// Dark pieces are drawn in a dark shade of their player's color,
-// light pieces and pawns in a light shade. The color schemes are palettes
+// Every piece is drawn from the outline ("white") Cburnett design, its body
+// in a dark shade of its player's color for a dark piece and in a light
+// shade for a light piece or a pawn. The color schemes are palettes
 // of player colors, on a neutral board, and name the players.
 
 import { chessGame } from "../../common/chess/game.js";
 import { KING, QUEEN, ROOK, BISHOP, KNIGHT, pawn } from "../../common/chess/movement.js";
 import { other, ownerOf, typeOf, turnedOver } from "../../common/chess/rules.js";
-import { FILLED, OUTLINE } from "./cburnett.js";
+import { PIECES as CBURNETT } from "./cburnett.js";
 
 // Two-sided pieces: [letter, name, value, moves, flags].
 const PIECES = [
@@ -58,14 +59,9 @@ const PALETTES = {
 const BOARD = ["#e4e1da", "#a8a49c"];   // a neutral "stone" board: [light, dark]
 const INK = "#141414";
 
-// A piece image in `shades` ({ dark, light }) as a data URL.
-function pieceSvg(letter, darkSide, { dark, light }) {
-  const svg = darkSide
-    ? FILLED[letter]
-      .replace(/stroke(:|=")#000(000)?/g, `stroke$1${INK}`)
-      .replace(/fill(:|=")#000(000)?/g, `fill$1${dark}`)
-      .replace(/#fff(fff)?/g, light)
-    : OUTLINE[letter].replace(/#000(000)?/g, INK).replace(/#fff(fff)?/g, light);
+// A piece image, its body in `fill`, as a data URL.
+function pieceSvg(letter, fill) {
+  const svg = CBURNETT[letter].replace(/#000(000)?/g, INK).replace(/#fff(fff)?/g, fill);
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }
 
@@ -76,10 +72,10 @@ export const COLOR_SCHEMES = Object.fromEntries(Object.entries(PALETTES).map(([k
     players[p] = { name: player, fill: dark, mark: "#ffffff" };
     images[p] = {};
     for (const [letter] of PIECES) {
-      images[p][letter] = pieceSvg(letter, true, { dark, light });
-      images[p][letter + LIGHT_MARK] = pieceSvg(letter, false, { dark, light });
+      images[p][letter] = pieceSvg(letter, dark);
+      images[p][letter + LIGHT_MARK] = pieceSvg(letter, light);
     }
-    images[p].P = pieceSvg("P", false, { dark, light });
+    images[p].P = pieceSvg("P", light);
   });
   return [key, { name, players, images, cellFill: (cell) => BOARD[cell.tags.dark ? 1 : 0] }];
 }));
