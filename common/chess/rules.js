@@ -18,7 +18,7 @@
 //     royal:    the piece check and checkmate are about (one per side)
 //     becomes:  the key of the type this piece turns into after it moves
 //               (e.g. a two-faced piece flipping over); castling turns
-//               both the royal and its castler
+//               both the royal and its castler, unless castleTurns is false
 //     castler:  the piece the royal castles with (a Rook)
 //     pawn:     moves are written without a letter; resets the fifty-move
 //               count; a double step allows en passant
@@ -28,6 +28,9 @@
 //   castling: [{ name, king, rook, kingTo, rookTo }] for White, by square
 //             names; Black's are mirrored onto the far rank. Rights are
 //             bits in this order, White's then Black's.
+//   castleTurns: true (default): castling turns over a royal and castler
+//             that have `becomes`, as any move does; false: both keep their
+//             side
 //   castleMove: "king" (default): castling is the royal's move to kingTo;
 //             "rook": the royal's move onto its own castler, for royals that
 //             could otherwise move to kingTo
@@ -94,6 +97,7 @@ export function attachRules(board, spec) {
   board.chess = {
     types, byKey, ...compiled, castling,
     castleMove: spec.castleMove || "king",
+    castleTurns: spec.castleTurns !== false,
     check: spec.check !== false,
     stalemate: spec.stalemate || "draw",
     rows, cols,
@@ -307,8 +311,9 @@ function trial(s, move, castle, fn) {
     cells[castle.king] = 0;
     cells[castle.rook] = 0;
     const saved = [cells[castle.kingTo], cells[castle.rookTo]];
-    cells[castle.kingTo] = turnedOver(s.board.chess, moving);
-    cells[castle.rookTo] = turnedOver(s.board.chess, rook);
+    const turn = s.board.chess.castleTurns ? (x) => turnedOver(s.board.chess, x) : (x) => x;
+    cells[castle.kingTo] = turn(moving);
+    cells[castle.rookTo] = turn(rook);
     s.royal[player] = castle.kingTo;
     const result = fn(castle.kingTo);
     cells[castle.kingTo] = saved[0];
@@ -396,8 +401,8 @@ export function playMove(s, move) {
     const rook = cells[castle.rook];
     cells[castle.king] = 0;
     cells[castle.rook] = 0;
-    cells[castle.kingTo] = turned;
-    cells[castle.rookTo] = turnedOver(r, rook);
+    cells[castle.kingTo] = r.castleTurns ? turned : moving;
+    cells[castle.rookTo] = r.castleTurns ? turnedOver(r, rook) : rook;
     landing = castle.kingTo;
   } else {
     captured = cells[to];

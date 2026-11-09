@@ -10,8 +10,8 @@
 // and each Master attacks by its own face, so one Master may check or mate
 // the other, and two Masters may stand side by side when neither face
 // attacks the other's square. Castling follows chess (the Master and Rook
-// unmoved, the squares between empty, not out of, through or into check); it
-// counts as the Master's move, so it turns the Master over. Because an
+// unmoved, the squares between empty, not out of, through or into check), but
+// the Master does not turn over: it keeps its current face. Because an
 // upright Master could also move two squares along the rank, castling is
 // entered as the Master's move onto its own Rook ([e1, h1]). Stalemate is a
 // draw, as is 50 moves each without a capture or pawn move.
@@ -81,6 +81,7 @@ const RULES = {
     { name: "O-O-O", king: "e1", rook: "a1", kingTo: "c1", rookTo: "d1" },
   ],
   castleMove: "rook",
+  castleTurns: false,   // castling leaves the Master on its current face
 };
 
 const pairChoices = PAIR_KEYS.map((value) => ({ value, label: pairName(value) }));
