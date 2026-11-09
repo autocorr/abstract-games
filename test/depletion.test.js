@@ -100,7 +100,7 @@ test("a chain touching only one side does not win", () => {
 test("goal edges are drawn for both players", () => {
   const decor = game.boardDecor(game.createBoard(opts()));
   assert.equal(decor.length, 2);
-  for (const d of decor) assert.equal(d.segments.length, 28);
+  for (const d of decor) assert.equal(d.polygons.length, 2);
 });
 
 test("turned for portrait, Black's edges stand vertical and parallel", () => {
