@@ -529,10 +529,18 @@ export function mount(game, { root = document.body } = {}) {
 
   const px = (style, ...props) => props.reduce((sum, p) => sum + (parseFloat(style[p]) || 0), 0);
 
+  // The viewport height with a mobile browser's toolbars shown (100svh). It
+  // stays the same as the toolbars hide while scrolling, so the board does
+  // not grow then; the live height would make it zoom in under the reader.
+  const svhProbe = document.createElement("div");
+  svhProbe.setAttribute("aria-hidden", "true");
+  svhProbe.style.cssText = "position:fixed;top:0;left:0;width:0;height:100vh;height:100svh;visibility:hidden;pointer-events:none";
+  document.body.appendChild(svhProbe);
+
   function fitBoard() {
     if (!board) return;
     const wide = wideQuery.matches;
-    const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    const vh = svhProbe.getBoundingClientRect().height || window.innerHeight;
     const wrapStyle = getComputedStyle(ui.boardWrap);
     const chromeX = px(wrapStyle, "paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth");
     const chromeY = px(wrapStyle, "paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth");
@@ -583,7 +591,6 @@ export function mount(game, { root = document.body } = {}) {
 
   window.addEventListener("resize", fitBoard);
   window.addEventListener("orientationchange", fitBoard);
-  if (window.visualViewport) window.visualViewport.addEventListener("resize", fitBoard);
   wideQuery.addEventListener("change", fitBoard);
   if (typeof ResizeObserver !== "undefined") new ResizeObserver(fitBoard).observe(root);
 
