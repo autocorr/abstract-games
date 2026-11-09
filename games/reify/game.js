@@ -16,7 +16,7 @@
 
 import { chessGame } from "../../common/chess/game.js";
 import { KING, QUEEN, ROOK, BISHOP, KNIGHT, pawn } from "../../common/chess/movement.js";
-import { WHITE, BLACK, other, ownerOf, typeOf, turnedOver } from "../../common/chess/rules.js";
+import { other, ownerOf, typeOf, turnedOver } from "../../common/chess/rules.js";
 import { CONCRETE, ABSTRACT } from "./cburnett.js";
 
 // Two-sided pieces: [letter, name, value, moves, flags].
@@ -158,7 +158,3 @@ const game = {
 };
 
 export default game;
-
-// For tests.
-export const internals = { ABSTRACT_MARK, PALETTES };
-export { WHITE, BLACK };

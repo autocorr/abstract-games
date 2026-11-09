@@ -94,6 +94,14 @@ test("checkmate and the threefold rule apply", () => {
   play(t, ...shuffle, ...shuffle);
   assert.equal(t.winner, 0);
   assert.equal(t.reason, "repetition");
+  // After 1.e4 no Black pawn can take en passant, so the position counts
+  // as the same one when it recurs.
+  const u = newGame(game, {});
+  const black = ["g8-f6", "g1-f3", "f6-g8", "f3-g1"];
+  play(u, "e2-e4", ...black, ...black.slice(0, 3));
+  assert.equal(u.winner, null);
+  play(u, black[3]);
+  assert.equal(u.reason, "repetition");
 });
 
 test("schemes name the players and draw pieces as data URLs", () => {
