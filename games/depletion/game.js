@@ -7,10 +7,11 @@
 // the W and E edges. The board is drawn as a diamond with its long diagonal
 // horizontal; on a portrait screen the shell turns it into an upright
 // parallelogram with Black's edges vertical and parallel (see `rotatable`).
-// Each player's edges are marked in their colour.
+// Each player's edges are marked by a frame in their colour, as on a Hex
+// board, which fills the notches of the zigzag edge but stays off the cells.
 
-import { rhombusBoard, rhombusSides } from "../../common/board/hex.js";
-import { goalMasks, connectsSides } from "../../common/board/graph.js";
+import { rhombusBoard, rhombusFrame } from "../../common/board/hex.js";
+import { goalMasks, connectsSides, extendView } from "../../common/board/graph.js";
 import { makeBag, cloneBag, drawOutcomes, drawMarble, lastDrawn, isEmpty, returnDrawn, bagPanel } from "../../common/bag.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
 import { LAYOUTS, makeRegions } from "./regions.js";
@@ -29,6 +30,9 @@ const PLAYERS = {
   1: { name: "Black", fill: "#202329", mark: "#ffffff", sides: ["N", "S"], goal: "the two edges marked in black" },
   2: { name: "White", fill: "#f2f2f0", mark: "#0e0f13", sides: ["W", "E"], goal: "the two edges marked in white" },
 };
+
+// How far the frame reaches past the outermost cell corners, in cells.
+const FRAME_MARGIN = 0.07;
 
 const SIZES = Array.from({ length: 13 }, (_, i) => 7 + i);
 
@@ -49,7 +53,8 @@ function buildBoard({ size, colours, layout }) {
     board.regionCells[region[c.id]].push(c.id);
   }
   board.goal = goalMasks(board, PLAYERS);
-  return board;
+  board.frame = rhombusFrame(board, FRAME_MARGIN);
+  return extendView(board, Object.values(board.frame).flat());
 }
 
 const colourOf = (state) => COLOURS[COLOUR_INDEX[lastDrawn(state.bag)]];
@@ -138,10 +143,10 @@ export default {
     return { sub: PLAYERS[player].name, title: `${PLAYERS[player].name} connects ${PLAYERS[player].goal}` };
   },
   boardDecor(board) {
-    const sides = rhombusSides(board);
+    const { N, S, W, E } = board.frame;
     return [
-      { segments: [...sides.N, ...sides.S], stroke: PLAYERS[1].fill, halo: "#c4c8cf", width: 0.16 },
-      { segments: [...sides.W, ...sides.E], stroke: PLAYERS[2].fill, halo: "#0e0f13", width: 0.16 },
+      { polygons: [N, S], fill: PLAYERS[1].fill, stroke: "#0e0f13", width: 0.035 },
+      { polygons: [W, E], fill: PLAYERS[2].fill, stroke: "#0e0f13", width: 0.035 },
     ];
   },
 };
