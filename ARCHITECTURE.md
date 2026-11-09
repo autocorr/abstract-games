@@ -60,7 +60,8 @@ games/
     index.html              page shell: title, rules text, mount(game)
     game.js                 pure rules module (no DOM)
 test/
-  conformance.test.js       contract checks run against every registered game
+  conformance.js            contract checks run against every registered game
+  conformance-<n>.test.js   shards of those checks, run in parallel
   <topic>.test.js           unit tests for shared modules and individual games
 ```
 
@@ -461,7 +462,7 @@ with color schemes that recolor the Cburnett pieces and name the players).
 ## Testing
 
 `npm test` runs `node --test test/*.test.js`. Because games are plain
-modules, tests import them directly. `test/conformance.test.js` runs every
+modules, tests import them directly. `test/conformance.js` runs every
 game in `games.js`, for every combination of option values, through contract
 checks: seeded random playouts terminate, `legalMoves` is empty exactly when
 the game is over, moves are well formed and round-trip through `moveKey`,
@@ -474,6 +475,12 @@ under every colour scheme. Two fixtures in
 `test/fixtures/` exercise the suite and the MCTS tests: tic-tac-toe, and bag
 tic-tac-toe (a marble draw picks the square colour to play on). Each game adds its
 own rule tests.
+
+`node --test` runs test files in parallel but the tests in one file serially,
+so the conformance checks are dealt round-robin, one game's option set at a
+time, across `SHARDS` files `test/conformance-<n>.test.js`. A test checks
+that there is one file per shard; to change the count, change `SHARDS` and
+add or remove files.
 
 The page shell is not covered by `npm test`; check it in a browser with
 `npm run serve`.

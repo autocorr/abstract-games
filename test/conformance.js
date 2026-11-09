@@ -1,8 +1,14 @@
 // Contract checks run against every registered game (and the tic-tac-toe
 // fixture, which keeps the suite itself honest). A new game that passes these
 // will work with the shell, the AI and URL replay.
+//
+// node --test runs test files in parallel but the tests within a file one
+// after another, so the checks are split into SHARDS files,
+// conformance-<shard>.test.js, each calling conformance(shard). Every game's
+// option sets are dealt round-robin across the shards.
 
 import { test } from "node:test";
+import { readdirSync } from "node:fs";
 import assert from "node:assert/strict";
 import { games } from "../games.js";
 import { validateBoard } from "../common/board/graph.js";
@@ -109,8 +115,23 @@ function checkHands(game, state) {
 const PLAYOUTS = 3;
 const MAX_PLIES = 10000;
 
-for (const { entry, game } of entries) {
-  test(`${entry.id}: registry entry and metadata`, () => {
+export const SHARDS = 8;
+
+export function conformance(shard) {
+  // Each shard must have its own file, or some option sets go unchecked.
+  if (shard === 0) {
+    test("conformance shard files match SHARDS", () => {
+      const files = readdirSync(new URL(".", import.meta.url)).filter((f) => /^conformance-\d+\.test\.js$/.test(f));
+      assert.deepEqual(files.sort(), Array.from({ length: SHARDS }, (_, i) => `conformance-${i}.test.js`).sort());
+    });
+  }
+  let unit = 0;
+  const mine = () => unit++ % SHARDS === shard;
+  for (const { entry, game } of entries) checkGame(entry, game, mine);
+}
+
+function checkGame(entry, game, mine) {
+  if (mine()) test(`${entry.id}: registry entry and metadata`, () => {
     assert.equal(typeof game.id, "string");
     assert.equal(typeof game.title, "string");
     if (entry.module) {
@@ -144,6 +165,7 @@ for (const { entry, game } of entries) {
   });
 
   for (const options of optionSets(game)) {
+    if (!mine()) continue;
     const label = `${entry.id} ${JSON.stringify(options)}`;
 
     test(`${label}: board is well formed`, () => {
