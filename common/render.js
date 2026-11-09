@@ -33,17 +33,14 @@ let filterSeq = 0;
 // margin as the board's own viewBox. Exact at any angle, not just 90 degrees.
 export function rotatedViewBox(board, deg) {
   if (!deg) return board.viewBox;
-  const [vx] = board.viewBox.split(" ").map(Number);
-  const pad = board.bounds.minX - vx;
+  const pad = board.pad;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const cell of board.cells) {
-    for (const p of cell.poly) {
-      const [rx, ry] = rotatePoint(p, deg);
-      if (rx < minX) minX = rx;
-      if (ry < minY) minY = ry;
-      if (rx > maxX) maxX = rx;
-      if (ry > maxY) maxY = ry;
-    }
+  for (const p of [...board.cells.flatMap((c) => c.poly), ...(board.extent || [])]) {
+    const [rx, ry] = rotatePoint(p, deg);
+    if (rx < minX) minX = rx;
+    if (ry < minY) minY = ry;
+    if (rx > maxX) maxX = rx;
+    if (ry > maxY) maxY = ry;
   }
   return [minX - pad, minY - pad, maxX - minX + 2 * pad, maxY - minY + 2 * pad].map(round4).join(" ");
 }
@@ -93,7 +90,9 @@ export function createRenderer(svg) {
   // outside? }] lines drawn over the cells (e.g. players' goal edges); width
   // is in multiples of board.unit, and a halo is a thin outline around the
   // line. outside: for segments on the board's edge, the line goes under the
-  // cells and only its outer half, width wide, shows.
+  // cells and only its outer half, width wide, shows. Or [{ polygons:
+  // [[[x, y], ...], ...], fill, stroke?, width? }]: shapes under the cells
+  // (e.g. a frame), outlined in stroke if given.
   // rotate: display rotation in degrees (clockwise on screen).
   function setBoard(newBoard, fill, decor = [], rotate = 0) {
     board = newBoard;
@@ -169,7 +168,15 @@ export function createRenderer(svg) {
     // Decor marked outside goes under the cells, which hide its inner half.
     const decorGroup = (list) => {
       const g = svgEl("g", { "pointer-events": "none", "stroke-linecap": "round", fill: "none" });
-      for (const { segments, stroke, halo, width = 0.1, outside } of list) {
+      for (const { segments, polygons, fill, stroke, halo, width = 0.1, outside } of list) {
+        if (polygons) {
+          for (const poly of polygons) {
+            g.appendChild(svgEl("polygon", {
+              points: pointsAttr(poly), fill, stroke: stroke || "none", "stroke-width": width * u, "stroke-linejoin": "round",
+            }));
+          }
+          continue;
+        }
         const d = segmentsPath(segments);
         const w = outside ? 2 * width : width;
         if (halo) g.appendChild(svgEl("path", { d, stroke: halo, "stroke-width": (w + (outside ? 0.04 : 0.08)) * u }));
@@ -177,7 +184,7 @@ export function createRenderer(svg) {
       }
       return g;
     };
-    const under = decor.filter((d) => d.outside);
+    const under = decor.filter((d) => d.outside || d.polygons);
     if (under.length) root.appendChild(decorGroup(under));
     root.appendChild(cellsG);
 
@@ -198,7 +205,7 @@ export function createRenderer(svg) {
       }));
     }
 
-    const over = decor.filter((d) => !d.outside);
+    const over = decor.filter((d) => !d.outside && !d.polygons);
     if (over.length) root.appendChild(decorGroup(over));
 
     // Overlays never intercept clicks: they always reach the cell below.

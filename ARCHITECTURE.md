@@ -32,7 +32,8 @@ common/
                             helpers; groups, liberties, side-to-side connection,
                             directions (ray, lineLength)
     square.js               square grids: chess/draughts boards and Go-style points boards
-    hex.js                  hex rhombus (Hex), hex-hex and triangle (Y) boards
+    hex.js                  hex rhombus (Hex), hex-hex and triangle (Y) boards; rhombusSides and
+                            rhombusFrame for goal edges
     cairo.js                Cairo pentagonal tiling patches
   chess/                    chess-like games, generic over piece movement (see "Chess variants")
     movement.js             movement atoms (leap, ride, cannon), standard pieces, compiled tables
@@ -172,6 +173,8 @@ export default {
                                     //   active colour scheme object, or null)
   boardDecor(board),                // -> lines over the cells, e.g. goal edges (outside: true
                                     //   draws an edge line outside the cells instead;
+                                    //   { polygons, fill } are shapes under the cells, e.g. a
+                                    //   frame, widening the view with extendView(board, points);
                                     //   optional: true only with optionalDecor shown)
   optionalDecor,                    // e.g. "Corner marks": Setup offers Show / Hide (saved,
                                     //   no new game; Hide by default) for optional decor

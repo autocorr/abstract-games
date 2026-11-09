@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateBoard, ray, lineLength, groupAt, liberties, opposite, gridName, fillsRectangle, goalMasks, connectsSides } from "../common/board/graph.js";
+import { validateBoard, ray, lineLength, groupAt, liberties, opposite, gridName, fillsRectangle, goalMasks, connectsSides, extendView } from "../common/board/graph.js";
 import { squareBoard } from "../common/board/square.js";
-import { rhombusBoard, hexHexBoard, triangleBoard } from "../common/board/hex.js";
+import { rhombusBoard, rhombusFrame, hexHexBoard, triangleBoard } from "../common/board/hex.js";
 
 test("square board: coordinates, names and colour tags", () => {
   const b = squareBoard({ cols: 8 });
@@ -174,4 +174,36 @@ test("goalMasks and connectsSides: three sides, as in Y", () => {
   assert.equal(connectsSides(b, cells, b.at(0, 0), goal, 3), true, "the bottom-right corner touches S");
   cells[b.at(0, 4)] = 0;
   assert.equal(connectsSides(b, cells, b.at(0, 0), goal, 3), false);
+});
+
+test("rhombus frame: clears every cell corner and splits on the diagonals", () => {
+  for (const rotate of [0, -30]) {
+    const b = rhombusBoard(7, { rotate });
+    const frame = rhombusFrame(b, 0.1);
+    const corners = b.cells.flatMap((c) => c.poly);
+    const cross = (o, a, p) => (a[0] - o[0]) * (p[1] - o[1]) - (a[1] - o[1]) * (p[0] - o[0]);
+    for (const [a, z, mid] of Object.values(frame)) {
+      // Every cell corner is on the centre's side of the outer edge, at
+      // least the margin from it.
+      const len = Math.hypot(z[0] - a[0], z[1] - a[1]);
+      const side = Math.sign(cross(a, z, mid));
+      for (const p of corners) assert.ok((side * cross(a, z, p)) / len >= 0.1 * b.unit - 1e-9);
+    }
+    // Neighbouring sides share their outer corners, and each seam lies on a
+    // diagonal of the frame: opposite corners and the centre are collinear.
+    const { N, E, S, W } = frame;
+    assert.deepEqual([N[1], E[1], S[1], W[1]], [E[0], S[0], W[0], N[0]]);
+    const mid = N[2];
+    assert.ok(Math.abs(cross(N[0], S[0], mid)) < 1e-9);
+    assert.ok(Math.abs(cross(N[1], S[1], mid)) < 1e-9);
+  }
+});
+
+test("extendView widens the viewBox to take in outside points", () => {
+  const b = rhombusBoard(5);
+  const [x0, y0, w0, h0] = b.viewBox.split(" ").map(Number);
+  extendView(b, [[b.bounds.minX - 1, b.bounds.minY - 2]]);
+  const [x1, y1, w1, h1] = b.viewBox.split(" ").map(Number);
+  assert.ok(Math.abs(x1 - (x0 - 1)) < 1e-3 && Math.abs(y1 - (y0 - 2)) < 1e-3);
+  assert.ok(Math.abs(w1 - (w0 + 1)) < 1e-3 && Math.abs(h1 - (h0 + 2)) < 1e-3);
 });

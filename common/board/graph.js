@@ -87,7 +87,21 @@ export function makeBoard(cellSpecs, { neighbours, pad = 0.15 } = {}) {
   const p = pad * unit;
   const viewBox = [minX - p, minY - p, maxX - minX + 2 * p, maxY - minY + 2 * p].map(round4).join(" ");
 
-  return { cells, neighbours: nbrs, size: cells.length, unit, bounds: { minX, minY, maxX, maxY }, viewBox };
+  return { cells, neighbours: nbrs, size: cells.length, unit, bounds: { minX, minY, maxX, maxY }, pad: p, viewBox };
+}
+
+// Widen a board's viewBox to take in `points` drawn outside the cells (e.g. a
+// frame), keeping the same margin; rotatedViewBox includes them too.
+export function extendView(board, points) {
+  board.extent = points;
+  let { minX, minY, maxX, maxY } = board.bounds;
+  for (const [x, y] of points) {
+    minX = Math.min(minX, x); minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+  }
+  const p = board.pad;
+  board.viewBox = [minX - p, minY - p, maxX - minX + 2 * p, maxY - minY + 2 * p].map(round4).join(" ");
+  return board;
 }
 
 // Does the cells' area fill the board's bounding box (a square grid)?
