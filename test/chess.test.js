@@ -105,6 +105,12 @@ test("castling turns over both a two-faced royal and a two-faced castler", () =>
   playMove(s, [sq(s.board, "e1"), sq(s.board, "h1")]);
   assert.equal(s.cells[sq(s.board, "g1")], pieceCode(s.board.chess.byKey.F, WHITE));
   assert.equal(s.cells[sq(s.board, "f1")], pieceCode(s.board.chess.byKey.U, WHITE));
+  // With castleTurns false, both keep their side.
+  const board = attachRules(squareBoard({ cols: 8, grid: false }), { ...SPEC, castleMove: "rook", castleTurns: false });
+  const t = { ...position({ e1: "wM", h1: "wT", e8: "bK" }, { castling: 15 }), board };
+  playMove(t, [sq(board, "e1"), sq(board, "h1")]);
+  assert.equal(t.cells[sq(board, "g1")], pieceCode(board.chess.byKey.M, WHITE));
+  assert.equal(t.cells[sq(board, "f1")], pieceCode(board.chess.byKey.T, WHITE));
 });
 
 test("notation names the origin when the other face of a piece could also go there", () => {

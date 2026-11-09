@@ -91,7 +91,7 @@ test("Masters may stand side by side when neither attacks the other", () => {
   assert.ok(inCheck(mixed, BLACK));
 });
 
-test("castling onto the Rook; the Master turns over; not through check", () => {
+test("castling onto the Rook; the Master keeps its face; not through check", () => {
   const pieces = { e1: "w" + Q, h1: "wR", a1: "wR", b8: "b" + Q };
   let s = position(pieces, { castling: 15 });
   assert.ok(movesFrom(s, "e1").includes("e1-h1"));
@@ -100,7 +100,7 @@ test("castling onto the Rook; the Master turns over; not through check", () => {
   assert.equal(describeMove(game, s, [sq(s.board, "e1"), sq(s.board, "h1")], null), "O-O");
   assert.equal(describeMove(game, s, [sq(s.board, "e1"), sq(s.board, "g1")], null), "Kg1");
   play(s, "e1-h1");
-  assert.equal(keyAt(s, "g1"), C);
+  assert.equal(keyAt(s, "g1"), Q);
   assert.equal(keyAt(s, "f1"), "R");
   assert.equal(s.castling & 3, 0);
   // f1 attacked: no short castling.

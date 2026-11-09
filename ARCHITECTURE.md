@@ -420,7 +420,8 @@ Pieces are data: a type lists its movement as atoms from `movement.js`
 `relative` vectors for pawns, `initial` for a double step), plus flags:
 `royal` (the piece check is about), `becomes` (the type it turns into after
 moving, for two-faced pieces; castling turns both the royal and its
-castler), `castler`, `pawn`, `promote`. A variant's
+castler, unless the spec sets `castleTurns: false`), `castler`, `pawn`,
+`promote`. A variant's
 rules spec adds castling (by square names, mirrored for Black; castling may
 be entered as the royal's move to its square or onto its own Rook), whether
 check applies, and whether stalemate draws or loses. `attachRules(board,
@@ -446,7 +447,8 @@ sets `repetition: 3` for the threefold rule (positions since the last
 capture or pawn move are kept in `s.history`); the returned object can be spread and its
 methods overridden. Liquefaction is built this way (a marble draw before
 each move, a colour-check in `allow`), as is Shaolin King (two-faced
-royals that turn over as they move, dealt at random by `setupPly`). So is Lottery
+royals that turn over as they move but not when castling, dealt at
+random by `setupPly`). So is Lottery
 Chess (drops, and a `drawPly` of one or two plies: a marble from the
 mover's bag, then on white a d10 for the piece put in hand).
 
