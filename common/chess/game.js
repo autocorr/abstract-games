@@ -31,8 +31,9 @@
 //                           (default 100; 0: never)
 //   repetition           occurrences of a position that draw (3: the
 //                           threefold rule; default 0: never). A position is
-//                           the pieces, the player to move, castling rights
-//                           and the en passant square, and hands with drops.
+//                           the pieces, the player to move, castling rights,
+//                           the en passant square if a pawn of the mover's
+//                           could capture there, and hands with drops.
 //   reasons              { reason: (loserName, s) => line } outcome lines
 //
 // The returned game can be spread and its methods overridden; the methods
@@ -87,9 +88,21 @@ export function fiftyHint(s, plies = 100) {
   return left <= 10 ? `Draw in ${left} ${left === 1 ? "move" : "moves"} each without a capture or pawn move.` : "";
 }
 
+// Could a pawn of the player to move capture en passant? (Ignores whether
+// the capture would leave the mover in check.)
+function epCapturable(s) {
+  if (s.ep < 0) return false;
+  const r = s.board.chess, row = r.row[s.ep] + (s.turn === WHITE ? -1 : 1);
+  return [-1, 1].some((dc) => {
+    const x = s.cells[s.board.at(r.col[s.ep] + dc, row)];
+    return x && ownerOf(x) === s.turn && r.types[typeOf(x)].pawn;
+  });
+}
+
 // A string naming a position for the repetition rule.
 export function positionKey(s) {
-  let key = String.fromCharCode(...s.cells) + "|" + s.turn + "|" + s.castling + "|" + s.ep;
+  const ep = epCapturable(s) ? s.ep : -1;
+  let key = String.fromCharCode(...s.cells) + "|" + s.turn + "|" + s.castling + "|" + ep;
   if (s.hand) key += "|" + s.hand.join(",");
   return key;
 }
