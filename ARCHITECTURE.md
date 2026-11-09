@@ -13,6 +13,7 @@ games.js                    registry of games: { id, title, blurb, path, module 
 common/
   base.css                  tokens (light/dark colours, radii, spacing), controls, game page
                             layout, landing page
+  favicon.svg               site icon: a 2x2 brown checkerboard, linked by each page head
   fonts/                    Inter variable font (SIL OFL), subset by .tools/scripts/subset_inter.py
   theme.js                  the site-wide Theme setting (auto / light / dark)
   theme-init.js             classic script in each page head: applies the saved theme before paint
@@ -494,7 +495,7 @@ block.
    with a generator from `common/board/`.
 2. Create `games/<id>/index.html` with the rules in `<template id="rules">`
    and a module script that calls `mount(game)`. Copy Filament's: its head
-   also loads `theme-init.js`. The title and blurb come from the registry.
+   also loads `theme-init.js` and the favicon. The title and blurb come from the registry.
 3. Register it in `games.js`.
 4. Optionally add `moveText` if the default log text (cell names) does not
    read well for the game's moves.
