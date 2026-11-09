@@ -127,3 +127,37 @@ export function rhombusSides(board) {
   }
   return out;
 }
+
+// A frame around a rhombus board, as on a Hex board: a band along each side
+// out to a straight line `margin` (in multiples of board.unit) past the
+// outermost cell corners, filling the notches of the zigzag edge, with
+// neighbouring sides meeting on the board's diagonals. Each side is a
+// triangle from its two outer corners to the centre, meant to be drawn under
+// the cells, which hide all but the band. -> { N: [[x, y] x 3], S, W, E }
+export function rhombusFrame(board, margin) {
+  const cx = board.cells.reduce((s, c) => s + c.x, 0) / board.size;
+  const cy = board.cells.reduce((s, c) => s + c.y, 0) / board.size;
+  const geo = {};
+  for (const [side, segs] of Object.entries(rhombusSides(board))) {
+    // The side's direction joins its two farthest-apart corners; n faces out.
+    const pts = segs.flat();
+    let a = pts[0], b = pts[0], best = 0;
+    for (const p of pts) for (const q of pts) {
+      const d = Math.hypot(p[0] - q[0], p[1] - q[1]);
+      if (d > best) { best = d; a = p; b = q; }
+    }
+    let n = [(a[1] - b[1]) / best, (b[0] - a[0]) / best];
+    if (((a[0] + b[0]) / 2 - cx) * n[0] + ((a[1] + b[1]) / 2 - cy) * n[1] < 0) n = [-n[0], -n[1]];
+    const reach = Math.max(...pts.map((p) => p[0] * n[0] + p[1] * n[1])) + margin * board.unit;
+    geo[side] = { n, reach };
+  }
+  // The point on both sides' outer lines.
+  const corner = (s, t) => {
+    const A = geo[s], B = geo[t];
+    const det = A.n[0] * B.n[1] - A.n[1] * B.n[0];
+    return [(A.reach * B.n[1] - B.reach * A.n[1]) / det, (A.n[0] * B.reach - B.n[0] * A.reach) / det];
+  };
+  const NW = corner("N", "W"), NE = corner("N", "E"), SW = corner("S", "W"), SE = corner("S", "E");
+  const mid = [(NW[0] + SE[0]) / 2, (NW[1] + SE[1]) / 2];
+  return { N: [NW, NE, mid], E: [NE, SE, mid], S: [SE, SW, mid], W: [SW, NW, mid] };
+}
