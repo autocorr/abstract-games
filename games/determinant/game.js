@@ -235,7 +235,7 @@ export default withSwap({
   boardDecor(board) {
     const n = board.cols - 1, o = -0.32, f = n + 0.32;
     return [
-      { segments: [[[0, o], [n, o]], [[0, f], [n, f]]], stroke: PLAYERS[BLACK].fill, halo: "#c4c8cf", width: 0.14 },
+      { segments: [[[0, o], [n, o]], [[0, f], [n, f]]], stroke: PLAYERS[BLACK].fill, halo: "#000000", width: 0.14 },
       { segments: [[[o, 0], [o, n]], [[f, 0], [f, n]]], stroke: PLAYERS[WHITE].fill, halo: "#0e0f13", width: 0.14 },
     ];
   },
