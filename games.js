@@ -106,4 +106,12 @@ export const games = [
     path: "games/lottery-chess/",
     module: "games/lottery-chess/game.js",
   },
+  {
+    id: "reify",
+    title: "Reify",
+    board: "Chessboard",
+    blurb: "Chess where every piece but the pawns turns over each time it lands, from concrete to abstract and back. Keep at least one concrete piece on the board: lose your last one to a capture and you lose the game.",
+    path: "games/reify/",
+    module: "games/reify/game.js",
+  },
 ];

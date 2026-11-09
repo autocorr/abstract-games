@@ -18,6 +18,7 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Broadcast](games/broadcast/)
 - [Shaolin King](games/shaolin-king/)
 - [Lottery Chess](games/lottery-chess/)
+- [Reify](games/reify/)
 
 ## Running locally
 

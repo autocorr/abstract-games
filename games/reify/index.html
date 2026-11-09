@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reify</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Checkmate the opposing King, or capture your opponent's last concrete piece. The board, setup and moves are those of chess.</p>
+  <p><b>Two sides.</b> Every piece except the pawns has two sides, concrete (dark) and abstract (light). Both sides move and capture exactly as the chess piece does. All pieces start concrete, and a piece turns over every time it lands, whether it moves or captures: concrete becomes abstract, and abstract becomes concrete. Castling turns over both the King and the Rook.</p>
+  <p><b>Stay concrete.</b> You must always have at least one concrete piece on the board. A move that would turn over your last concrete piece is not allowed. If your opponent captures your last concrete piece, you lose at once. Pawns have only one side, are drawn light, and do not count. The King counts while it is concrete, but it does not have to be concrete as long as another piece is.</p>
+  <p><b>Promotion.</b> A pawn reaching the last rank promotes to a concrete Queen, Rook, Bishop or Knight of your choice.</p>
+  <p><b>Check and mate.</b> The King is royal on either side: check and checkmate are as in chess. If you have no legal move and are not in check, you are stalemated and lose. That includes having only moves that would turn over your last concrete piece.</p>
+  <p><b>Draws.</b> 50 moves each without a capture or a pawn move is a draw, as is the same position occurring three times (the same player to move, with the same castling and en passant rights).</p>
+  <p><b>Colors.</b> Each player has a color: a dark shade for concrete pieces, a light shade for abstract pieces and pawns. Pick a palette under Colors in Setup; the players are named after their colors.</p>
+  <p><b>Credits.</b> Chess pieces by Colin M.L. Burnett (Cburnett), from Wikimedia Commons, used under the BSD license and recolored. Palettes after Okabe and Ito's color-blind-safe colors.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
