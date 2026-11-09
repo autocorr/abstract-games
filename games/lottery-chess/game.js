@@ -3,10 +3,10 @@
 //
 // Each player has their own bag of 7 marbles: 2 white (a prize) and 5
 // black (nothing). A turn starts with a draw from the mover's bag
-// ("draw:W"); on white, a ten-sided die ("roll:7") picks the piece put in
+// ("draw:W"), except White's first, to offset the first move; on white, a ten-sided die ("roll:7") picks the piece put in
 // the mover's hand: 1-4 Pawn, 5-6 Knight, 7-8 Bishop, 9 Rook, 10 Queen. A
 // bag is not refilled until all 7 are drawn, so each player wins exactly 2
-// pieces every 7 turns. Drawn marbles stay in view until the refill.
+// pieces every 7 draws. Drawn marbles stay in view until the refill.
 //
 // Then the player moves as in chess, or drops a piece from their hand onto
 // any empty square instead (as in Crazyhouse: pawns not on the first or
@@ -62,6 +62,7 @@ const base = chessGame({
     s.bags = [null, makeBag(BAG), makeBag(BAG)];
     s.rolling = false;   // drew white this turn; the die is next
     s.roll = 0;          // this turn's die, once rolled
+    s.opening = true;    // White's first turn, which has no draw
   },
   clone(copy) {
     copy.bags = [null, cloneBag(copy.bags[WHITE]), cloneBag(copy.bags[BLACK])];
@@ -84,9 +85,11 @@ const base = chessGame({
       s.rolling = drawMarble(bag, move) === "W";
     },
     done: (s) => !s.rolling,
+    skip: (s) => s.opening,
   },
   afterMove(s) {
     s.roll = 0;
+    s.opening = false;
   },
 });
 

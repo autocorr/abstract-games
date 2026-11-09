@@ -24,26 +24,31 @@ function position(pieces, { turn = WHITE } = {}) {
     if (key === "K") s.royal[player] = sq(s.board, at);
   }
   s.turn = turn;
+  s.opening = false;
   return game.refresh(s);
 }
 
-test("each turn opens with a draw from the mover's own bag of 2 white and 5 black", () => {
+test("White's first turn has no draw; every later turn opens with one from the mover's bag", () => {
   const s = newGame(game, {});
-  assert.equal(game.toMove(s), CHANCE);
-  assert.equal(game.currentPlayer(s), WHITE);
-  const odds = Object.fromEntries(game.chances(s).map((o) => [o.move, o.p]));
-  assert.deepEqual(odds, { "draw:W": 2 / 7, "draw:B": 5 / 7 });
-  game.applyMove(s, "draw:B");
   assert.equal(game.toMove(s), WHITE);
   assert.equal(game.legalMoves(s).length, 20);   // no hand, no drops
   game.applyMove(s, cellMove(s, "e2-e4"));
+  assert.deepEqual(s.bags[WHITE].counts, { W: 2, B: 5 });   // White's bag is untouched
   assert.equal(game.toMove(s), CHANCE);
-  assert.deepEqual(s.bags[BLACK].counts, { W: 2, B: 5 });   // Black's bag is untouched so far
-  assert.deepEqual(s.bags[WHITE].counts, { W: 2, B: 4 });
+  assert.equal(game.currentPlayer(s), BLACK);
+  const odds = Object.fromEntries(game.chances(s).map((o) => [o.move, o.p]));
+  assert.deepEqual(odds, { "draw:W": 2 / 7, "draw:B": 5 / 7 });
+  game.applyMove(s, "draw:B");
+  assert.equal(game.toMove(s), BLACK);
+  game.applyMove(s, cellMove(s, "e7-e5"));
+  assert.equal(game.toMove(s), CHANCE);   // White draws from the second turn on
+  assert.equal(game.currentPlayer(s), WHITE);
+  assert.deepEqual(s.bags[BLACK].counts, { W: 2, B: 4 });
 });
 
 test("white rolls a d10 for the prize, which goes into the hand", () => {
   const s = newGame(game, {});
+  game.applyMove(s, cellMove(s, "e2-e4"));
   game.applyMove(s, "draw:W");
   assert.equal(game.toMove(s), CHANCE);
   const outcomes = game.chances(s);
@@ -51,9 +56,9 @@ test("white rolls a d10 for the prize, which goes into the hand", () => {
   assert.ok(outcomes.every((o) => o.p === 0.1));
   assert.equal(text(s, "roll:9"), "rolled 9: Rook");
   game.applyMove(s, "roll:9");
-  assert.equal(game.toMove(s), WHITE);
-  assert.equal(handCount(s, WHITE, type(s, "R")), 1);
-  assert.match(game.turnHint(s), /^White won a Rook\./);
+  assert.equal(game.toMove(s), BLACK);
+  assert.equal(handCount(s, BLACK, type(s, "R")), 1);
+  assert.match(game.turnHint(s), /^Black won a Rook\./);
   const panels = game.chanceView(s);
   assert.deepEqual(panels.at(-1).dice, [9]);
   // The Rook may be dropped this turn on any empty square.
@@ -72,13 +77,16 @@ test("a bag is refilled only when all 7 marbles are drawn", () => {
   // Draw black while there is one (then white), win a pawn on white, and
   // shuffle the knights.
   const turn = (shuffle) => {
-    const draw = game.chances(s).some((o) => o.move === "draw:B") ? "draw:B" : "draw:W";
-    if (s.turn === WHITE) draws.push(draw);
-    game.applyMove(s, draw);
-    if (s.rolling) game.applyMove(s, "roll:1");
+    if (game.toMove(s) === CHANCE) {
+      const draw = game.chances(s).some((o) => o.move === "draw:B") ? "draw:B" : "draw:W";
+      if (s.turn === WHITE) draws.push(draw);
+      game.applyMove(s, draw);
+      if (s.rolling) game.applyMove(s, "roll:1");
+    }
     game.applyMove(s, cellMove(s, shuffle));
   };
-  for (let i = 0; i < 8; i++) {
+  // Nine turns each: White's first has no draw.
+  for (let i = 0; i < 9; i++) {
     turn(i % 2 ? "f3-g1" : "g1-f3");
     turn(i % 2 ? "f6-g8" : "g8-f6");
   }
