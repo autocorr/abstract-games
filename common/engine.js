@@ -161,9 +161,10 @@ export function randomPlayout(game, state, rng = Math.random, maxPlies = 100000)
 }
 
 // Default piece listing: state.cells[id] holds the owning player (0 = empty).
-// `style` picks one of game.pieceStyles (default: the first).
-export function piecesOf(game, state, style = Object.keys(game.pieceStyles || {})[0]) {
-  if (game.piecesOf) return game.piecesOf(state, style);
+// `style` picks one of game.pieceStyles (default: the first); `scheme` is
+// the active colour scheme object, or null.
+export function piecesOf(game, state, style = Object.keys(game.pieceStyles || {})[0], scheme = null) {
+  if (game.piecesOf) return game.piecesOf(state, style, scheme);
   const out = [];
   const cells = state.cells;
   for (let id = 0; id < cells.length; id++) if (cells[id]) out.push({ id, player: cells[id] });

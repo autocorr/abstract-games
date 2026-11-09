@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { squareBoard } from "../common/board/square.js";
+import { chessGame } from "../common/chess/game.js";
 import { KING, QUEEN, ROOK, KNIGHT, NIGHTRIDER, QUEEN_CANNON, pawn, images } from "../common/chess/movement.js";
 import {
   attachRules, attacked, inCheck, legalMoves, playMove, notation, pieceCode, WHITE, BLACK,
@@ -20,6 +21,9 @@ const SPEC = {
     { key: "C", name: "Cannon", letter: "C", moves: QUEEN_CANNON },
     { key: "M", name: "Master", letter: "M", moves: QUEEN, royal: true, becomes: "F" },
     { key: "F", name: "Master", letter: "M", moves: QUEEN_CANNON, royal: true, becomes: "M" },
+    // A two-faced Rook: "T" turns into "U" when it moves, and back.
+    { key: "T", name: "Rook", letter: "R", moves: ROOK, castler: true, becomes: "U" },
+    { key: "U", name: "Rook", letter: "R", moves: ROOK, castler: true, becomes: "T" },
   ],
   castling: [
     { name: "O-O", king: "e1", rook: "h1", kingTo: "g1", rookTo: "f1" },
@@ -96,6 +100,19 @@ test("castling by destination or onto the rook, not through check", () => {
   assert.ok(!from(s, "e1").includes("e1-g1"));
 });
 
+test("castling turns over both a two-faced royal and a two-faced castler", () => {
+  const s = position({ e1: "wM", h1: "wT", e8: "bK" }, { castling: 15, castleMove: "rook" });
+  playMove(s, [sq(s.board, "e1"), sq(s.board, "h1")]);
+  assert.equal(s.cells[sq(s.board, "g1")], pieceCode(s.board.chess.byKey.F, WHITE));
+  assert.equal(s.cells[sq(s.board, "f1")], pieceCode(s.board.chess.byKey.U, WHITE));
+});
+
+test("notation names the origin when the other face of a piece could also go there", () => {
+  const s = position({ a1: "wT", h1: "wU", e8: "bK", e2: "wK" });
+  const move = [sq(s.board, "a1"), sq(s.board, "d1")];
+  assert.equal(notation(s, move, legalMoves(s, WHITE)), "Rad1");
+});
+
 test("a two-faced royal flips when it moves, and its face decides its attacks", () => {
   const s = position({ d1: "wM", d8: "bM", d4: "wP" });
   const info = playMove(s, [sq(s.board, "d1"), sq(s.board, "d2")]);
@@ -167,4 +184,49 @@ test("a dropped pawn on its second rank may double-step; drops clear en passant"
   playMove(s, [dropSlot(s, WHITE, s.board.chess.byKey.N), sq(s.board, "h3")]);
   assert.equal(s.ep, -1);
   assert.equal(s.clock, 1);
+});
+
+// A minimal chessGame: Kings and Knights only.
+function knightsGame(extra = {}) {
+  return chessGame({
+    id: "knights", title: "Knights", url: import.meta.url,
+    rules: () => ({ types: SPEC.types.filter((t) => ["K", "N"].includes(t.key)) }),
+    setup: () => [[null, null, null, null, "K", null, "N", null]],
+    ...extra,
+  });
+}
+const play = (game, s, ...moves) => {
+  for (const m of moves) {
+    const [a, b] = m.split("-").map((n) => sq(s.board, n));
+    game.applyMove(s, [a, b]);
+  }
+  return s;
+};
+const SHUFFLE = ["g1-f3", "g8-f6", "f3-g1", "f6-g8"];
+
+test("the threefold rule draws on the third occurrence of a position", () => {
+  const game = knightsGame({ repetition: 3 });
+  const s = game.initialState(game.createBoard({}), {});
+  play(game, s, ...SHUFFLE, ...SHUFFLE.slice(0, 3));
+  assert.equal(s.winner, null);
+  play(game, s, SHUFFLE[3]);
+  assert.equal(s.winner, 0);
+  assert.equal(s.reason, "repetition");
+  assert.deepEqual(game.outcomeLines(s), ["The same position occurred three times."]);
+  // Without the rule, play goes on.
+  const free = knightsGame();
+  const t = free.initialState(free.createBoard({}), {});
+  play(free, t, ...SHUFFLE, ...SHUFFLE);
+  assert.equal(t.winner, null);
+});
+
+test("afterMove may end the game", () => {
+  const game = knightsGame({ afterMove: (s) => (s.turn === WHITE ? { winner: WHITE, reason: "custom" } : null), reasons: { custom: (loser) => `${loser} is out.` } });
+  const s = game.initialState(game.createBoard({}), {});
+  play(game, s, "g1-f3");
+  assert.equal(s.winner, WHITE);
+  assert.deepEqual(game.legalMoves(s), []);
+  assert.deepEqual(game.outcomeLines(s), ["Black is out."]);
+  // A scheme may rename the players.
+  assert.deepEqual(game.outcomeLines(s, null, { players: { 1: { name: "Red" }, 2: { name: "Blue" } } }), ["Blue is out."]);
 });

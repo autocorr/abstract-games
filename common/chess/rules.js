@@ -17,7 +17,8 @@
 //               corner when the game's piece labels are on
 //     royal:    the piece check and checkmate are about (one per side)
 //     becomes:  the key of the type this piece turns into after it moves
-//               (e.g. a two-faced piece flipping over)
+//               (e.g. a two-faced piece flipping over); castling turns
+//               both the royal and its castler
 //     castler:  the piece the royal castles with (a Rook)
 //     pawn:     moves are written without a letter; resets the fifty-move
 //               count; a double step allows en passant
@@ -281,6 +282,13 @@ function epVictim(s, from, to) {
   return s.board.at(s.board.chess.col[to], s.board.chess.row[from]);
 }
 
+// The piece code `x` turns into when it moves (itself unless its type
+// `becomes` another).
+export function turnedOver(r, x) {
+  const t = r.become[typeOf(x)];
+  return t ? pieceCode(t, ownerOf(x)) : x;
+}
+
 // Make `move` on the cells only (no rights or clocks), run fn(royalTo), and
 // take it back. Used to test moves for check.
 function trial(s, move, castle, fn) {
@@ -299,8 +307,8 @@ function trial(s, move, castle, fn) {
     cells[castle.king] = 0;
     cells[castle.rook] = 0;
     const saved = [cells[castle.kingTo], cells[castle.rookTo]];
-    cells[castle.kingTo] = moving;
-    cells[castle.rookTo] = rook;
+    cells[castle.kingTo] = turnedOver(s.board.chess, moving);
+    cells[castle.rookTo] = turnedOver(s.board.chess, rook);
     s.royal[player] = castle.kingTo;
     const result = fn(castle.kingTo);
     cells[castle.kingTo] = saved[0];
@@ -381,7 +389,7 @@ export function playMove(s, move) {
   }
   const moving = cells[from], player = ownerOf(moving), t = typeOf(moving);
   const type = r.types[t];
-  const turned = r.become[t] ? pieceCode(r.become[t], player) : moving;
+  const turned = turnedOver(r, moving);
   const castle = from === s.royal[player] ? castleOf(s, move) : null;
   let captured = 0, landing = to;
   if (castle) {
@@ -389,7 +397,7 @@ export function playMove(s, move) {
     cells[castle.king] = 0;
     cells[castle.rook] = 0;
     cells[castle.kingTo] = turned;
-    cells[castle.rookTo] = rook;
+    cells[castle.rookTo] = turnedOver(r, rook);
     landing = castle.kingTo;
   } else {
     captured = cells[to];
@@ -450,8 +458,13 @@ export function notation(s, move, legal = []) {
   if (castle) return castle.name;
   const capture = (s.cells[to] !== 0 && ownerOf(s.cells[to]) !== ownerOf(x)) || isEnPassant(s, move);
   if (type.pawn) return (capture ? name(from)[0] + "x" : "") + name(to);
-  // Name the file, rank or square of origin if a like piece could also go there.
-  const rivals = legal.filter(([f, d]) => d === to && f !== from && s.cells[f] === x);
+  // Name the file, rank or square of origin if a piece with the same letter
+  // (either face of a two-faced piece) could also go there.
+  const player = ownerOf(x);
+  const rivals = legal.filter(([f, d]) => {
+    const y = d === to && f !== from && s.cells[f];
+    return y && ownerOf(y) === player && r.types[typeOf(y)].letter === type.letter;
+  });
   let origin = "";
   if (rivals.length) {
     if (!rivals.some(([f]) => r.col[f] === r.col[from])) origin = name(from).match(/^[a-z]+/)[0];
