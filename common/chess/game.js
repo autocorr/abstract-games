@@ -15,9 +15,9 @@
 //   init(s, opts)        add variant state to the starting position
 //   clone(copy)          deepen the copy of variant state (copy is shallow)
 //   setupPly:            { chances(s), apply(s, move), done(s) }
-//   drawPly:             { chances(s), apply(s, move), done(s) }: chance
-//                           plies before every move, until done(s) (default:
-//                           one ply)
+//   drawPly:             { chances(s), apply(s, move), done(s), skip(s) }:
+//                           chance plies before every move, until done(s)
+//                           (default: one ply); none on a turn where skip(s)
 //   allow(s, move, ctx)  rules out moves (see rules.js legalMoves)
 //   afterMove(s, landing) after a turn's last ply, before the next turn;
 //                           may return { winner, reason } to end the game
@@ -116,7 +116,7 @@ export function chessGame(v) {
   const typesOf = (s) => s.board.chess.types;
 
   function startTurn(s) {
-    if (v.drawPly) {
+    if (v.drawPly && !(v.drawPly.skip && v.drawPly.skip(s))) {
       s.phase = "draw";
       return;
     }
