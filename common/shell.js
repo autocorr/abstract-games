@@ -380,11 +380,14 @@ export function mount(game, { root = document.body } = {}) {
 
   // (Re)draw the static board at a display rotation (see fitBoard). Boards
   // that do not fill a rectangle (hexagons, diamonds, Cairo patches) are
-  // drawn straight on the page; rectangular ones keep a framing panel.
+  // drawn straight on the page; rectangular ones keep a framing panel,
+  // except Lichess-style chessboards, which stand on the page as on Lichess.
   function showBoard(rotate) {
     const decor = (game.boardDecor ? game.boardDecor(board) : []).filter((d) => !d.optional || settings.decor === "on");
     renderer.setBoard(board, cellFill(), decor, rotate);
-    ui.boardWrap.classList.toggle("frameless", !fillsRectangle(board));
+    const lichess = board.look === "lichess";
+    ui.boardWrap.classList.toggle("frameless", !fillsRectangle(board) || lichess);
+    ui.boardWrap.classList.toggle("lichess", lichess);
     lastBoardMax = -1;
   }
 

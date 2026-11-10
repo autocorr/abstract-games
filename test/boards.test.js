@@ -4,6 +4,16 @@ import { validateBoard, ray, lineLength, groupAt, liberties, opposite, gridName,
 import { squareBoard } from "../common/board/square.js";
 import { rhombusBoard, rhombusFrame, hexHexBoard, triangleBoard } from "../common/board/hex.js";
 
+test("square board: the Lichess look has no grid lines and no margin", () => {
+  const b = squareBoard({ cols: 7, look: "lichess" });
+  assert.deepEqual(validateBoard(b), []);
+  assert.equal(b.look, "lichess");
+  assert.equal(b.grid, false);
+  assert.equal(b.pad, 0);
+  assert.equal(b.viewBox, "-0.5 -0.5 7 7");
+  assert.equal(squareBoard({ cols: 7 }).look, undefined);
+});
+
 test("square board: coordinates, names and colour tags", () => {
   const b = squareBoard({ cols: 8 });
   assert.deepEqual(validateBoard(b), []);

@@ -314,6 +314,9 @@ body.game {
   .board-wrap { --wrap-pad: var(--space-2); }
   .board-wrap.frameless { --wrap-pad: 2px; }
 }
+/* A Lichess-style chessboard (see render.js) stands flush, edge to edge
+   with any hand panels above and below it. */
+.board-wrap.frameless.lichess { --wrap-pad: 0px; }
 svg.board { width: 100%; height: auto; display: block; }
 
 /* Hands (pieces held to drop) above and below the board, as Lichess shows
