@@ -46,3 +46,10 @@ to add a new game.
 ## License
 
 [MIT](LICENSE)
+
+Chess piece images are by Colin M.L. Burnett ("Cburnett"), from Wikimedia
+Commons, used under the BSD license (some games recolor them); see
+[common/pieces/cburnett/README.md](common/pieces/cburnett/README.md).
+
+Grounded Chess's color palettes are after Okabe and Ito's color-blind-safe
+colors.
