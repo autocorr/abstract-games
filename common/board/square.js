@@ -44,7 +44,12 @@ export function starPoints(n) {
 //   stars:     for points boards, [[col, row], ...] star points to mark
 //   grid:      false: draw the squares without outlines between them, only
 //              a border around the board (as on a chessboard)
-export function squareBoard({ cols, rows = cols, adjacency = "orth", style = "cells", stars = [], grid = true } = {}) {
+//   look:      "lichess": a chessboard drawn as Lichess draws it (implies
+//              grid: false): no border or margin, slightly rounded corners,
+//              coordinates inset in the edge squares, and green move hints
+//              (see render.js)
+export function squareBoard({ cols, rows = cols, adjacency = "orth", style = "cells", stars = [], grid = true, look = null } = {}) {
+  const lichess = look === "lichess";
   const specs = [];
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -69,11 +74,12 @@ export function squareBoard({ cols, rows = cols, adjacency = "orth", style = "ce
   const neighbours = specs.map(({ coord: { col, row } }) =>
     steps.map((d) => id(col + DIRS8[d][0], row + DIRS8[d][1])).filter((n) => n >= 0).sort((a, b) => a - b));
 
-  const board = makeBoard(specs, { neighbours, pad: style === "points" ? 0 : 0.15 });
+  const board = makeBoard(specs, { neighbours, pad: style === "points" || lichess ? 0 : 0.15 });
   board.cols = cols;
   board.rows = rows;
   board.style = style;
-  if (!grid) board.grid = false;
+  if (!grid || lichess) board.grid = false;
+  if (lichess) board.look = "lichess";
   attachGrid(board, DIRS8,
     (c) => (Array.isArray(c) ? c.join(",") : `${c.col},${c.row}`),
     (c, [dc, dr]) => [c.col + dc, c.row + dr]);

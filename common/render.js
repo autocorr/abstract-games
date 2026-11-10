@@ -9,6 +9,12 @@
 // setBoard() can turn the whole drawing by a display rotation (e.g. 90
 // degrees to fit a wide board on a portrait screen, or any angle a game
 // asks for). Rules never see it; piece shadows and labels stay upright.
+//
+// Boards with look "lichess" (see square.js) are drawn as Lichess draws a
+// chessboard: no border, slightly rounded corners, rank numbers and file
+// letters inset in the edge squares in the opposite square colour, the
+// selected square filled dark green, and move targets as green dots (empty
+// squares) or green corners (captures), under the pieces.
 
 import { svgEl } from "./ui/dom.js";
 import { round4, edgeKey, rotatePoint } from "./board/graph.js";
@@ -25,6 +31,12 @@ const HIGHLIGHT = "#ffd54f";
 const MARKER_DOT = "#969ca6";
 const LABEL_PX = 40;   // font size piece labels are set at before scaling (see drawPieces)
 const LAST_TINT = "rgba(155, 199, 0, 0.41)";   // Lichess's last-move green
+// Lichess's selected square and move-destination greens.
+const LICHESS_SELECTED = "rgba(20, 85, 30, 0.5)";
+const LICHESS_DEST = "rgba(20, 85, 30, 0.5)";
+const LICHESS_CAPTURE = "rgba(20, 85, 0, 0.3)";
+const CORNER_RADIUS = 0.05;   // a Lichess board's rounded corners, in cells
+const COORD_SIZE = 0.17;      // coordinate font size, in cells
 
 let filterSeq = 0;
 
@@ -79,6 +91,10 @@ export function createRenderer(svg) {
   const shadowId = `pieceShadow${seq}`;
   const hatchId = `cellHatch${seq}`;
   const glowId = `checkGlow${seq}`;
+  const destId = `moveDest${seq}`;
+  const captureId = `captureDest${seq}`;
+  const clipId = `boardClip${seq}`;
+  let coordNodes = [];
 
   svg.addEventListener("click", (e) => {
     const target = e.target instanceof Element ? e.target.closest(".cell") : null;
@@ -128,8 +144,32 @@ export function createRenderer(svg) {
       svgEl("stop", { offset: "89%", "stop-color": "#a90000", "stop-opacity": 0 }),
       svgEl("stop", { offset: "100%", "stop-color": "#9e0000", "stop-opacity": 0 }));
     defs.appendChild(glow);
+    // Lichess's move destinations (radial gradients out to the cell's
+    // corners, as its CSS draws them): a dot on an empty square, and on an
+    // occupied one the corners outside a circle.
+    const dest = svgEl("radialGradient", { id: destId, r: Math.SQRT1_2 });
+    dest.append(
+      svgEl("stop", { offset: "19%", "stop-color": LICHESS_DEST }),
+      svgEl("stop", { offset: "20%", "stop-color": LICHESS_DEST, "stop-opacity": 0 }));
+    const capture = svgEl("radialGradient", { id: captureId, r: Math.SQRT1_2 });
+    capture.append(
+      svgEl("stop", { offset: "79%", "stop-color": LICHESS_CAPTURE, "stop-opacity": 0 }),
+      svgEl("stop", { offset: "80%", "stop-color": LICHESS_CAPTURE }));
+    defs.append(dest, capture);
+    const lichess = board.look === "lichess";
+    if (lichess) {
+      const { minX, minY, maxX, maxY } = board.bounds;
+      const clip = svgEl("clipPath", { id: clipId });
+      clip.appendChild(svgEl("rect", {
+        x: minX, y: minY, width: maxX - minX, height: maxY - minY, rx: CORNER_RADIUS * u,
+      }));
+      defs.appendChild(clip);
+    }
     svg.appendChild(defs);
-    const root = svgEl("g", rotate ? { transform: `rotate(${rotate})` } : {});
+    const root = svgEl("g", {
+      ...(rotate ? { transform: `rotate(${rotate})` } : {}),
+      ...(lichess ? { "clip-path": `url(#${clipId})` } : {}),
+    });
     svg.appendChild(root);
 
     const points = board.style === "points";
@@ -198,7 +238,7 @@ export function createRenderer(svg) {
       root.appendChild(grid);
     }
 
-    if (plain) {
+    if (plain && !lichess) {
       root.appendChild(svgEl("path", {
         d: perimeterPath(board), fill: "none", stroke: CELL_STROKE, "stroke-width": 0.05 * u,
         "stroke-linecap": "square", "pointer-events": "none",
@@ -212,11 +252,46 @@ export function createRenderer(svg) {
     layers = {
       tiles: svgEl("g", { "pointer-events": "none" }),   // shaded cells, under everything else
       highlights: svgEl("g", { "pointer-events": "none" }),
+      coords: svgEl("g", { "pointer-events": "none", "font-weight": 600 }),
       pieces: svgEl("g", { filter: `url(#${shadowId})`, "pointer-events": "none" }),
       images: svgEl("g", { "pointer-events": "none" }),   // image pieces and unshadowed discs
       markers: svgEl("g", { "pointer-events": "none" }),
     };
-    root.append(layers.tiles, layers.highlights, layers.pieces, layers.images, layers.markers);
+    root.append(layers.tiles, layers.highlights, layers.coords, layers.pieces, layers.images, layers.markers);
+    drawCoords();
+  }
+
+  // Lichess-style coordinates: rank numbers in the top-left corner of the
+  // first file's squares, file letters in the bottom-right corner of the
+  // first rank's, each in the other square colour. Not drawn on a rotated
+  // board, where those corners would be on the wrong sides.
+  function drawCoords() {
+    layers.coords.replaceChildren();
+    coordNodes = [];
+    if (board.look !== "lichess" || rotation) return;
+    const u = board.unit, k = (COORD_SIZE * u) / LABEL_PX;
+    for (const c of board.cells) {
+      const { col, row } = c.coord, name = c.tags.name;
+      const labels = [];
+      if (col === 0) labels.push([name.slice(1), -0.45, -0.45, "start", "hanging"]);
+      if (row === 0) labels.push([name[0], 0.45, 0.43, "end", "auto"]);
+      for (const [text, dx, dy, anchor, baseline] of labels) {
+        const t = svgEl("text", {
+          "font-size": LABEL_PX, "text-anchor": anchor, "dominant-baseline": baseline,
+          transform: `translate(${c.x + dx * u} ${c.y + dy * u}) scale(${k})`,
+        });
+        t.textContent = text;
+        layers.coords.appendChild(t);
+        coordNodes.push([t, c]);
+      }
+    }
+    colourCoords();
+  }
+
+  function colourCoords() {
+    if (!coordNodes.length) return;
+    const light = board.cells.find((c) => !c.tags.dark), dark = board.cells.find((c) => c.tags.dark);
+    for (const [t, c] of coordNodes) t.setAttribute("fill", cellFill(c.tags.dark ? light : dark));
   }
 
   function setCellFill(fill) {
@@ -228,6 +303,7 @@ export function createRenderer(svg) {
       cellNodes[i].setAttribute("fill", fill);
       if (board.style === "points" || board.grid === false) cellNodes[i].setAttribute("stroke", fill);
     });
+    colourCoords();
   }
 
   // A piece's colours: its own fill and mark (neutral pieces, which belong
@@ -343,7 +419,8 @@ export function createRenderer(svg) {
   //           last-move green) and "check" (red glow over the cell, as
   //           Lichess shows a King in check).
   // selected: cell ids in the current partial move
-  // targets:  cell ids that would extend the partial move
+  // targets:  cell ids that would extend the partial move (Lichess boards:
+  //           green dots, or corners on an occupied cell)
   function draw({ pieces = [], players = {}, markers = [], selected = [], targets = [] }) {
     const u = board.unit;
     const owner = new Map(pieces.map((p) => [p.id, pieceSpec(p, players)]));
@@ -366,7 +443,12 @@ export function createRenderer(svg) {
         layers.highlights.appendChild(svgEl("polygon", { points: pointsAttr(c.poly), fill: `url(#${glowId})` }));
       }
     }
+    const lichess = board.look === "lichess";
     for (const id of selected) {
+      if (lichess) {
+        layers.highlights.appendChild(svgEl("polygon", { points: pointsAttr(board.cells[id].poly), fill: LICHESS_SELECTED }));
+        continue;
+      }
       layers.highlights.appendChild(svgEl("polygon", {
         points: pointsAttr(board.cells[id].poly),
         fill: "rgba(255, 213, 79, 0.25)",
@@ -392,7 +474,15 @@ export function createRenderer(svg) {
         }));
       }
     }
-    const targetDots = [...targets.map((id) => ({ id })), ...markers.filter((m) => m.kind === "target")];
+    // Lichess boards: targets under the pieces, a dot or capture corners.
+    if (lichess) {
+      for (const id of targets) {
+        layers.highlights.appendChild(svgEl("polygon", {
+          points: pointsAttr(board.cells[id].poly), fill: `url(#${owner.has(id) ? captureId : destId})`,
+        }));
+      }
+    }
+    const targetDots = [...(lichess ? [] : targets.map((id) => ({ id }))), ...markers.filter((m) => m.kind === "target")];
     for (const { id, y = 0 } of targetDots) {
       const c = board.cells[id];
       // y: below the centre on screen, whatever the display rotation.

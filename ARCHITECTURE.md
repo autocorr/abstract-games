@@ -92,7 +92,7 @@ Tiling generators live in `common/board/`:
 
 | Generator | Coord | Tags |
 | --------- | ----- | ---- |
-| `squareBoard({ cols, rows, adjacency, style, stars, grid })` | `{ col, row }`, row 0 = rank 1 at the bottom | `name` ("a1"), `dark` (a1 dark), `quad` (Dabbaba sub-grid 0-3), `edges` ("N"/"S"/"E"/"W") |
+| `squareBoard({ cols, rows, adjacency, style, stars, grid, look })` | `{ col, row }`, row 0 = rank 1 at the bottom | `name` ("a1"), `dark` (a1 dark), `quad` (Dabbaba sub-grid 0-3), `edges` ("N"/"S"/"E"/"W") |
 | `rhombusBoard(n)`, `hexHexBoard(side)`, `triangleBoard(n)` | axial `{ q, r }`, pointy-top; a triangle adds `d`, the distances to its sides | `tri` (3-colouring), `edges` (rhombus "N"/"S"/"E"/"W"; hex-hex side 0-5; triangle "W"/"E"/"S"), `name` ("a1": column from q, row from r, top row 1) |
 | `cairoBoard(centres, { rotate })` | (none) | `tone` (pentagon orientation), `name` ("1".."n" in reading order) |
 
@@ -102,6 +102,11 @@ gives one; the conformance tests check that they are unique.
 `squareBoard` adjacency is `"orth"` (default), `"diag"` or `"king"`. With
 `grid: false` the squares are drawn without outlines between them and the
 board gets one border around its edge, as on a chessboard (Liquefaction). With
+`look: "lichess"` (the chess variants' default board) a chessboard is drawn
+as Lichess draws it: no border, margin or framing panel, slightly rounded
+corners, rank numbers and file letters inset in the edge squares, the
+selected square filled dark green, and move targets as green dots, or green
+corners on a capture. With
 `style: "points"` pieces sit on intersections as in Go: the renderer draws
 `board.lines` and star points (`board.dots`) over a continuous surface, and
 the cells stay as click targets. `starPoints(n)` gives the usual Go layout
@@ -451,7 +456,8 @@ end the game) and decide what having no move means (`noMoves`). A variant
 sets `repetition: 3` for the threefold rule (positions since the last
 capture or pawn move are kept in `s.history`); the returned object can be spread and its
 methods overridden. Liquefaction is built this way (a marble draw before
-each move, a colour-check in `allow`), as is Shaolin King (two-faced
+each move, a colour-check in `allow`, and its own four-colour board without
+the Lichess look, whose greens would muddy its colours), as is Shaolin King (two-faced
 royals that turn over as they move but not when castling, dealt at
 random by `setupPly`). So is Lottery
 Chess (drops, and a `drawPly` of one or two plies: a marble from the

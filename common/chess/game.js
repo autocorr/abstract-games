@@ -7,7 +7,8 @@
 // before every move (Liquefaction's marble).
 //
 // Variant fields (besides the usual id, title, url, options, ...):
-//   board(opts)          -> a square.js board (default: 8x8 chessboard)
+//   board(opts)          -> a square.js board (default: 8x8 chessboard with
+//                           the Lichess look; see square.js)
 //   boardKey(opts)       -> the options that shape the board and rules
 //   rules(opts)          -> rules spec (see rules.js)
 //   setup(opts)          -> White's ranks from rank 1, as type keys (see
@@ -282,7 +283,7 @@ export function chessGame(v) {
     },
 
     createBoard: cachedBoards(v.boardKey || (() => ""), (opts) => {
-      return attachRules(v.board ? v.board(opts) : squareBoard({ cols: 8, grid: false }), v.rules(opts));
+      return attachRules(v.board ? v.board(opts) : squareBoard({ cols: 8, look: "lichess" }), v.rules(opts));
     }),
 
     initialState(board, opts) {
