@@ -197,10 +197,15 @@ export function createRenderer(svg) {
         points: pointsAttr(c.poly),
         fill,
         // Points and plain boards: a hairline stroke in the fill colour hides
-        // the anti-aliasing seams between cells.
-        stroke: points || plain ? fill : CELL_STROKE,
-        "stroke-width": (points ? 0.01 : plain ? 0.02 : 0.025) * u,
-        "stroke-linejoin": "round",
+        // the anti-aliasing seams between cells. Lichess boards instead snap
+        // their squares to whole pixels (as their highlights are, below), as
+        // a stroke would spill onto neighbouring squares and show beside a
+        // highlight.
+        ...(lichess ? { stroke: "none", "shape-rendering": "crispEdges" } : {
+          stroke: points || plain ? fill : CELL_STROKE,
+          "stroke-width": (points ? 0.01 : plain ? 0.02 : 0.025) * u,
+          "stroke-linejoin": "round",
+        }),
       });
       cellsG.appendChild(poly);
       return poly;
@@ -251,7 +256,7 @@ export function createRenderer(svg) {
     // Overlays never intercept clicks: they always reach the cell below.
     layers = {
       tiles: svgEl("g", { "pointer-events": "none" }),   // shaded cells, under everything else
-      highlights: svgEl("g", { "pointer-events": "none" }),
+      highlights: svgEl("g", { "pointer-events": "none", ...(lichess ? { "shape-rendering": "crispEdges" } : {}) }),
       coords: svgEl("g", { "pointer-events": "none", "font-weight": 600 }),
       pieces: svgEl("g", { filter: `url(#${shadowId})`, "pointer-events": "none" }),
       images: svgEl("g", { "pointer-events": "none" }),   // image pieces and unshadowed discs
@@ -301,7 +306,7 @@ export function createRenderer(svg) {
     board.cells.forEach((c, i) => {
       const fill = cellFill(c);
       cellNodes[i].setAttribute("fill", fill);
-      if (board.style === "points" || board.grid === false) cellNodes[i].setAttribute("stroke", fill);
+      if ((board.style === "points" || board.grid === false) && board.look !== "lichess") cellNodes[i].setAttribute("stroke", fill);
     });
     colourCoords();
   }
