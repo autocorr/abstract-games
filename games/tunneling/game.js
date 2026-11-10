@@ -35,7 +35,6 @@ const HOPPER_URL = {
   [BLACK]: new URL("../../common/pieces/cburnett/bQ.svg", import.meta.url).href,
 };
 const STONE_PIECE = { player: null, fill: "#8c8c8c", mark: "#ffffff", size: 0.65, shadow: false };
-const LAST_MOVE = "rgba(14, 15, 19, 0.75)";
 
 // Starting positions, as White's grasshoppers in doubled coordinates about the
 // board's centre (x = 2 * col - (n - 1), likewise y from the row; both odd).
@@ -53,7 +52,7 @@ const SETUPS = {
 
 // Each cell's rays along the 8 directions (square.js's DIRS8), to the edge.
 function buildBoard(size) {
-  const board = squareBoard({ cols: size, grid: false });
+  const board = squareBoard({ cols: size, look: "lichess" });
   board.rays = board.cells.map((c) => board.dirs.map((_, d) => ray(board, c.id, d)).filter((r) => r.length));
   return board;
 }
@@ -162,7 +161,8 @@ export default {
   },
 
   markers(s) {
-    return s.last ? s.last.map((id) => ({ id, kind: "square", color: LAST_MOVE })) : [];
+    // The last move's squares, tinted Lichess's green as in the chess variants.
+    return s.last ? s.last.map((id) => ({ id, kind: "tint" })) : [];
   },
 };
 
