@@ -43,6 +43,8 @@ common/
   render.js                 SVG renderer: cell, highlight, piece and marker layers
   chance-view.js            bag and dice panels shown in the turn card
   pieces/cburnett/          chess piece images (Cburnett, BSD; see its README)
+  pieces/triangles.js       triangle pieces pointing each side's way (Wavefunction Collapse,
+                            Transmission)
   shell.js                  mount(game): builds the page UI around a Game
   ui/
     dom.js                  h(), svgEl(), collapsible sections with remembered open state
@@ -102,7 +104,8 @@ gives one; the conformance tests check that they are unique.
 `squareBoard` adjacency is `"orth"` (default), `"diag"` or `"king"`. With
 `grid: false` the squares are drawn without outlines between them and the
 board gets one border around its edge, as on a chessboard (Liquefaction). With
-`look: "lichess"` (the chess variants' default board, and Tunneling's) a chessboard is drawn
+`look: "lichess"` (the chess variants' default board, and Tunneling's and
+Wavefunction Collapse's) a chessboard is drawn
 as Lichess draws it: no border, margin or framing panel, slightly rounded
 corners, rank numbers and file letters inset in the edge squares, the
 selected square filled dark green, and move targets as green dots, or green

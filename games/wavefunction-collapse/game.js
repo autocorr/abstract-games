@@ -29,6 +29,7 @@ import { squareBoard } from "../../common/board/square.js";
 import { makeBag, cloneBag, drawOutcomes, drawMarble, drawnColour, isEmpty, returnDrawn, bagPanel } from "../../common/bag.js";
 import { CHANCE, pickWeighted, cachedBoards } from "../../common/engine.js";
 import { randInt } from "../../common/rng.js";
+import { WHITE_TRIANGLE, BLACK_TRIANGLE } from "../../common/pieces/triangles.js";
 
 const WHITE = 1, BLACK = 2;
 const N = 8;
@@ -62,8 +63,9 @@ const colorSchemes = {
   blue: { name: "Blue", cellFill: (cell) => (cell.tags.dark ? "#8ca2ad" : "#dee3e6") },
 };
 
-const LAST_MOVE = "rgba(14, 15, 19, 0.75)";
-const CAPTURED = "#d2453b";
+// Checkers are triangles pointing the way they move.
+const IMAGES = { [WHITE]: WHITE_TRIANGLE, [BLACK]: BLACK_TRIANGLE };
+const CAPTURED = "rgba(210, 69, 59, 0.5)";   // a red tint over a captured checker's square
 
 const other = (p) => 3 - p;
 const at = (col, row) => row * N + col;
@@ -72,7 +74,7 @@ const rowOf = (id) => (id - (id % N)) / N;
 const farRow = (p) => (p === WHITE ? N - 1 : 0);
 
 function buildBoard() {
-  const board = squareBoard({ cols: N, grid: false });
+  const board = squareBoard({ cols: N, look: "lichess" });
   board.dark = board.cells.map((c) => c.tags.dark);
   return board;
 }
@@ -250,10 +252,16 @@ const game = {
     return s.winner;
   },
 
+  piecesOf(s) {
+    const out = [];
+    s.cells.forEach((x, id) => { if (x) out.push({ id, player: x, image: IMAGES[x] }); });
+    return out;
+  },
+
   markers(s) {
     const out = [];
-    if (s.last) for (const id of s.last) out.push({ id, kind: "square", color: LAST_MOVE });
-    if (s.captured >= 0) out.push({ id: s.captured, kind: "square", color: CAPTURED });
+    if (s.last) for (const id of s.last) out.push({ id, kind: "tint" });
+    if (s.captured >= 0) out.push({ id: s.captured, kind: "tint", color: CAPTURED });
     return out;
   },
 
