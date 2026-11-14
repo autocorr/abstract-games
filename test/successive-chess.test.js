@@ -105,10 +105,13 @@ test("capturing the King waits on a saving throw: at least the roll saves it", (
   assert.equal(game.currentPlayer(saved), BLACK);
   assert.equal(game.chanceView(saved)[2].result, "Saved");
 
+  assert.deepEqual(game.markers(s).filter((m) => m.kind === "check").map((m) => m.id), [sq(s.board, "a8")]);
   game.applyMove(s, "roll:3");
   assert.deepEqual(game.outcome(s), { winner: WHITE });
   assert.equal(at(s, "a8"), piece(s, WHITE, "R"));
   assert.deepEqual(game.legalMoves(s), []);
+  game.markers(s);   // draws without the attack
+  assert.equal(game.chanceView(s)[2].result, "Failed");
 });
 
 test("removing your own King loses", () => {

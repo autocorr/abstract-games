@@ -68,7 +68,8 @@ const base = chessGame({
   ],
   fiftyMoves: FIFTY,
   // The King under attack, while the defender rolls to save it.
-  markers: (s) => (s.phase === "save" ? [{ id: s.attack[1], kind: "check" }] : []),
+  // (Gone once the throw fails and the capture is made.)
+  markers: (s) => (s.phase === "save" && s.attack ? [{ id: s.attack[1], kind: "check" }] : []),
   reasons: {
     royal: (loser) => `${loser}'s King was captured.`,
     removed: (loser) => `${loser} removed their own King.`,
