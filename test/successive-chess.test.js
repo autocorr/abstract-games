@@ -181,3 +181,14 @@ test("castling is as in chess: not out of, through or into attack", () => {
   assert.ok(!castles(setup({ g8: "bR" })));   // into
   assert.ok(castles(setup({ h8: "bR" })));    // the Rook may be attacked
 });
+
+test("stalemate loses: no legal move after a roll", () => {
+  const s = position({
+    a8: "wK", b8: "wB", c8: "wN", a7: "wP", b7: "wP", c7: "wP", e7: "wP", b6: "wP", d6: "wP",
+    d7: "bN", e8: "bR", h1: "bK",
+  });
+  game.applyMove(s, "roll:3");
+  assert.deepEqual(game.outcome(s), { winner: BLACK });
+  assert.deepEqual(game.legalMoves(s), []);
+  assert.deepEqual(game.outcomeLines(s, game.outcome(s), null), ["White has no legal move (stalemate loses)."]);
+});

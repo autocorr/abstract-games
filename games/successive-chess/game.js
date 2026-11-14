@@ -9,8 +9,8 @@
 // their own pieces (the move [square]) and the turn ends. Removing your own
 // King loses.
 //
-// The King is not royal: there is no check, checkmate or stalemate, and a
-// player with no move just loses the rest of the turn. Capturing the
+// The King is not royal: there is no check or checkmate. A player with no
+// legal move when they must move (stalemate) loses. Capturing the
 // opponent's King wins, but first the defender rolls a saving throw: at
 // least the mover's current roll saves the King, the capture is not made
 // and the mover's turn ends.
@@ -20,8 +20,8 @@
 //
 // En passant is open against a double step that was the last move of the
 // opponent's turn. The fifty-move rule counts single moves: 100 of them
-// without a capture or pawn move draw. A pass or saved capture counts as a
-// move, so every game ends. There is no draw by repetition.
+// without a capture or pawn move draw. A saved capture counts as a move,
+// so every game ends. There is no draw by repetition.
 
 import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
 import { CHANCE, pickWeighted } from "../../common/engine.js";
@@ -100,9 +100,10 @@ function castleSafe(s, move, { castle }) {
 function startMoves(s) {
   s.phase = "move";
   s.moves = legalMoves(s, s.turn, castleSafe);
-  if (!s.moves.length) {
-    s.clock++;   // a pass counts as a move for the fifty-move rule
-    endTurn(s);
+  if (!s.moves.length) {   // stalemate loses
+    s.moves = null;
+    s.winner = other(s.turn);
+    s.reason = "stalemate";
   }
 }
 
