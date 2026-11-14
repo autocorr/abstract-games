@@ -28,7 +28,7 @@ import { CHANCE, pickWeighted } from "../../common/engine.js";
 import { chessGame, PLAYERS, PROMOTE } from "../../common/chess/game.js";
 import { KING, QUEEN, ROOK, BISHOP, KNIGHT, pawn } from "../../common/chess/movement.js";
 import {
-  WHITE, BLACK, other, legalMoves, attacked, playMove, promotePending, notation, material, ownerOf, typeOf,
+  WHITE, BLACK, other, legalMoves, pseudoMoves, attacked, playMove, promotePending, notation, material, ownerOf, typeOf,
 } from "../../common/chess/rules.js";
 
 const SIDES = 6;
@@ -52,10 +52,10 @@ const RULES = {
   check: false,
 };
 
-// Playouts: capture-biased random moves, adjudicated on material after
-// this many moves (as in chessGame's playouts).
-const PLAYOUT_MOVES = 40;
-const CAPTURE_BIAS = 0.75;
+// Playouts: short runs of greedy captures and otherwise random moves that
+// avoid attacked squares, then adjudicated on material and mobility (see
+// playout). Mutable for tuning experiments.
+export const tuning = { moves: 16, mobility: 0.1, scale: 2, rescue: 0.9 };
 
 const base = chessGame({
   id: "successive-chess",
@@ -244,20 +244,51 @@ function legal(s) {
 
 // ---- playouts ----
 
-// A capture of the King's if any (and the roll could win it), else
-// capture-biased, else random.
+// The King's capture if the roll could win it; else the capture gaining
+// the most (victim less the mover, if the square is attacked), if any
+// gains; else, often, the most valuable piece in danger (attacked and
+// undefended, or a Rook or more attacked at all) to a safe square; else a
+// random move, preferring one to a square not attacked.
 function playoutMove(s, rng) {
-  const types = typesOf(s);
-  let best = -1, bestMoves = null;
+  const types = typesOf(s), me = s.turn, enemy = other(me);
+  const value = (sq) => types[typeOf(s.cells[sq])].value || 0;
+  let best = 0, bestMoves = null;
   for (const m of s.moves) {
     const x = s.cells[m[1]];
-    if (!x || ownerOf(x) === s.turn) continue;
-    const val = types[typeOf(x)].royal ? (s.die > 1 ? 100 : -1) : (types[typeOf(x)].value || 0) + 1;
-    if (val < 0) continue;
-    if (val > best) { best = val; bestMoves = [m]; } else if (val === best) bestMoves.push(m);
+    if (!x || ownerOf(x) === me) continue;
+    let gain;
+    if (types[typeOf(x)].royal) gain = s.die > 1 ? 1000 : -1;
+    else {
+      gain = types[typeOf(x)].value;
+      if (attacked(s, m[1], enemy)) gain -= types[typeOf(s.cells[m[0]])].royal ? 100 : value(m[0]);
+    }
+    if (gain > best) { best = gain; bestMoves = [m]; } else if (gain === best && bestMoves) bestMoves.push(m);
   }
-  if (bestMoves && (best === 100 || rng() < CAPTURE_BIAS)) return bestMoves[Math.floor(rng() * bestMoves.length)];
-  return s.moves[Math.floor(rng() * s.moves.length)];
+  if (bestMoves) return bestMoves[Math.floor(rng() * bestMoves.length)];
+
+  if (rng() < tuning.rescue) {
+    let danger = -1, worth = 0;
+    for (let sq = 0; sq < s.cells.length; sq++) {
+      const x = s.cells[sq];
+      if (!x || ownerOf(x) !== me) continue;
+      const v = types[typeOf(x)].royal ? 50 : value(sq);
+      if (v <= worth || !attacked(s, sq, enemy)) continue;
+      if (v < 5 && attacked(s, sq, me)) continue;   // defended
+      danger = sq;
+      worth = v;
+    }
+    if (danger >= 0) {
+      const away = s.moves.filter((m) => m[0] === danger && !attacked(s, m[1], enemy));
+      if (away.length) return away[Math.floor(rng() * away.length)];
+    }
+  }
+
+  let move;
+  for (let tries = 0; tries < 4; tries++) {
+    move = s.moves[Math.floor(rng() * s.moves.length)];
+    if (!attacked(s, move[1], enemy)) break;
+  }
+  return move;
 }
 
 // The cheapest piece other than the King (the King if nothing else is left).
@@ -292,9 +323,11 @@ function playout(s, rng) {
         applyMove(s, playoutRemoval(s, rng));
         continue;
     }
-    if (moves++ >= PLAYOUT_MOVES) {
-      const d = material(s, s.turn) - material(s, other(s.turn));
-      s.winner = rng() < 1 / (1 + Math.exp(-d / 2)) ? s.turn : other(s.turn);
+    if (moves++ >= tuning.moves) {
+      const me = s.turn, you = other(me);
+      const d = material(s, me) - material(s, you) +
+        tuning.mobility * (pseudoMoves(s, me).length - pseudoMoves(s, you).length);
+      s.winner = rng() < 1 / (1 + Math.exp(-d / tuning.scale)) ? me : you;
       s.reason = "adjudicated";
       break;
     }
