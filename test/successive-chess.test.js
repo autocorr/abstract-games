@@ -88,31 +88,15 @@ test("there is no check: a King may move into attack", () => {
   assert.ok(moves.includes("e1-d2"));
 });
 
-test("capturing the King waits on a saving throw: at least the roll saves it", () => {
+test("capturing the King wins at once", () => {
   const s = position({ e1: "wK", a8: "bK", a1: "wR" });
-  game.applyMove(s, "roll:4");
+  game.applyMove(s, "roll:1");
+  assert.equal(text(s, cellMove(s, "a1-a8")), "Rxa8");
   game.applyMove(s, cellMove(s, "a1-a8"));
-  assert.equal(game.toMove(s), CHANCE);
-  assert.equal(game.currentPlayer(s), WHITE);
-  assert.equal(at(s, "a1"), piece(s, WHITE, "R"));   // not made yet
-  assert.equal(text(s, "roll:4"), "saving throw 4: saved");
-  assert.equal(text(s, "roll:3"), "saving throw 3: failed");
-
-  const saved = game.clone(s);
-  game.applyMove(saved, "roll:4");
-  assert.equal(game.outcome(saved), null);
-  assert.equal(at(saved, "a1"), piece(s, WHITE, "R"));
-  assert.equal(at(saved, "a8"), piece(s, BLACK, "K"));
-  assert.equal(game.currentPlayer(saved), BLACK);
-  assert.equal(game.chanceView(saved)[2].result, "Saved");
-
-  assert.deepEqual(game.markers(s).filter((m) => m.kind === "check").map((m) => m.id), [sq(s.board, "a8")]);
-  game.applyMove(s, "roll:3");
   assert.deepEqual(game.outcome(s), { winner: WHITE });
   assert.equal(at(s, "a8"), piece(s, WHITE, "R"));
   assert.deepEqual(game.legalMoves(s), []);
-  game.markers(s);   // draws without the attack
-  assert.equal(game.chanceView(s)[2].result, "Failed");
+  assert.deepEqual(game.outcomeLines(s, game.outcome(s), null), ["Black's King was captured."]);
 });
 
 test("removing your own King loses", () => {

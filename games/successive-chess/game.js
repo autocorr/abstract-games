@@ -11,17 +11,14 @@
 //
 // The King is not royal: there is no check or checkmate. A player with no
 // legal move when they must move (stalemate) loses. Capturing the
-// opponent's King wins, but first the defender rolls a saving throw: at
-// least the mover's current roll saves the King, the capture is not made
-// and the mover's turn ends.
+// opponent's King wins.
 //
 // Castling is as in chess: the King may not castle out of, through or into
 // a square the opponent attacks.
 //
 // En passant is open against a double step that was the last move of the
 // opponent's turn. The fifty-move rule counts single moves: 100 of them
-// without a capture or pawn move draw. A saved capture counts as a move,
-// so every game ends. There is no draw by repetition.
+// without a capture or pawn move draw. There is no draw by repetition.
 
 import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
 import { CHANCE, pickWeighted } from "../../common/engine.js";
@@ -67,9 +64,6 @@ const base = chessGame({
     Array(8).fill("P"),
   ],
   fiftyMoves: FIFTY,
-  // The King under attack, while the defender rolls to save it.
-  // (Gone once the throw fails and the capture is made.)
-  markers: (s) => (s.phase === "save" && s.attack ? [{ id: s.attack[1], kind: "check" }] : []),
   reasons: {
     royal: (loser) => `${loser}'s King was captured.`,
     removed: (loser) => `${loser} removed their own King.`,
@@ -84,8 +78,7 @@ const lastOf = (a) => a[a.length - 1];
 // ---- turn flow ----
 //
 // Phases: "roll" (chance: the mover's die), "move", "promote", "decide"
-// (roll again or stop), "remove" (after a bust), "save" (chance: the
-// defender's saving throw against s.attack).
+// (roll again or stop), "remove" (after a bust).
 
 // Castling as in chess, though there is no check: not from, across or
 // onto an attacked square.
@@ -120,7 +113,6 @@ function endTurn(s) {
   s.ep = s.epNext;
   s.epNext = -1;
   s.moves = null;
-  s.attack = null;
   s.die = 0;
   s.turn = other(s.turn);
   s.phase = "roll";
@@ -165,7 +157,6 @@ function applyMove(s, move) {
       s.rolls = s.rolls.slice();
       if (!s.die) {   // the turn's first roll
         s.rolls[s.turn] = [];
-        s.saveRoll = 0;
       }
       s.rolls[s.turn] = [...s.rolls[s.turn], value];
       if (busts(s, value)) {
@@ -178,14 +169,14 @@ function applyMove(s, move) {
       return null;
     }
     case "move": {
-      if (isKing(s, s.cells[move[1]]) && ownerOf(s.cells[move[1]]) !== s.turn) {
-        s.attack = move;
-        s.last = move.slice();
-        s.phase = "save";
-        s.moves = null;
-        return null;
-      }
       const info = play(s, move);
+      if (info.captured && isKing(s, info.captured)) {
+        s.moves = null;
+        s.pending = -1;   // a pawn taking the King on the last rank needn't promote
+        s.winner = s.turn;
+        s.reason = "royal";
+        return info;
+      }
       if (info.promote) s.phase = "promote";
       else afterMove(s);
       return info;
@@ -203,20 +194,6 @@ function applyMove(s, move) {
       s.moves = null;
       remove(s, move[0]);
       return null;
-    case "save": {
-      s.saveRoll = rolledValue(move);
-      if (s.saveRoll >= s.die) {
-        s.clock++;   // the attempt counts as a move for the fifty-move rule
-        endTurn(s);
-        return null;
-      }
-      play(s, s.attack);
-      s.attack = null;
-      s.pending = -1;   // a pawn taking the King on the last rank needn't promote
-      s.winner = s.turn;
-      s.reason = "royal";
-      return null;
-    }
   }
   throw new Error(`no move expected in phase ${s.phase}`);
 }
@@ -232,8 +209,7 @@ const promotions = (s) => typesOf(s)[typeOf(s.cells[s.pending])].promote.map((k)
 function legal(s) {
   if (s.winner !== null) return [];
   switch (s.phase) {
-    case "roll":
-    case "save": return rollOutcomes(SIDES).map((o) => o.move);
+    case "roll": return rollOutcomes(SIDES).map((o) => o.move);
     case "move":
     case "remove": return s.moves;
     case "promote": return promotions(s);
@@ -244,7 +220,7 @@ function legal(s) {
 
 // ---- playouts ----
 
-// The King's capture if the roll could win it; else the capture gaining
+// The King's capture if any; else the capture gaining
 // the most (victim less the mover, if the square is attacked), if any
 // gains; else, often, the most valuable piece in danger (attacked and
 // undefended, or a Rook or more attacked at all) to a safe square; else a
@@ -257,7 +233,7 @@ function playoutMove(s, rng) {
     const x = s.cells[m[1]];
     if (!x || ownerOf(x) === me) continue;
     let gain;
-    if (types[typeOf(x)].royal) gain = s.die > 1 ? 1000 : -1;
+    if (types[typeOf(x)].royal) gain = 1000;
     else {
       gain = types[typeOf(x)].value;
       if (attacked(s, m[1], enemy)) gain -= types[typeOf(s.cells[m[0]])].royal ? 100 : value(m[0]);
@@ -307,7 +283,6 @@ function playout(s, rng) {
   for (let moves = 0; s.winner === null; ) {
     switch (s.phase) {
       case "roll":
-      case "save":
         applyMove(s, pickWeighted(rollOutcomes(SIDES), rng));
         continue;
       case "promote": {
@@ -370,8 +345,6 @@ const game = {
     s.moves = null;
     s.die = 0;          // the turn's current roll (0 before the first)
     s.rolls = [null, [], []];   // each player's rolls in their latest turn
-    s.attack = null;    // a King capture awaiting the saving throw
-    s.saveRoll = 0;     // the latest saving throw, until the next turn
     s.epNext = -1;      // en passant square for the opponent, once the turn ends
     return s;
   },
@@ -384,7 +357,7 @@ const game = {
     return s;
   },
 
-  toMove: (s) => (s.phase === "roll" || s.phase === "save" ? CHANCE : s.turn),
+  toMove: (s) => (s.phase === "roll" ? CHANCE : s.turn),
   currentPlayer: (s) => s.turn,
   chances: () => rollOutcomes(SIDES),
   legalMoves: legal,
@@ -398,10 +371,6 @@ const game = {
         const value = rolledValue(move);
         return busts(s, value) ? `rolled ${value}: bust` : `rolled ${value}`;
       }
-      case "save": {
-        const value = rolledValue(move);
-        return `saving throw ${value}: ${value >= s.die ? "saved" : "failed"}`;
-      }
       case "decide": return move === AGAIN ? "roll again" : "stop";
       case "remove": {
         const x = s.cells[move[0]];
@@ -413,11 +382,10 @@ const game = {
     return null;
   },
 
-  // Each player's rolls in their latest turn, the mover's lit while
-  // rolling, and the saving throw while it is due and until the next turn.
+  // Each player's rolls in their latest turn, the mover's lit while rolling.
   chanceView(s) {
     const live = s.winner === null;
-    const panels = [WHITE, BLACK].map((p) => {
+    return [WHITE, BLACK].map((p) => {
       const rolls = s.rolls[p];
       const rolling = live && s.turn === p && s.phase === "roll";
       // A new turn's first roll clears the last turn's.
@@ -425,15 +393,6 @@ const game = {
       const bust = !(rolling && !s.die) && rolls.length > 1 && lastOf(rolls) <= rolls[rolls.length - 2];
       return dicePanel(dice, { title: `${PLAYERS[p].name}'s rolls`, owner: p, active: rolling, result: bust ? "Bust" : null });
     });
-    if (s.phase === "save" || s.saveRoll) {
-      panels.push(dicePanel([s.saveRoll || null], {
-        title: "Saving throw",
-        owner: other(s.turn),
-        active: live && s.phase === "save",
-        result: s.saveRoll ? (s.winner !== null ? "Failed" : "Saved") : null,
-      }));
-    }
-    return panels;
   },
 
   turnHint(s, scheme) {
@@ -446,7 +405,6 @@ const game = {
       case "promote": return `${name}: choose a piece to promote to.`;
       case "decide": return `${name}: roll again (more than ${s.die} for another move, else lose a piece) or end the turn.`;
       case "remove": return `${name} rolled ${lastOf(s.rolls[s.turn])}, not more than ${s.die}: remove one of your pieces.`;
-      case "save": return `${PLAYERS[other(s.turn)].name} rolls to save the King: ${s.die} or more saves it…`;
     }
     return "";
   },
