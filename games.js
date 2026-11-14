@@ -114,4 +114,12 @@ export const games = [
     path: "games/grounded-chess/",
     module: "games/grounded-chess/game.js",
   },
+  {
+    id: "hemisphere",
+    title: "Hemisphere",
+    board: "Half of a Goldberg polyhedron",
+    blurb: "Place stones on the projective plane, a disk whose rim is glued to its opposite side. Win with a loop of your stones that passes through the rim an odd number of times.",
+    path: "games/hemisphere/",
+    module: "games/hemisphere/game.js",
+  },
 ];
