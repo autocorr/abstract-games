@@ -98,3 +98,16 @@ test("swap hands Red's opening to Blue", () => {
   assert.equal(game.toMove(s), 1);
 });
 
+
+test("the mirrored edge: optional copies across the rim, one ring on the smallest board", () => {
+  assert.equal(game.optionalDecor, "Mirrored edge");
+  for (const [size, , , rings] of BOARDS) {
+    const board = game.createBoard({ cells: size });
+    const decor = game.boardDecor(board);
+    assert.ok(decor.every((d) => d.optional));
+    const { copies } = decor.find((d) => d.copies);
+    assert.equal(Math.max(...copies.map((c) => c.ring)), rings);
+    assert.ok(decor.find((d) => d.segments).segments.length > 0);
+  }
+  assert.equal(BOARDS[0][3], 1);
+});

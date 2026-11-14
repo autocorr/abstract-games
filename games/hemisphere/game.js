@@ -37,12 +37,15 @@ const PLAYERS = {
   [BLUE]: { name: "Blue", fill: "#0072b2", mark: "#ffffff" },
 };
 const LOOP = "#f0e442";   // the winning loop's outline: Okabe-Ito yellow
+const RIM = "#3a3f4a";    // the rim line, in the cell outlines' colour (render.js's CELL_STROKE)
+const RIM_HALO = "#e4e1da";   // its halo, in the hexagons' colour
 
 // Achiral Goldberg polyhedra (only these have opposite cells to pair) with
-// an even number of cells on the half: [cells, m, n]. An odd half has cells
-// on the equator, and keeping one of each opposite pair of those adds a row
-// along half of the rim, which breaks the board's symmetry.
-const BOARDS = [[16, 1, 1], [46, 3, 0], [126, 5, 0]];
+// an even number of cells on the half: [cells, m, n, rings], where rings is
+// how many rings of cells across the rim the mirrored edge shows. An odd
+// half has cells on the equator, and keeping one of each opposite pair of
+// those adds a row along half of the rim, which breaks the board's symmetry.
+const BOARDS = [[16, 1, 1, 1], [46, 3, 0, 2], [126, 5, 0, 2]];
 
 // The colours are fixed: one scheme, a light stone board with the six
 // pentagons a shade darker.
@@ -51,8 +54,8 @@ const colorSchemes = {
 };
 
 function buildBoard({ cells }) {
-  const [, m, n] = BOARDS.find(([size]) => size === cells);
-  const board = hemiGoldbergBoard(m, n);
+  const [, m, n, copyRings] = BOARDS.find(([size]) => size === cells);
+  const board = hemiGoldbergBoard(m, n, { copyRings });
   // Every adjacency once, as flat arrays, for the full-board check.
   const eu = [], ev = [], et = [];
   board.neighbours.forEach((ns, a) => ns.forEach((b, t) => {
@@ -163,6 +166,16 @@ export default withSwap({
   colorSchemes,
 
   createBoard: cachedBoards((o) => String(o.cells), buildBoard),
+  // The mirrored edge (optional): faded copies of the cells across the rim
+  // drawn beyond it, where a path through the rim comes back in, and the
+  // rim outlined.
+  optionalDecor: "Mirrored edge",
+  boardDecor(board) {
+    return [
+      { copies: board.copies, opacity: 0.4, optional: true },
+      { segments: board.rim, stroke: RIM, halo: RIM_HALO, width: 0.12, optional: true },
+    ];
+  },
   initialState(board) {
     return {
       board,
