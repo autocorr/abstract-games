@@ -166,3 +166,18 @@ test("100 moves without a capture or pawn move draw", () => {
   game.applyMove(s, cellMove(s, "e1-e2"));
   assert.deepEqual(game.outcome(s), { winner: 0 });
 });
+
+test("castling is as in chess: not out of, through or into attack", () => {
+  const castles = (s) => game.legalMoves(s).some((m) => m.join() === cellMove(s, "e1-g1").join());
+  const setup = (extra) => {
+    const s = position({ e1: "wK", h1: "wR", a8: "bK", ...extra });
+    s.castling = 1;   // White's O-O
+    game.applyMove(s, "roll:3");
+    return s;
+  };
+  assert.ok(castles(setup({})));
+  assert.ok(!castles(setup({ e8: "bR" })));   // out of
+  assert.ok(!castles(setup({ f8: "bR" })));   // through
+  assert.ok(!castles(setup({ g8: "bR" })));   // into
+  assert.ok(castles(setup({ h8: "bR" })));    // the Rook may be attacked
+});

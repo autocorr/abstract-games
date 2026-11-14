@@ -15,6 +15,9 @@
 // least the mover's current roll saves the King, the capture is not made
 // and the mover's turn ends.
 //
+// Castling is as in chess: the King may not castle out of, through or into
+// a square the opponent attacks.
+//
 // En passant is open against a double step that was the last move of the
 // opponent's turn. The fifty-move rule counts single moves: 100 of them
 // without a capture or pawn move draw. A pass or saved capture counts as a
@@ -25,7 +28,7 @@ import { CHANCE, pickWeighted } from "../../common/engine.js";
 import { chessGame, PLAYERS, PROMOTE } from "../../common/chess/game.js";
 import { KING, QUEEN, ROOK, BISHOP, KNIGHT, pawn } from "../../common/chess/movement.js";
 import {
-  WHITE, BLACK, other, legalMoves, playMove, promotePending, notation, material, ownerOf, typeOf,
+  WHITE, BLACK, other, legalMoves, attacked, playMove, promotePending, notation, material, ownerOf, typeOf,
 } from "../../common/chess/rules.js";
 
 const SIDES = 6;
@@ -83,9 +86,20 @@ const lastOf = (a) => a[a.length - 1];
 // (roll again or stop), "remove" (after a bust), "save" (chance: the
 // defender's saving throw against s.attack).
 
+// Castling as in chess, though there is no check: not from, across or
+// onto an attacked square.
+function castleSafe(s, move, { castle }) {
+  if (!castle) return true;
+  const enemy = other(s.turn);
+  if (castle.pass.some((sq) => attacked(s, sq, enemy))) return false;   // pass includes the start
+  const after = base.clone(s);
+  playMove(after, move);
+  return !attacked(after, castle.kingTo, enemy);
+}
+
 function startMoves(s) {
   s.phase = "move";
-  s.moves = legalMoves(s, s.turn);
+  s.moves = legalMoves(s, s.turn, castleSafe);
   if (!s.moves.length) {
     s.clock++;   // a pass counts as a move for the fifty-move rule
     endTurn(s);
