@@ -13,10 +13,10 @@
 <body>
 
 <template id="rules">
-  <p><b>Goal.</b> Capture the opposing King. The pieces, moves and setup are those of chess, but the King is not royal: there is no check or checkmate, and a King may move into or stay under attack.</p>
-  <p><b>A turn.</b> Start your turn by rolling a die and moving a piece. Then you may roll again or end your turn. If the new roll is higher than your previous one, make another move, and you may roll again after it. If it is the same or lower, you bust: remove one of your own pieces from the board and your turn ends. After a 6 your turn ends, since no roll can beat it.</p>
-  <p><b>Saving throw.</b> When a move would capture the opposing King, its owner first rolls a saving throw. If it is equal to or higher than the mover's current roll, the King is saved: the move is not made and the mover's turn ends. Otherwise the capture is made and the mover wins. A capture on a roll of 1 can never succeed.</p>
-  <p><b>Other rules.</b> Castling and promotion (to Queen, Rook, Bishop or Knight) are as in chess: as there, the King may not castle while attacked, nor cross or land on an attacked square. En passant is possible against a double step that was the last move of the opponent's turn. Removing your own King after a bust loses. If you have no legal move when you must move (stalemate), you lose. The game is drawn after 100 moves in a row (counting every move of both players) without a capture or pawn move; a saved capture counts as a move. There is no draw by repetition.</p>
+  <p>Chess, with these changes.</p>
+  <p><b>Turns.</b> Roll a die, then move. You may then roll again: higher than your previous roll gives another move (and another chance to roll); equal or lower is a bust: remove one of your own pieces and your turn ends. A 6 ends your turn.</p>
+  <p><b>Kings.</b> There is no check or checkmate. Capture the opposing King to win, but its owner first rolls a saving throw: equal to or higher than your current roll saves it, and your turn ends without the capture. Removing your own King loses.</p>
+  <p><b>Other rules.</b> Having no legal move after a roll loses. En passant is only possible against the last move of the opponent's turn. The fifty-move rule counts every move by either player (100 in all); a saved capture counts as one. There is no draw by repetition.</p>
 </template>
 
 <script type="module">
