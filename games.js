@@ -120,6 +120,14 @@ export const games = [
     module: "games/grounded-chess/game.js",
   },
   {
+    id: "successive-chess",
+    title: "Successive Chess",
+    board: "Chessboard",
+    blurb: "Roll a die and move, then keep rolling for more moves while each roll beats the last. A roll that fails costs you a piece. There is no check: capture the King to win.",
+    path: "games/successive-chess/",
+    module: "games/successive-chess/game.js",
+  },
+  {
     id: "hemisphere",
     title: "Hemisphere",
     board: "Half of a Goldberg polyhedron",

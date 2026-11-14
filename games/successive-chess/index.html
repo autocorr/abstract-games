@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Successive Chess</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<link rel="icon" href="../../common/favicon.svg" type="image/svg+xml">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Capture the opposing King. The pieces, moves and setup are those of chess, but the King is not royal: there is no check or checkmate, a King may move into or stay under attack, and there is no stalemate.</p>
+  <p><b>A turn.</b> Start your turn by rolling a die and moving a piece. Then you may roll again or end your turn. If the new roll is higher than your previous one, make another move, and you may roll again after it. If it is the same or lower, you bust: remove one of your own pieces from the board and your turn ends. After a 6 your turn ends, since no roll can beat it.</p>
+  <p><b>Saving throw.</b> When a move would capture the opposing King, its owner first rolls a saving throw. If it is equal to or higher than the mover's current roll, the King is saved: the move is not made and the mover's turn ends. Otherwise the capture is made and the mover wins. A capture on a roll of 1 can never succeed.</p>
+  <p><b>Other rules.</b> Castling and promotion (to Queen, Rook, Bishop or Knight) are as in chess; with no check, a King may castle out of, through or into attack. En passant is possible against a double step that was the last move of the opponent's turn. Removing your own King after a bust loses. If you have no legal move, the rest of your turn is lost. The game is drawn after 100 moves in a row (counting every move of both players) without a capture or pawn move; a saved capture or a lost turn counts as a move. There is no draw by repetition.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
