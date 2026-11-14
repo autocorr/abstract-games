@@ -35,6 +35,7 @@ common/
     hex.js                  hex rhombus (Hex), hex-hex and triangle (Y) boards; rhombusSides and
                             rhombusFrame for goal edges
     cairo.js                Cairo pentagonal tiling patches
+    goldberg.js             Goldberg polyhedra, and hemi-Goldberg boards (projective plane)
   chess/                    chess-like games, generic over piece movement (see "Chess variants")
     movement.js             movement atoms (leap, ride, cannon), standard pieces, compiled tables
     rules.js                rules specs: move generation, attacks and check, castling, en passant,
@@ -97,6 +98,13 @@ Tiling generators live in `common/board/`:
 | `squareBoard({ cols, rows, adjacency, style, stars, grid, look })` | `{ col, row }`, row 0 = rank 1 at the bottom | `name` ("a1"), `dark` (a1 dark), `quad` (Dabbaba sub-grid 0-3), `edges` ("N"/"S"/"E"/"W") |
 | `rhombusBoard(n)`, `hexHexBoard(side)`, `triangleBoard(n)` | axial `{ q, r }`, pointy-top; a triangle adds `d`, the distances to its sides | `tri` (3-colouring), `edges` (rhombus "N"/"S"/"E"/"W"; hex-hex side 0-5; triangle "W"/"E"/"S"), `name` ("a1": column from q, row from r, top row 1) |
 | `cairoBoard(centres, { rotate })` | (none) | `tone` (pentagon orientation), `name` ("1".."n" in reading order) |
+| `hemiGoldbergBoard(m, n)` | `{ sphere }`, the centre on the unit sphere | `pentagon`, `name` ("1".."n" spiralling out from the centre) |
+
+A hemi-Goldberg board keeps one cell of each opposite pair of a centrally
+symmetric Goldberg polyhedron (GP(m, 0) or GP(m, m)), a tiling of the
+projective plane. It is drawn as the northern hemisphere in an equal-area
+projection, its rim glued to itself; `board.twists[id]` parallels
+`board.neighbours[id]` with 1 for an adjacency that crosses the rim.
 
 Cell names (`tags.name`) are what the move log shows, so every generator
 gives one; the conformance tests check that they are unique.
@@ -145,7 +153,8 @@ export default {
   options: {                        // the shell builds the Setup section from this
     size: { label: "Board size", choices: [48, 160], default: 48 },
   },
-  colorSchemes: {                   // optional; first entry is the default
+  colorSchemes: {                   // optional; first entry is the default; a single entry
+                                    //   fixes the colours (Setup offers no choice)
     sand: { name: "Sand", cellFill: (cell) => "#ffd890" },
     // optional marbles: { W: { name, fill } } recolours the bag panels
     // optional players: { 1: { name, fill }, ... } renames and recolours the
@@ -209,9 +218,10 @@ export default {
                                     //   label on it or at (labelX, labelY); stroke: its outline
                                     //   width; tile: true shades the whole cell in the piece's
                                     //   colour (e.g. a neutral piece with a fill)
-  markers(state, move, info),       // -> [{ id, kind, color?, y? }] for the last move. Over pieces:
-                                    //   "ring" | "dot" | "target" (y: cells below the centre,
-                                    //   level on screen); under pieces: "shade" (hatched
+  markers(state, move, info),       // -> [{ id, kind, color?, y?, size? }] for the last move. Over
+                                    //   pieces: "ring" (size: diameter in cells, default 0.52)
+                                    //   | "dot" | "target" (y: cells below the centre, level
+                                    //   on screen); under pieces: "shade" (hatched
                                     //   cell), "square" (cell outline), "tint" (translucent
                                     //   fill, by default Lichess's last-move green), "check"
                                     //   (Lichess's red glow over the cell)

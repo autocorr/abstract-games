@@ -415,14 +415,15 @@ export function createRenderer(svg) {
   //           stroke: its outline width; tile: true fills the whole cell
   //           with the piece's colour, under the highlights
   // players:  game.players ({ [player]: { fill, mark } })
-  // markers:  [{ id, kind, color?, y? }]. Over the pieces: "ring" (colour
-  //           follows the piece), "dot", and "target" (the highlight dot of a
-  //           selectable cell, y cells below the centre, e.g. clear of a
-  //           label). Under the pieces: "shade" (hatched cell),
-  //           "square" (cell outline, default highlight colour), "tint"
-  //           (cell filled with a translucent colour, by default Lichess's
-  //           last-move green) and "check" (red glow over the cell, as
-  //           Lichess shows a King in check).
+  // markers:  [{ id, kind, color?, y?, size? }]. Over the pieces: "ring"
+  //           (colour follows the piece; size: its diameter in cells,
+  //           default 0.52, the stroke scaled to match), "dot", and "target"
+  //           (the highlight dot of a selectable cell, y cells below the
+  //           centre, e.g. clear of a label). Under the pieces: "shade"
+  //           (hatched cell), "square" (cell outline, default highlight
+  //           colour), "tint" (cell filled with a translucent colour, by
+  //           default Lichess's last-move green) and "check" (red glow over
+  //           the cell, as Lichess shows a King in check).
   // selected: cell ids in the current partial move
   // targets:  cell ids that would extend the partial move (Lichess boards:
   //           green dots, or corners on an occupied cell)
@@ -472,10 +473,10 @@ export function createRenderer(svg) {
       if (m.kind === "dot") {
         layers.markers.appendChild(svgEl("circle", { cx: c.x, cy: c.y, r: 0.14 * u, fill: MARKER_DOT }));
       } else if (m.kind === "ring" && owner.has(m.id)) {
-        const spec = owner.get(m.id);
+        const spec = owner.get(m.id), k = (m.size || 0.52) / 0.52;
         layers.markers.appendChild(svgEl("circle", {
-          cx: c.x, cy: c.y, r: 0.26 * u, fill: "none",
-          stroke: spec.mark || "#fff", "stroke-width": 0.06 * u,
+          cx: c.x, cy: c.y, r: 0.26 * k * u, fill: "none",
+          stroke: spec.mark || "#fff", "stroke-width": 0.06 * k * u,
         }));
       }
     }
