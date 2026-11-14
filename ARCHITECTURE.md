@@ -153,7 +153,8 @@ export default {
   options: {                        // the shell builds the Setup section from this
     size: { label: "Board size", choices: [48, 160], default: 48 },
   },
-  colorSchemes: {                   // optional; first entry is the default
+  colorSchemes: {                   // optional; first entry is the default; a single entry
+                                    //   fixes the colours (Setup offers no choice)
     sand: { name: "Sand", cellFill: (cell) => "#ffd890" },
     // optional marbles: { W: { name, fill } } recolours the bag panels
     // optional players: { 1: { name, fill }, ... } renames and recolours the
@@ -217,9 +218,10 @@ export default {
                                     //   label on it or at (labelX, labelY); stroke: its outline
                                     //   width; tile: true shades the whole cell in the piece's
                                     //   colour (e.g. a neutral piece with a fill)
-  markers(state, move, info),       // -> [{ id, kind, color?, y? }] for the last move. Over pieces:
-                                    //   "ring" | "dot" | "target" (y: cells below the centre,
-                                    //   level on screen); under pieces: "shade" (hatched
+  markers(state, move, info),       // -> [{ id, kind, color?, y?, size? }] for the last move. Over
+                                    //   pieces: "ring" (size: diameter in cells, default 0.52)
+                                    //   | "dot" | "target" (y: cells below the centre, level
+                                    //   on screen); under pieces: "shade" (hatched
                                     //   cell), "square" (cell outline), "tint" (translucent
                                     //   fill, by default Lichess's last-move green), "check"
                                     //   (Lichess's red glow over the cell)

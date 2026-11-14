@@ -94,7 +94,8 @@ export function buildSetup(game, settings, { onPlayer, onAiTime, onOption, onSch
     optionControls[key] = row.control;
     node.append(row.node);
   }
-  if (game.colorSchemes) {
+  // A single scheme fixes the game's colours: nothing to choose.
+  if (game.colorSchemes && Object.keys(game.colorSchemes).length > 1) {
     const choices = Object.entries(game.colorSchemes).map(([value, s]) => ({ value, label: s.name }));
     node.append(choiceRow("Colors", choices, settings.scheme, onScheme).node);
   }
