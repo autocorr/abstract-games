@@ -28,7 +28,7 @@
 import { hexHexBoard } from "../../common/board/hex.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
 import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
-import { withSwap } from "../../common/swap.js";
+import { withSwap, swapStones } from "../../common/swap.js";
 import { analyzeGroups as analyze, cascadeWinner, decider as deciderFor, largestGroupsHooks } from "../../common/largest-groups.js";
 
 const BLACK = 1, WHITE = 2;
@@ -170,8 +170,7 @@ export default withSwap({
   // The swap: every stone changes colour (the board is symmetric), and the
   // other player rolls next.
   swapColours(s) {
-    for (let id = 0; id < s.cells.length; id++) if (s.cells[id]) s.cells[id] = 3 - s.cells[id];
-    s.turn = 3 - s.turn;
+    swapStones(s);
     s.phase = "roll";
   },
   outcome(s) {

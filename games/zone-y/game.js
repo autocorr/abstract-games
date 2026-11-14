@@ -24,7 +24,7 @@
 import { triangleBoard } from "../../common/board/hex.js";
 import { goalMasks, connectsSides, components } from "../../common/board/graph.js";
 import { cachedBoards } from "../../common/engine.js";
-import { withSwap } from "../../common/swap.js";
+import { withSwap, swapStones } from "../../common/swap.js";
 
 const BLACK = 1, WHITE = 2;
 const SIDES = ["W", "E", "S"];
@@ -147,10 +147,7 @@ export default withSwap({
   },
   // The board is symmetric and both players share the goal: recolour the
   // stones and hand the move over.
-  swapColours(s) {
-    for (let id = 0; id < s.cells.length; id++) if (s.cells[id]) s.cells[id] = 3 - s.cells[id];
-    s.turn = 3 - s.turn;
-  },
+  swapColours: swapStones,
   outcome(s) {
     return s.winner ? { winner: s.winner } : null;
   },

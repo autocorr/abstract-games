@@ -48,7 +48,7 @@
 import { hexHexBoard, DIRS6 } from "../../common/board/hex.js";
 import { ray } from "../../common/board/graph.js";
 import { cachedBoards } from "../../common/engine.js";
-import { withSwap } from "../../common/swap.js";
+import { withSwap, swapStones } from "../../common/swap.js";
 import { shuffle } from "../../common/rng.js";
 
 const BLACK = 1, WHITE = 2;
@@ -382,9 +382,8 @@ export default withSwap({
   },
   applyMove: apply,
   swapColours(s) {
-    for (let id = 0; id < s.cells.length; id++) if (s.cells[id]) s.cells[id] = 3 - s.cells[id];
+    swapStones(s);
     for (const claim of s.claims) claim.player = 3 - claim.player;
-    s.turn = 3 - s.turn;
   },
   outcome(s) {
     return s.over ? { winner: s.winner } : null;

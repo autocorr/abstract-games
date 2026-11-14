@@ -24,7 +24,8 @@ common/
   rng.js                    seedable RNG for reproducible playouts and tests
   bag.js                    bags of coloured marbles: draws as chance plies, refills, bagPanel()
   dice.js                   dice: rolls as chance plies, dicePanel()
-  swap.js                   withSwap(game): the swap (pie) rule for any two-player game
+  swap.js                   withSwap(game): the swap (pie) rule for any two-player game;
+                            swapStones() for games that only recolour stones
   largest-groups.js         group sizes and the "largest groups cascading" win condition, with
                             piecesOf / scoreSummary / outcomeLines hooks (Nucleation, Coagulate)
   board/
@@ -310,6 +311,11 @@ across the diagonal, so N-S edges become W-E). After White swaps on move 2,
 the opening stone is White's and Black moves next. This is the same game as
 the players trading sides, but each player keeps their colour, and so do
 their human/AI settings and the AI's sense of who wins.
+
+`swapStones(state)` from `swap.js` is the `swapColours` of a game whose
+`state.cells` holds player numbers and `state.turn` the player to move, on
+a board that needs no reflection (Zone Y). A game with more owned by a
+colour calls it and recolours the rest (Cliques' claims).
 
 By default the string move `"swap"` is offered once, at player 2's first
 decision in their own turn (`currentPlayer`, so not when player 2 acts
