@@ -336,6 +336,27 @@ function playout(s, rng) {
   return s.winner;
 }
 
+// Whether to roll again, for the AI: MCTS judges it badly, as after
+// rolling the mover's next move is a decision in its tree, whose
+// exploration of poor moves drags the value down, but after stopping the
+// opponent's is (see ARCHITECTURE.md, "AI"). Instead, alternate playouts
+// after each choice for the time allowed and take the better.
+const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+
+function aiMove(s, { timeMs = 1000, iterations = Infinity, rng = Math.random } = {}) {
+  if (s.phase !== "decide") return null;
+  const choices = [AGAIN, STOP], wins = [0, 0], runs = [0, 0];
+  const deadline = now() + Math.max(0, timeMs);
+  for (let n = 0; n < 2 || (n < 2 * iterations && now() < deadline); n++) {
+    const i = n % 2, t = base.clone(s);
+    applyMove(t, choices[i]);
+    const winner = playout(t, rng);
+    wins[i] += winner === s.turn ? 1 : winner === 0 ? 0.5 : 0;
+    runs[i]++;
+  }
+  return wins[0] / runs[0] > wins[1] / runs[1] ? AGAIN : STOP;
+}
+
 // ---- the game ----
 
 const game = {
@@ -369,6 +390,7 @@ const game = {
   legalMoves: legal,
   applyMove,
   playout,
+  aiMove,
 
   moveText(s, move, info, scheme) {
     switch (s.phase) {

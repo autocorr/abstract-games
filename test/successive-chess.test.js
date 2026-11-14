@@ -4,6 +4,7 @@ import game, { internals } from "../games/successive-chess/game.js";
 import { newGame, CHANCE } from "../common/engine.js";
 import { pieceCode, WHITE, BLACK } from "../common/chess/rules.js";
 import { describeMove } from "../common/log.js";
+import { seededRng } from "../common/rng.js";
 
 const { AGAIN, STOP, FIFTY } = internals;
 const sq = (board, name) => board.cells.find((c) => c.tags.name === name).id;
@@ -205,4 +206,16 @@ test("the dice panel clears a player's last turn when their next turn starts", (
   game.applyMove(s, STOP);
   assert.deepEqual(game.chanceView(s)[0].dice, [null]);   // White to roll
   assert.deepEqual(game.chanceView(s)[1].dice, [2]);
+});
+
+test("the AI rolls again after a low roll when a free piece is there to take", () => {
+  const s = newGame(game, {});
+  for (const [name, code] of Object.entries({ g1: null, f3: "wN", e2: null, e4: "wP", g8: null, h4: "bN" })) {
+    s.cells[sq(s.board, name)] = code ? piece(s, code[0] === "w" ? WHITE : BLACK, code.slice(1)) : 0;
+  }
+  s.phase = "decide";
+  s.die = 1;
+  assert.equal(game.aiMove(s, { timeMs: 60000, iterations: 3000, rng: seededRng(1) }), AGAIN);
+  s.phase = "move";
+  assert.equal(game.aiMove(s, { timeMs: 0, iterations: 10 }), null);   // MCTS decides moves
 });

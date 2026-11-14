@@ -454,7 +454,10 @@ search runs on the main thread instead. A game
 can speed up rollouts by providing `playout(state, rng)`, and may make
 the AI's choice itself at some positions with `aiMove(state, { timeMs,
 iterations, rng })` (null to search), within the same time or iteration
-budget.
+budget. Successive Chess uses it for whether to roll again: MCTS judges it
+badly, because after rolling the mover's next move is a decision in the
+tree, whose exploration of poor moves drags its value down, but after
+stopping it is the opponent's.
 
 ## Chess variants
 
