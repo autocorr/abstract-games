@@ -192,3 +192,14 @@ test("stalemate loses: no legal move after a roll", () => {
   assert.deepEqual(game.legalMoves(s), []);
   assert.deepEqual(game.outcomeLines(s, game.outcome(s), null), ["White has no legal move (stalemate loses)."]);
 });
+
+test("the dice panel clears a player's last turn when their next turn starts", () => {
+  const s = newGame(game, {});
+  game.applyMove(s, "roll:6");
+  game.applyMove(s, cellMove(s, "e2-e4"));
+  game.applyMove(s, "roll:2");
+  game.applyMove(s, cellMove(s, "e7-e5"));
+  game.applyMove(s, STOP);
+  assert.deepEqual(game.chanceView(s)[0].dice, [null]);   // White to roll
+  assert.deepEqual(game.chanceView(s)[1].dice, [2]);
+});

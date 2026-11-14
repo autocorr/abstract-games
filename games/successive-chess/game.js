@@ -364,8 +364,9 @@ const game = {
     const panels = [WHITE, BLACK].map((p) => {
       const rolls = s.rolls[p];
       const rolling = live && s.turn === p && s.phase === "roll";
-      const dice = rolling ? [...rolls, null] : rolls.length ? rolls : [null];
-      const bust = rolls.length > 1 && lastOf(rolls) <= rolls[rolls.length - 2];
+      // A new turn's first roll clears the last turn's.
+      const dice = rolling ? (s.die ? [...rolls, null] : [null]) : rolls.length ? rolls : [null];
+      const bust = !(rolling && !s.die) && rolls.length > 1 && lastOf(rolls) <= rolls[rolls.length - 2];
       return dicePanel(dice, { title: `${PLAYERS[p].name}'s rolls`, owner: p, active: rolling, result: bust ? "Bust" : null });
     });
     if (s.phase === "save" || s.saveRoll) {
