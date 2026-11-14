@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hemisphere</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<link rel="icon" href="../../common/favicon.svg" type="image/svg+xml">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Goal.</b> Make a loop of your stones that passes through the rim of the board an odd number of times. Such a loop cannot be shrunk to a point; a loop that stays inside the rim does not count.</p>
+  <p><b>Board.</b> The board is the projective plane, drawn as a disk: half of a Goldberg polyhedron (a ball of hexagons and twelve pentagons), each cell standing for itself and the cell opposite it. The rim of the disk is glued to itself. A cell on the rim also touches the cells across from it on the far side of the rim, so a path that leaves through the rim comes back in from the opposite side, mirrored. The six shaded cells are the pentagons; they play like any other cell.</p>
+  <p><b>Turn.</b> Red moves first. Players take turns placing a stone of their color on an empty cell.</p>
+  <p><b>Swap.</b> After Red's first stone, Blue may swap instead of playing: Red's stone becomes Blue's, and Red moves next.</p>
+  <p><b>End.</b> The first player to make such a loop wins, and the loop is outlined. Any two of these loops cross, so only one player can make one, and the game cannot end in a draw: a full board always holds exactly one.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
