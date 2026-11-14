@@ -106,6 +106,10 @@ symmetric Goldberg polyhedron (GP(m, 0) or GP(m, m)), a tiling of the
 projective plane. It is drawn as the northern hemisphere in an equal-area
 projection, its rim glued to itself; `board.twists[id]` parallels
 `board.neighbours[id]` with 1 for an adjacency that crosses the rim.
+`board.rim` is the rim as line segments, and `board.copies` the cells just
+beyond it (`{ poly, x, y, of, ring }`: drawn where they lie, each standing for
+the board cell `of` on the far side, `ring` cells out), for drawing the
+far side of the rim as `copies` decor.
 
 Cell names (`tags.name`) are what the move log shows, so every generator
 gives one; the conformance tests check that they are unique.
@@ -194,6 +198,9 @@ export default {
                                     //   draws an edge line outside the cells instead;
                                     //   { polygons, fill } are shapes under the cells, e.g. a
                                     //   frame, widening the view with extendView(board, points);
+                                    //   { copies: [{ poly, of }], opacity? } are faded,
+                                    //   unclickable copies of cells drawn elsewhere, showing
+                                    //   their tile pieces and widening the view;
                                     //   optional: true only with optionalDecor shown)
   optionalDecor,                    // e.g. "Corner marks": Setup offers Show / Hide (saved,
                                     //   no new game; Hide by default) for optional decor
