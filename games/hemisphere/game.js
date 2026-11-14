@@ -8,8 +8,8 @@
 // A player wins with a loop of their stones that cannot be shrunk to a
 // point: one that passes through the rim an odd number of times. Such a loop
 // is one-sided (going round it once reverses left and right), and any two
-// of them cross, so only one player can make one. Every cell has three
-// corners, so stones cannot cross at a corner, and a full board holds
+// of them cross, so only one player can make one. Three cells meet at
+// every corner, so stones cannot cross at a corner, and a full board holds
 // exactly one: there are no draws. Stones are never removed, so the first
 // player to make a loop is the one who has it on the full board (used by
 // the playouts).
@@ -24,11 +24,13 @@
 // Red's opening instead.
 
 import { hemiGoldbergBoard } from "../../common/board/goldberg.js";
+import { inradius } from "../../common/board/graph.js";
 import { cachedBoards } from "../../common/engine.js";
-import { withSwap } from "../../common/swap.js";
+import { withSwap, swapStones } from "../../common/swap.js";
 
 const RED = 1, BLUE = 2;
 const RING = 0.52;        // the last-move ring's width, of the circle inscribed in its cell
+                          //   (render.js's RING_SIZE; rules modules don't import the renderer)
 // Okabe-Ito vermilion and blue, called Red and Blue as in Hex.
 const PLAYERS = {
   [RED]: { name: "Red", fill: "#d55e00", mark: "#ffffff" },
@@ -61,18 +63,6 @@ function buildBoard({ cells }) {
   // a regular hexagon.
   board.ringSize = board.cells.map((c) => (RING * 2 * inradius(c)) / board.unit);
   return board;
-}
-
-// Distance from a cell's centre to the nearest point of its outline.
-function inradius({ x, y, poly }) {
-  let best = Infinity;
-  poly.forEach(([ax, ay], i) => {
-    const [bx, by] = poly[(i + 1) % poly.length];
-    const dx = bx - ax, dy = by - ay;
-    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)));
-    best = Math.min(best, Math.hypot(ax + t * dx - x, ay + t * dy - y));
-  });
-  return best;
 }
 
 // ---- parity union-find ------------------------------------------------------
@@ -149,9 +139,7 @@ function winningLoop(board, cells, player) {
 function place(s, id) {
   const { board, cells, parent, parity } = s;
   const player = s.turn;
-  cells[id] = player;
-  parent[id] = id;
-  parity[id] = 0;
+  cells[id] = player;   // parent[id] and parity[id] are still a group of one
   s.last = id;
   const ns = board.neighbours[id], ts = board.twists[id];
   let loop = false;
@@ -202,10 +190,7 @@ export default withSwap({
   },
   // Both players share the goal and the board: recolour the stones and hand
   // the move over. The groups stay as they are.
-  swapColours(s) {
-    for (let id = 0; id < s.cells.length; id++) if (s.cells[id]) s.cells[id] = 3 - s.cells[id];
-    s.turn = 3 - s.turn;
-  },
+  swapColours: swapStones,
   outcome(s) {
     return s.winner ? { winner: s.winner } : null;
   },
