@@ -26,7 +26,6 @@ const scale = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const unit = (a) => scale(a, 1 / Math.hypot(...a));
-const pointKey3 = (p) => p.map((v) => Math.round(v * 1e6) + 0).join(",");
 
 // An icosahedron with a vertex at each pole: the upper ring at longitudes
 // 0, 72, ... and the lower ring halfway between them.
@@ -57,7 +56,7 @@ export function goldbergSphere(m, n) {
   const b = [m + n / 2, n * s3], c = [b[0] / 2 - b[1] * s3, b[0] * s3 + b[1] / 2];
   const det = b[0] * c[1] - b[1] * c[0];
   const span = m + n;
-  const centres = [], index = new Map();
+  const centres = [];
   const pentagon = new Set();
   for (const [ia, ib, ic] of faces) {
     const [A, B, C] = [verts[ia], verts[ib], verts[ic]];
@@ -68,9 +67,10 @@ export function goldbergSphere(m, n) {
         const u = (x * c[1] - y * c[0]) / det, v = (b[0] * y - b[1] * x) / det, w = 1 - u - v;
         if (u < -EPS || v < -EPS || w < -EPS) continue;
         const p = unit(add(add(scale(A, w), scale(B, u)), scale(C, v)));
-        const key = pointKey3(p);
-        if (index.has(key)) continue;
-        index.set(key, centres.length);
+        // A point on a face's edge or corner is shared with the neighbouring
+        // faces: keep the first copy, matched by direction (rounded keys
+        // could split it over float noise).
+        if (Math.min(u, v, w) < EPS && centres.some((q) => dot(p, q) > 1 - EPS)) continue;
         if (Math.max(u, v, w) > 1 - EPS) pentagon.add(centres.length);
         centres.push(p);
       }

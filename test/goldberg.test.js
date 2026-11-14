@@ -17,7 +17,8 @@ test("Goldberg spheres: 12 pentagons, the rest hexagons, 10T + 2 cells", () => {
 });
 
 test("hemi-Goldberg boards: half the cells, six pentagons, sound adjacency", () => {
-  for (const [m, n, size, twisted] of [[1, 1, 16, 10], [3, 0, 46, 15], [5, 0, 126, 25], [3, 3, 136, 30]]) {
+  // GP(2, 0) has cells on the equator, one of each opposite pair kept.
+  for (const [m, n, size, twisted] of [[2, 0, 21, 15], [1, 1, 16, 10], [3, 0, 46, 15], [5, 0, 126, 25], [3, 3, 136, 30]]) {
     const b = hemiGoldbergBoard(m, n);
     assert.equal(b.size, size);
     assert.deepEqual(validateBoard(b), []);

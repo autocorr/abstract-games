@@ -26,6 +26,15 @@ import { CHANCE } from "./engine.js";
 
 export const SWAP = "swap";
 
+// swapColours for the common case: state.cells holds player numbers (0 for
+// empty), state.turn the player to move, and the board needs no reflection.
+// Recolours the stones and hands the move over; a game with more owned by a
+// colour (claims, ...) calls it and recolours the rest itself.
+export function swapStones(s) {
+  for (let id = 0; id < s.cells.length; id++) if (s.cells[id]) s.cells[id] = 3 - s.cells[id];
+  s.turn = 3 - s.turn;
+}
+
 // Player 2 deciding in their own turn: game.currentPlayer, when defined,
 // names the turn's owner, which may differ from the player deciding now
 // (e.g. an opponent resolving an event mid-turn).
