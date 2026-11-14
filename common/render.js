@@ -29,7 +29,8 @@ const DEFAULT_CELL_FILL = "#ffd890";
 const CELL_STROKE = "#3a3f4a";
 const HIGHLIGHT = "#ffd54f";
 const MARKER_DOT = "#969ca6";
-const LABEL_PX = 40;   // font size piece labels are set at before scaling (see drawPieces)
+const RING_SIZE = 0.52;   // a "ring" marker's default diameter, in cells
+const LABEL_PX = 40;  // font size piece labels are set at before scaling (see drawPieces)
 const LAST_TINT = "rgba(155, 199, 0, 0.41)";   // Lichess's last-move green
 // Lichess's selected square and move-destination greens.
 const LICHESS_SELECTED = "rgba(20, 85, 30, 0.5)";
@@ -473,10 +474,10 @@ export function createRenderer(svg) {
       if (m.kind === "dot") {
         layers.markers.appendChild(svgEl("circle", { cx: c.x, cy: c.y, r: 0.14 * u, fill: MARKER_DOT }));
       } else if (m.kind === "ring" && owner.has(m.id)) {
-        const spec = owner.get(m.id), k = (m.size || 0.52) / 0.52;
+        const spec = owner.get(m.id), size = m.size || RING_SIZE;
         layers.markers.appendChild(svgEl("circle", {
-          cx: c.x, cy: c.y, r: 0.26 * k * u, fill: "none",
-          stroke: spec.mark || "#fff", "stroke-width": 0.06 * k * u,
+          cx: c.x, cy: c.y, r: (size / 2) * u, fill: "none",
+          stroke: spec.mark || "#fff", "stroke-width": ((0.06 * size) / RING_SIZE) * u,
         }));
       }
     }

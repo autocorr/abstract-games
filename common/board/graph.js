@@ -117,6 +117,19 @@ export function fillsRectangle(board) {
   return Math.abs(area) / 2 >= 0.98 * (maxX - minX) * (maxY - minY);
 }
 
+// Distance from a cell's centre to the nearest point of its outline: the
+// radius of the largest circle about the centre that fits in the cell.
+export function inradius({ x, y, poly }) {
+  let best = Infinity;
+  poly.forEach(([ax, ay], i) => {
+    const [bx, by] = poly[(i + 1) % poly.length];
+    const dx = bx - ax, dy = by - ay;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)));
+    best = Math.min(best, Math.hypot(ax + t * dx - x, ay + t * dy - y));
+  });
+  return best;
+}
+
 // "a1"-style cell name for grid generators: file letter from `col`, rank
 // number from `row` (both from 0).
 export function gridName(col, row) {

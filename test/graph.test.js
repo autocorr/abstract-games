@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { makeBoard, components, validateBoard, rotatePoint } from "../common/board/graph.js";
+import { makeBoard, components, validateBoard, rotatePoint, inradius } from "../common/board/graph.js";
 
 // A w x h block of unit squares centred on integer points.
 function squares(w, h) {
@@ -62,4 +62,14 @@ test("validateBoard reports asymmetric adjacency", () => {
 test("rotatePoint rotates counter-clockwise in standard axes", () => {
   const [x, y] = rotatePoint([1, 0], 90);
   assert.ok(Math.abs(x) < 1e-12 && Math.abs(y - 1) < 1e-12);
+});
+
+test("inradius is the distance to the nearest side", () => {
+  const [square] = makeBoard(squares(1, 1)).cells;
+  assert.ok(Math.abs(inradius(square) - 0.5) < 1e-12);
+  // Off-centre: the nearest side is closer.
+  assert.ok(Math.abs(inradius({ ...square, x: square.x + 0.2 }) - 0.3) < 1e-12);
+  // A regular hexagon of circumradius 1: sqrt(3) / 2.
+  const hex = Array.from({ length: 6 }, (_, k) => [Math.cos((k * Math.PI) / 3), Math.sin((k * Math.PI) / 3)]);
+  assert.ok(Math.abs(inradius({ x: 0, y: 0, poly: hex }) - Math.sqrt(3) / 2) < 1e-12);
 });
