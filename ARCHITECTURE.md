@@ -240,6 +240,9 @@ export default {
   scoreSummary(state, player, scheme), // -> { main, sub, title } for the turn panel
   outcomeLines(state, outcome, scheme), // -> HTML lines shown under the game-over verdict
   playout(state, rng),              // faster rollout for MCTS; returns a winner
+  aiMove(state, { timeMs, iterations, rng }), // the AI's move where the game decides
+                                    //   it itself (e.g. a choice MCTS judges badly), or
+                                    //   null to search as usual
 };
 ```
 
@@ -448,7 +451,10 @@ a module Web Worker (`common/ai/worker.js`) that imports the game from
 `game.url`, replays the move list and searches for the requested time
 (`searchMove()` in `mcts.js`). If a worker cannot be created the same
 search runs on the main thread instead. A game
-can speed up rollouts by providing `playout(state, rng)`.
+can speed up rollouts by providing `playout(state, rng)`, and may make
+the AI's choice itself at some positions with `aiMove(state, { timeMs,
+iterations, rng })` (null to search), within the same time or iteration
+budget.
 
 ## Chess variants
 

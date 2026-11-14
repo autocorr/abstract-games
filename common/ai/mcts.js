@@ -101,9 +101,16 @@ function backpropagate(node, winner) {
 // or null if the game is already over or `state` is a chance ply. Stops after `timeMs` milliseconds or
 // `iterations` iterations, whichever comes first; always runs at least one
 // iteration so a legal move is returned even with zero time.
+//
+// A game may decide some positions itself: game.aiMove(state, { timeMs,
+// iterations, rng }) returns a move, or null to search as usual.
 export function mcts(game, state, { timeMs = 1000, iterations = Infinity, c = Math.SQRT2, rng = Math.random } = {}) {
   const root = makeNode(game, game.clone(state), null, null, 0);
   if (root.terminal !== null || root.toMove === CHANCE) return null;
+  if (game.aiMove) {
+    const move = game.aiMove(state, { timeMs, iterations, rng });
+    if (move != null) return move;
+  }
   const deadline = now() + Math.max(0, timeMs);
   let n = 0;
   do {
