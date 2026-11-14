@@ -35,6 +35,7 @@ common/
     hex.js                  hex rhombus (Hex), hex-hex and triangle (Y) boards; rhombusSides and
                             rhombusFrame for goal edges
     cairo.js                Cairo pentagonal tiling patches
+    goldberg.js             Goldberg polyhedra, and hemi-Goldberg boards (projective plane)
   chess/                    chess-like games, generic over piece movement (see "Chess variants")
     movement.js             movement atoms (leap, ride, cannon), standard pieces, compiled tables
     rules.js                rules specs: move generation, attacks and check, castling, en passant,
@@ -97,6 +98,13 @@ Tiling generators live in `common/board/`:
 | `squareBoard({ cols, rows, adjacency, style, stars, grid, look })` | `{ col, row }`, row 0 = rank 1 at the bottom | `name` ("a1"), `dark` (a1 dark), `quad` (Dabbaba sub-grid 0-3), `edges` ("N"/"S"/"E"/"W") |
 | `rhombusBoard(n)`, `hexHexBoard(side)`, `triangleBoard(n)` | axial `{ q, r }`, pointy-top; a triangle adds `d`, the distances to its sides | `tri` (3-colouring), `edges` (rhombus "N"/"S"/"E"/"W"; hex-hex side 0-5; triangle "W"/"E"/"S"), `name` ("a1": column from q, row from r, top row 1) |
 | `cairoBoard(centres, { rotate })` | (none) | `tone` (pentagon orientation), `name` ("1".."n" in reading order) |
+| `hemiGoldbergBoard(m, n)` | `{ sphere }`, the centre on the unit sphere | `pentagon`, `name` ("1".."n" spiralling out from the centre) |
+
+A hemi-Goldberg board keeps one cell of each opposite pair of a centrally
+symmetric Goldberg polyhedron (GP(m, 0) or GP(m, m)), a tiling of the
+projective plane. It is drawn as the northern hemisphere in an equal-area
+projection, its rim glued to itself; `board.twists[id]` parallels
+`board.neighbours[id]` with 1 for an adjacency that crosses the rim.
 
 Cell names (`tags.name`) are what the move log shows, so every generator
 gives one; the conformance tests check that they are unique.
