@@ -3,7 +3,7 @@
 // (board plus a gutter of sections), rendering, move input, AI players,
 // history, undo and the URL hash.
 
-import { createRenderer, rotatedViewBox, viewBoxAspect } from "./render.js";
+import { createRenderer, viewBoxAspect } from "./render.js";
 import { fillsRectangle } from "./board/graph.js";
 import { AIPlayer } from "./ai/player.js";
 import { renderChance } from "./chance-view.js";
@@ -564,14 +564,14 @@ export function mount(game, { root = document.body } = {}) {
     if (shown.length) {
       const gap = px(getComputedStyle(ui.boardCol), "rowGap");
       for (const n of shown) availH -= gap + px(getComputedStyle(n), "paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth");
-      handCells = shown.length * board.unit / Number(rotatedViewBox(board, renderer.rotation).split(" ")[2]);
+      handCells = shown.length * board.unit / Number(renderer.viewBoxAt(renderer.rotation).split(" ")[2]);
     }
     if (availW <= 0 || availH <= 0) return;
 
     // Turn a rotatable board if that makes it clearly bigger in the space available.
     if (game.rotatable) {
       const scale = (r) => {
-        const [, , w, h] = rotatedViewBox(board, r).split(" ").map(Number);
+        const [, , w, h] = renderer.viewBoxAt(r).split(" ").map(Number);
         return Math.min(availW / w, availH / h);
       };
       const turn = typeof game.rotatable === "number" ? game.rotatable : 90;
@@ -583,7 +583,7 @@ export function mount(game, { root = document.body } = {}) {
       }
     }
 
-    const aspect = viewBoxAspect(rotatedViewBox(board, renderer.rotation));
+    const aspect = viewBoxAspect(renderer.viewBoxAt(renderer.rotation));
     const inner = Math.floor(Math.min(availW, availH / (1 / aspect + handCells)));
     const width = inner + chromeX;
     if (width === lastBoardMax) return;

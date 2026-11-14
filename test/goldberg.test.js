@@ -50,3 +50,27 @@ test("hemi-Goldberg boards: twisted adjacencies join cells across the rim", () =
 test("only centrally symmetric Goldberg polyhedra make hemi-boards", () => {
   assert.throws(() => hemiGoldbergBoard(2, 1), /not centrally symmetric/);
 });
+
+test("hemi-Goldberg boards: the rim and the copies of cells beyond it", () => {
+  for (const [m, n, ring1] of [[1, 1, 10], [3, 0, 15], [5, 0, 25]]) {
+    const b = hemiGoldbergBoard(m, n);
+    // The rim runs along the circle |p| = 1, through the edges of the cells
+    // with a twisted adjacency.
+    assert.ok(b.rim.length > 0);
+    for (const seg of b.rim) for (const [x, y] of seg) assert.ok(Math.abs(Math.hypot(x, y) - 1) < 0.15);
+    const crossing = b.twists.flat().filter(Boolean).length;
+    assert.equal(b.rim.length, crossing * 4, "four segments per edge across the rim");
+    // Copies lie beyond the rim, ring by ring, each standing for a board cell
+    // at the rim (for the first ring) and opposite where it is drawn.
+    assert.equal(b.copies.filter((c) => c.ring === 1).length, ring1);
+    assert.ok(b.copies.some((c) => c.ring === 2) && b.copies.every((c) => c.ring <= 2));
+    for (const c of b.copies) {
+      assert.ok(Math.hypot(c.x, c.y) > 1, "beyond the rim");
+      const cell = b.cells[c.of];
+      assert.ok(c.x * cell.x + c.y * cell.y < 0, "on the far side from its cell");
+      if (c.ring === 1) assert.ok(b.twists[c.of].includes(1), "a cell at the rim");
+      assert.equal(c.poly.length, cell.poly.length);
+    }
+  }
+  assert.equal(hemiGoldbergBoard(3, 0, { copyRings: 1 }).copies.length, 15);
+});

@@ -29,3 +29,10 @@ test("rotatedViewBox: unchanged at 0, width and height swap at 90", () => {
   const [, , w90, h90] = rotatedViewBox(b, 90).split(" ").map(Number);
   assert.ok(Math.abs(w90 - h) < 1e-3 && Math.abs(h90 - w) < 1e-3);
 });
+
+test("rotatedViewBox: extra points widen the view, also unrotated", () => {
+  const b = squareBoard({ cols: 4, rows: 2 });
+  const [, , w, h] = b.viewBox.split(" ").map(Number);
+  const [x, , w2, h2] = rotatedViewBox(b, 0, [[-10, 0]]).split(" ").map(Number);
+  assert.ok(x < -10 && w2 > w + 5 && Math.abs(h2 - h) < 1e-3);
+});

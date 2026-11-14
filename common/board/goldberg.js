@@ -124,10 +124,15 @@ function northern([x, y, z]) {
 // or n = m), drawn as the northern hemisphere, a pentagon at the centre.
 //
 // board.twists[id] parallels board.neighbours[id]: 1 where the adjacency
-// crosses the rim. Cell tags: pentagon (true for the six pentagons), name
+// crosses the rim. board.rim is the rim as line segments [[a, b], ...]: the
+// cells' edges that cross it. board.copies lists the cells just beyond the
+// rim, drawn where they lie (the southern cells next to the hemisphere, out
+// to `copyRings` rings of them): { poly, x, y, of, ring }, each standing for
+// the board cell `of` (its opposite) and `ring` cells out from the rim. Cell
+// tags: pentagon (true for the six pentagons), name
 // ("1".."n" spiralling out from the centre: by rings of neighbours, each
 // clockwise from the top).
-export function hemiGoldbergBoard(m, n, { segments = 4 } = {}) {
+export function hemiGoldbergBoard(m, n, { segments = 4, copyRings = 2 } = {}) {
   if (n !== 0 && n !== m) throw new Error(`GP(${m},${n}) is not centrally symmetric`);
   const { centres, rings } = goldbergSphere(m, n);
   // Each centre's opposite: the most nearly opposite centre (looked up by
@@ -142,12 +147,16 @@ export function hemiGoldbergBoard(m, n, { segments = 4 } = {}) {
   if (kept.length * 2 !== centres.length) throw new Error(`GP(${m},${n}): the halves differ`);
   const id = new Map(kept.map((i, k) => [i, k]));
 
-  const cells = kept.map((i) => {
+  // A cell's corners on the sphere, and its outline projected.
+  const cornersOf = (i) => {
     const p = centres[i], ring = rings[i];
-    const corners = ring.map((k, t) => unit(add(add(p, centres[k]), centres[ring[(t + 1) % ring.length]])));
-    const poly = corners.flatMap((a, t) => arc(a, corners[(t + 1) % corners.length], segments)).map(project);
+    return ring.map((k, t) => unit(add(add(p, centres[k]), centres[ring[(t + 1) % ring.length]])));
+  };
+  const outline = (corners) => corners.flatMap((a, t) => arc(a, corners[(t + 1) % corners.length], segments)).map(project);
+  const cells = kept.map((i) => {
+    const p = centres[i];
     const [x, y] = project(p);
-    return { x, y, poly, coord: { sphere: p }, tags: { pentagon: ring.length === 5 } };
+    return { x, y, poly: outline(cornersOf(i)), coord: { sphere: p }, tags: { pentagon: rings[i].length === 5 } };
   });
   const neighbours = [], twists = [];
   for (const i of kept) {
@@ -174,5 +183,34 @@ export function hemiGoldbergBoard(m, n, { segments = 4 } = {}) {
 
   const board = makeBoard(cells, { neighbours });
   board.twists = twists;
+
+  // The rim: each edge between a kept cell and a southern one (edge t of a
+  // cell runs between its corners t - 1 and t, beside neighbour t).
+  board.rim = [];
+  for (const i of kept) {
+    const corners = cornersOf(i), len = corners.length;
+    rings[i].forEach((k, t) => {
+      if (id.has(k)) return;
+      const pts = [...arc(corners[(t + len - 1) % len], corners[t], segments), corners[t]].map(project);
+      for (let s = 1; s < pts.length; s++) board.rim.push([pts[s - 1], pts[s]]);
+    });
+  }
+  // The copies beyond the rim, ring by ring.
+  board.copies = [];
+  const seen = new Set(kept);
+  let frontier = kept;
+  for (let ring = 1; ring <= copyRings; ring++) {
+    const next = [];
+    for (const i of frontier) {
+      for (const k of rings[i]) {
+        if (seen.has(k)) continue;
+        seen.add(k);
+        next.push(k);
+        const [x, y] = project(centres[k]);
+        board.copies.push({ poly: outline(cornersOf(k)), x, y, of: id.get(antipode[k]), ring });
+      }
+    }
+    frontier = next;
+  }
   return board;
 }

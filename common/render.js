@@ -44,11 +44,12 @@ let filterSeq = 0;
 // The viewBox "x y w h" of `board` drawn turned by `deg` (clockwise on
 // screen) about the origin: the bounds of the rotated cells, with the same
 // margin as the board's own viewBox. Exact at any angle, not just 90 degrees.
-export function rotatedViewBox(board, deg) {
-  if (!deg) return board.viewBox;
+// `extra` points widen the view (e.g. decor drawn beyond the cells).
+export function rotatedViewBox(board, deg, extra = []) {
+  if (!deg && !extra.length) return board.viewBox;
   const pad = board.pad;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of [...board.cells.flatMap((c) => c.poly), ...(board.extent || [])]) {
+  for (const p of [...board.cells.flatMap((c) => c.poly), ...(board.extent || []), ...extra]) {
     const [rx, ry] = rotatePoint(p, deg);
     if (rx < minX) minX = rx;
     if (ry < minY) minY = ry;
@@ -88,6 +89,8 @@ export function createRenderer(svg) {
   let layers = null;
   let clickHandler = null;
   let rotation = 0;
+  let copies = [];   // [{ node, of, tiles }]: decor copies of cells (see setBoard)
+  let extra = [];    // points of decor beyond the cells, which widen the view
   const seq = ++filterSeq;
   const shadowId = `pieceShadow${seq}`;
   const hatchId = `cellHatch${seq}`;
@@ -109,14 +112,19 @@ export function createRenderer(svg) {
   // line. outside: for segments on the board's edge, the line goes under the
   // cells and only its outer half, width wide, shows. Or [{ polygons:
   // [[[x, y], ...], ...], fill, stroke?, width? }]: shapes under the cells
-  // (e.g. a frame), outlined in stroke if given.
+  // (e.g. a frame), outlined in stroke if given. Or [{ copies: [{ poly, of
+  // }], opacity? }]: copies of cells drawn elsewhere, faded to opacity
+  // (default 0.4), e.g. the cells across a glued edge. Each is filled as cell
+  // `of` and shows its tile pieces; copies are display only (not clickable)
+  // and widen the view.
   // rotate: display rotation in degrees (clockwise on screen).
   function setBoard(newBoard, fill, decor = [], rotate = 0) {
     board = newBoard;
     rotation = rotate;
     if (fill) cellFill = fill;
     const u = board.unit;
-    svg.setAttribute("viewBox", rotatedViewBox(board, rotate));
+    extra = decor.flatMap((d) => (d.copies ? d.copies.flatMap((c) => c.poly) : []));
+    svg.setAttribute("viewBox", rotatedViewBox(board, rotate, extra));
     svg.replaceChildren();
 
     // The shadow offset is in the rotated frame: turn it back so shadows
@@ -189,6 +197,21 @@ export function createRenderer(svg) {
       });
       root.appendChild(surface);
     }
+    copies = [];
+    for (const d of decor.filter((d) => d.copies)) {
+      const g = svgEl("g", { "pointer-events": "none", opacity: d.opacity ?? 0.4 });
+      const cellsOf = svgEl("g"), tiles = svgEl("g");
+      for (const { poly, of } of d.copies) {
+        const node = svgEl("polygon", {
+          points: pointsAttr(poly), fill: cellFill(board.cells[of]),
+          stroke: CELL_STROKE, "stroke-width": 0.025 * u, "stroke-linejoin": "round",
+        });
+        cellsOf.appendChild(node);
+        copies.push({ node, of, poly, tiles });
+      }
+      g.append(cellsOf, tiles);
+      root.appendChild(g);
+    }
     const cellsG = svgEl("g", { class: "cells" + (points ? " points" : "") });
     cellNodes = board.cells.map((c) => {
       const fill = cellFill(c);
@@ -251,7 +274,7 @@ export function createRenderer(svg) {
       }));
     }
 
-    const over = decor.filter((d) => !d.outside && !d.polygons);
+    const over = decor.filter((d) => !d.outside && !d.polygons && !d.copies);
     if (over.length) root.appendChild(decorGroup(over));
 
     // Overlays never intercept clicks: they always reach the cell below.
@@ -309,6 +332,7 @@ export function createRenderer(svg) {
       cellNodes[i].setAttribute("fill", fill);
       if ((board.style === "points" || board.grid === false) && board.look !== "lichess") cellNodes[i].setAttribute("stroke", fill);
     });
+    for (const { node, of } of copies) node.setAttribute("fill", cellFill(board.cells[of]));
     colourCoords();
   }
 
@@ -322,6 +346,7 @@ export function createRenderer(svg) {
     layers.tiles.replaceChildren();
     layers.pieces.replaceChildren();
     layers.images.replaceChildren();
+    for (const { tiles } of copies) tiles.replaceChildren();
     for (const p of pieces) {
       const c = board.cells[p.id];
       const spec = pieceSpec(p, players);
@@ -352,10 +377,12 @@ export function createRenderer(svg) {
         continue;
       }
       if (p.tile) {
-        layers.tiles.appendChild(svgEl("polygon", {
-          points: pointsAttr(c.poly), fill: spec.fill || "#888",
+        const tile = (poly) => svgEl("polygon", {
+          points: pointsAttr(poly), fill: spec.fill || "#888",
           stroke: CELL_STROKE, "stroke-width": 0.025 * u, "stroke-linejoin": "round",
-        }));
+        });
+        layers.tiles.appendChild(tile(c.poly));
+        for (const copy of copies) if (copy.of === p.id) copy.tiles.appendChild(tile(copy.poly));
         continue;
       }
       if (p.bar) {
@@ -505,6 +532,8 @@ export function createRenderer(svg) {
     setCellFill,
     draw,
     onCellClick(handler) { clickHandler = handler; },
+    // The viewBox at a display rotation, widened for the current decor.
+    viewBoxAt(deg) { return rotatedViewBox(board, deg, extra); },
     get board() { return board; },
     get rotation() { return rotation; },
   };
