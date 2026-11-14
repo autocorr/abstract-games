@@ -39,8 +39,10 @@ const PLAYERS = {
 const LOOP = "#f0e442";   // the winning loop's outline: Okabe-Ito yellow
 
 // Achiral Goldberg polyhedra (only these have opposite cells to pair) with
-// an even number of cells on the half: [cells, m, n].
-const BOARDS = [[16, 1, 1], [46, 3, 0], [126, 5, 0], [136, 3, 3]];
+// an even number of cells on the half: [cells, m, n]. An odd half has cells
+// on the equator, and keeping one of each opposite pair of those adds a row
+// along half of the rim, which breaks the board's symmetry.
+const BOARDS = [[16, 1, 1], [46, 3, 0], [136, 3, 3]];
 
 // The colours are fixed: one scheme, a light stone board with the six
 // pentagons a shade darker.
