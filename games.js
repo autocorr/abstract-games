@@ -1,5 +1,7 @@
 // Registry of games shown on the landing page and checked by the conformance
 // tests. Paths are relative to the site root.
+// thumbnailPlies (optional): plies the landing-page thumbnail plays, per board
+// cell (default 1/4); raise it for games whose rolls or draws are plies.
 
 export const games = [
   {
@@ -49,6 +51,7 @@ export const games = [
     blurb: "Roll a die and place a stone so that its group grows to the number rolled, or the nearest size below it you can make. The largest group wins.",
     path: "games/nucleation/",
     module: "games/nucleation/game.js",
+    thumbnailPlies: 1,
   },
   {
     id: "bivalent",
@@ -57,6 +60,7 @@ export const games = [
     blurb: "Draw gray to place your stone, red to place a neutral one. Lines of four score for you, lines of three for your opponent, and red stones count for whoever is moving.",
     path: "games/bivalent/",
     module: "games/bivalent/game.js",
+    thumbnailPlies: 0.75,
   },
   {
     id: "wavefunction-collapse",
@@ -89,6 +93,7 @@ export const games = [
     blurb: "Roll two dice. On a double, place a checker; otherwise sow a stack you cap. To win, hold two of the three scoring corners when the board fills.",
     path: "games/broadcast/",
     module: "games/broadcast/game.js",
+    thumbnailPlies: 3,
   },
   {
     id: "shaolin-king",

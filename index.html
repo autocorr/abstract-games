@@ -47,14 +47,16 @@
     const game = (await import(`./${entry.module}`)).default;
     const state = newGame(game);
     const rng = seededRng(7);
-    const plies = Math.round(state.board.size / 4);
+    const plies = Math.round(state.board.size * (entry.thumbnailPlies ?? 1 / 4));
     for (let i = 0; i < plies && !game.outcome(state); i++) {
       const moves = game.legalMoves(state);
       game.applyMove(state, moves[Math.floor(rng() * moves.length)]);
     }
     const scheme = game.colorSchemes && Object.values(game.colorSchemes)[0];
     const renderer = createRenderer(svg);
-    renderer.setBoard(state.board, scheme && scheme.cellFill, game.boardDecor ? game.boardDecor(state.board) : []);
+    // Optional decor is off by default, so the thumbnail leaves it out.
+    const decor = (game.boardDecor ? game.boardDecor(state.board) : []).filter((d) => !d.optional);
+    renderer.setBoard(state.board, scheme && scheme.cellFill, decor);
     renderer.draw({ pieces: piecesOf(game, state), players: game.players });
   }
 
