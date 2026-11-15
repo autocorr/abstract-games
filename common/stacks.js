@@ -1,5 +1,4 @@
 // Stacks of checkers drawn as piles of level bars (Broadcast). Pure: no DOM.
-// no DOM.
 //
 // A stack is listed bottom to top as player numbers; the bottom checker is
 // drawn lowest, the pile centred on the cell. Three styles, offered as the
