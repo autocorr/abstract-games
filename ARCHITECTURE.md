@@ -201,6 +201,8 @@ export default {
                                     //   { copies: [{ poly, of }], opacity? } are faded,
                                     //   unclickable copies of cells drawn elsewhere, showing
                                     //   their tile pieces and widening the view;
+                                    //   { texts: [{ x, y, text }], size? } are upright
+                                    //   labels, e.g. column numbers beside the board;
                                     //   optional: true only with optionalDecor shown)
   optionalDecor,                    // e.g. "Corner marks": Setup offers Show / Hide (saved,
                                     //   no new game; Hide by default) for optional decor
