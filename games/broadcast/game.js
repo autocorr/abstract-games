@@ -45,6 +45,7 @@ import { triangleBoard, hexHexBoard, DIRS6 } from "../../common/board/hex.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
 import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
 import { withSwap } from "../../common/swap.js";
+import { stackDrawer, stackStyles } from "../../common/stacks.js";
 
 const BLACK = 1, WHITE = 2;
 const PLAYERS = {
@@ -65,57 +66,9 @@ const colorSchemes = {
   blue: { name: "Blue", cellFill: (c) => (c.tags.scoring ? "#8fb3cf" : "#dee3e6") },
 };
 
-// Stacks are drawn as piles of level bars, bottom checker lowest, centred on
-// the cell and kept within it (sizes in cells; a cell is a little over 1.15
-// tall). "shaded" (the default): every bar alike, on a cell shaded for the
-// player on top; "capped": the top checker is a wider, taller bar; "plain":
-// every bar alike, thinning as the pile grows. Shaded and capped give the
-// height of a stack too tall to sow. None casts a shadow.
-const PILE = 0.75, GAP = 0.018;
-const pieceStyles = { shaded: { name: "Shaded" }, capped: { name: "Capped" }, plain: { name: "Plain" } };
-const SHADES = { [BLACK]: "#8d8a84", [WHITE]: "#fffdf8" };
-
-const TOP = { width: 0.76, height: 0.21 };
-const restHeight = (rest) => (rest ? Math.min(0.087, (PILE - TOP.height - GAP * rest) / rest) : 0);
-const cappedPile = (n) => TOP.height + (n - 1) * (restHeight(n - 1) + GAP);
-
-function cappedStack(id, stack) {
-  const rest = stack.length - 1;
-  const h = restHeight(rest);
-  let y = cappedPile(stack.length) / 2;   // the bottom of the pile
-  const out = [];
-  for (let i = 0; i < rest; i++) {
-    out.push({ id, player: stack[i], stroke: 0.018, bar: { width: 0.58, height: h, y: y - h / 2 } });
-    y -= h + GAP;
-  }
-  const top = { id, player: stack[rest], stroke: 0.025, bar: { ...TOP, y: y - TOP.height / 2, labelSize: 0.16 } };
-  if (stack.length >= UNSOWABLE) top.label = String(stack.length);
-  out.push(top);
-  return out;
-}
-
-function plainStack(id, stack, { x = 0, width = 0.66 } = {}) {
-  const n = stack.length;
-  const h = Math.min(0.115, (PILE - GAP * (n - 1)) / n);
-  const bottom = (n * h + (n - 1) * GAP) / 2;
-  return stack.map((player, i) => ({
-    id, player, stroke: 0.018, bar: { x, width, height: h, y: bottom - h / 2 - i * (h + GAP) },
-  }));
-}
-
-function shadedStack(id, stack) {
-  const n = stack.length;
-  const tile = { id, player: null, fill: SHADES[stack[n - 1]], tile: true };
-  if (n < UNSOWABLE) return [tile, ...plainStack(id, stack)];
-  // Room for the height on the right: the pile moves left and narrows.
-  const bars = plainStack(id, stack, { x: -0.1, width: 0.5 });
-  const top = bars[n - 1];
-  top.label = String(n);
-  top.bar = { ...top.bar, labelX: 0.33, labelY: 0, labelSize: 0.24 };
-  return [tile, ...bars];
-}
-
-const STACK_DRAWERS = { shaded: shadedStack, capped: cappedStack, plain: plainStack };
+// Stacks are drawn as piles of bars (common/stacks.js); a stack too tall to
+// sow shows its height.
+const piles = stackDrawer({ labelFrom: UNSOWABLE });
 
 // The hex-hex corners that score: those in directions NE, W and SE (DIRS6).
 const HEX_SCORING = [1, 3, 5];
@@ -335,7 +288,7 @@ export default withSwap({
     return move === FREE ? `Free sow (${s.free[s.turn]} left)` : null;
   },
   colorSchemes,
-  pieceStyles,
+  pieceStyles: stackStyles,
   pieceLabels: "Stack heights",
   optionalDecor: "Corner marks",
 
@@ -453,12 +406,7 @@ export default withSwap({
     return [{ segments: cornerMarks(board), stroke: "#111", width: MARK_WIDTH, optional: true }];
   },
   piecesOf(s, style) {
-    const out = [];
-    s.stacks.forEach((stack, id) => {
-      if (stack.length) out.push(...(STACK_DRAWERS[style] || shadedStack)(id, stack));
-    });
-    // Flat on the board: no drop shadows.
-    return out.map((p) => ({ ...p, shadow: false }));
+    return piles.piecesOf(s.stacks, style);
   },
   // Outlines on the cells of the last move, and dots on the stacks the roll
   // lets the mover sow or cap.
@@ -471,7 +419,7 @@ export default withSwap({
         for (const id of ids) {
           // The dot goes under a short pile, clear of the bars.
           const h = s.stacks[id].length;
-          out.push({ id, kind: "target", y: h > 1 && h < 5 ? cappedPile(h) / 2 + 0.13 : 0 });
+          out.push({ id, kind: "target", y: h > 1 && h < 5 ? piles.cappedPile(h) / 2 + 0.13 : 0 });
         }
       }
     }
