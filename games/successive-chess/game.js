@@ -19,11 +19,12 @@
 //
 // En passant is open against a double step that was the last move of the
 // opponent's turn. The fifty-move rule counts single moves: 100 of them
-// without a capture or pawn move draw. There is no draw by repetition.
+// without a capture, pawn move or removal draw, even mid-turn. There is no draw by repetition.
 
 import { rollOutcomes, rolledValue, dicePanel } from "../../common/dice.js";
 import { CHANCE, pickWeighted } from "../../common/engine.js";
-import { chessGame, PLAYERS, PROMOTE } from "../../common/chess/game.js";
+import { chessGame, PLAYERS, PROMOTE, typesOf, promotions } from "../../common/chess/game.js";
+import { now } from "../../common/ai/mcts.js";
 import { KING, QUEEN, ROOK, BISHOP, KNIGHT, pawn } from "../../common/chess/movement.js";
 import {
   WHITE, BLACK, other, legalMoves, pseudoMoves, attacked, playMove, promotePending, notation, material, ownerOf, typeOf,
@@ -68,11 +69,10 @@ const base = chessGame({
   reasons: {
     royal: (loser) => `${loser}'s King was captured.`,
     removed: (loser) => `${loser} removed their own King.`,
-    fifty: () => `${FIFTY} moves without a capture or pawn move.`,
+    fifty: () => `${FIFTY} moves without a capture, pawn move or removal.`,
   },
 });
 
-const typesOf = (s) => s.board.chess.types;
 const isKing = (s, x) => x && typesOf(s)[typeOf(x)].royal;
 const lastOf = (a) => a[a.length - 1];
 
@@ -119,7 +119,10 @@ function startMoves(s) {
 // roll was a 6, which nothing can beat.
 function afterMove(s) {
   s.moves = null;
-  if (s.die === SIDES) endTurn(s);
+  if (s.clock >= FIFTY) {
+    s.winner = 0;
+    s.reason = "fifty";
+  } else if (s.die === SIDES) endTurn(s);
   else s.phase = "decide";
 }
 
@@ -130,10 +133,6 @@ function endTurn(s) {
   s.die = 0;
   s.turn = other(s.turn);
   s.phase = "roll";
-  if (s.clock >= FIFTY) {
-    s.winner = 0;
-    s.reason = "fifty";
-  }
 }
 
 // Play a move on the board. En passant belongs to the opponent only, so
@@ -149,6 +148,7 @@ function remove(s, sq) {
   const x = s.cells[sq], r = s.board.chess;
   s.cells[sq] = 0;
   s.last = [sq];
+  s.clock = 0;   // a removal resets the fifty-move count, as a capture does
   for (const def of r.castling) if (def.king === sq || def.rook === sq) s.castling &= ~def.bit;
   // The pawn that just double-stepped is gone: nothing to take en passant.
   if (s.epNext >= 0 && sq === s.board.at(r.col[s.epNext], r.row[s.epNext] + (s.turn === WHITE ? 1 : -1))) s.epNext = -1;
@@ -217,8 +217,6 @@ function ownPieces(s) {
   s.cells.forEach((x, sq) => { if (x && ownerOf(x) === s.turn) out.push([sq]); });
   return out;
 }
-
-const promotions = (s) => typesOf(s)[typeOf(s.cells[s.pending])].promote.map((k) => PROMOTE + k);
 
 function legal(s) {
   if (s.winner !== null) return [];
@@ -331,7 +329,6 @@ function playout(s, rng) {
 // exploration of poor moves drags the value down, but after stopping the
 // opponent's is (see ARCHITECTURE.md, "AI"). Instead, alternate playouts
 // after each choice for the time allowed and take the better.
-const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 function aiMove(s, { timeMs = 1000, iterations = Infinity, rng = Math.random } = {}) {
   if (s.phase !== "decide") return null;
@@ -414,7 +411,8 @@ const game = {
   turnHint(s, scheme) {
     if (s.winner !== null) return "";
     const name = PLAYERS[s.turn].name;
-    const countdown = s.clock >= FIFTY - 20 ? ` Draw after ${FIFTY - s.clock} more moves without a capture or pawn move.` : "";
+    const left = FIFTY - s.clock;
+    const countdown = left <= 20 ? ` Draw after ${left} more ${left === 1 ? "move" : "moves"} without a capture, pawn move or removal.` : "";
     switch (s.phase) {
       case "roll": return s.die ? `${name} rolls again, needing more than ${s.die}…` : `${name} rolls…`;
       case "move": {

@@ -186,6 +186,31 @@ test("100 moves without a capture or pawn move draw", () => {
   assert.deepEqual(game.outcome(s), { winner: 0 });
 });
 
+test("the 100th move draws at once, mid-turn", () => {
+  const s = position({ e1: "wK", e8: "bK" });
+  s.clock = FIFTY - 2;
+  game.applyMove(s, "roll:1");
+  assert.match(game.turnHint(s), /Draw after 2 more moves/);
+  game.applyMove(s, cellMove(s, "e1-e2"));
+  game.applyMove(s, AGAIN);
+  game.applyMove(s, "roll:2");
+  assert.match(game.turnHint(s), /Draw after 1 more move without/);
+  game.applyMove(s, cellMove(s, "e2-e3"));
+  assert.deepEqual(game.outcome(s), { winner: 0 });
+  assert.deepEqual(game.legalMoves(s), []);
+});
+
+test("removing a piece after a bust resets the fifty-move count", () => {
+  const s = position({ e1: "wK", e8: "bK", a1: "wR" });
+  s.clock = 50;
+  game.applyMove(s, "roll:4");
+  game.applyMove(s, cellMove(s, "e1-e2"));
+  game.applyMove(s, AGAIN);
+  game.applyMove(s, "roll:2");
+  game.applyMove(s, cellMove(s, "a1"));
+  assert.equal(s.clock, 0);
+});
+
 test("castling is as in chess: not out of, through or into attack", () => {
   const castles = (s) => game.legalMoves(s).some((m) => m.join() === cellMove(s, "e1-g1").join());
   const setup = (extra) => {
