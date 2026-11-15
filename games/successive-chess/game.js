@@ -96,6 +96,13 @@ function castleSafe(s, move, { castle }) {
 // their last turn (0 before they have had one).
 const kingGuard = (s) => lastOf(s.rolls[other(s.turn)]) || 0;
 
+// Whether the mover attacks the opponent's King but rolled too low to take it.
+function kingBarred(s) {
+  if (s.die >= kingGuard(s)) return false;
+  const king = s.cells.findIndex((x) => isKing(s, x) && ownerOf(x) !== s.turn);
+  return king >= 0 && attacked(s, king, s.turn);
+}
+
 function startMoves(s) {
   s.phase = "move";
   const moves = legalMoves(s, s.turn, castleSafe);
@@ -298,8 +305,9 @@ function playout(s, rng) {
         continue;
       }
       case "decide":
-        // Roll again about as often as it would succeed.
-        applyMove(s, rng() * SIDES < SIDES - s.die ? AGAIN : STOP);
+        // Roll again about as often as it would succeed, and always when
+        // the King is there to take but the roll is too low.
+        applyMove(s, rng() * SIDES < SIDES - s.die || kingBarred(s) ? AGAIN : STOP);
         continue;
       case "remove":
         applyMove(s, playoutRemoval(s, rng));

@@ -5,6 +5,7 @@ import { newGame, CHANCE } from "../common/engine.js";
 import { pieceCode, WHITE, BLACK } from "../common/chess/rules.js";
 import { describeMove } from "../common/log.js";
 import { seededRng } from "../common/rng.js";
+import { mcts } from "../common/ai/mcts.js";
 
 const { AGAIN, STOP, FIFTY } = internals;
 const sq = (board, name) => board.cells.find((c) => c.tags.name === name).id;
@@ -232,4 +233,19 @@ test("the AI rolls again after a low roll when a free piece is there to take", (
   assert.equal(game.aiMove(s, { timeMs: 60000, iterations: 3000, rng: seededRng(1) }), AGAIN);
   s.phase = "move";
   assert.equal(game.aiMove(s, { timeMs: 0, iterations: 10 }), null);   // MCTS decides moves
+});
+
+test("the AI never takes a King its roll can't reach, and rolls again to reach it", () => {
+  const army = { e1: "wK", a2: "wP", b2: "wP", c2: "wP", f2: "wP", g2: "wP", h2: "wP", d1: "wQ", g1: "wN", e4: "wR",
+    e8: "bK", a7: "bP", b7: "bP", c7: "bP", f7: "bP", g7: "bP", h7: "bP", d8: "bQ", h8: "bR", g8: "bN" };
+  const s = position(army);
+  s.rolls = [null, [], [5]];
+  game.applyMove(s, "roll:4");
+  const move = mcts(game, s, { timeMs: 60000, iterations: 300, rng: seededRng(1) });
+  assert.notEqual(move[1], sq(s.board, "e8"));
+  const t = position(army);
+  t.rolls = [null, [4], [5]];
+  t.phase = "decide";
+  t.die = 4;
+  assert.equal(game.aiMove(t, { timeMs: 60000, iterations: 3000, rng: seededRng(1) }), AGAIN);
 });
