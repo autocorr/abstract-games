@@ -19,15 +19,15 @@ function icon(name) {
   return svg;
 }
 
-// onJump(n): show the position after n plies. onCopy(): copy the link and
-// resolve to true on success.
-export function createLogView({ onJump, onCopy }) {
+// onJump(n): show the position after n plies. onStep(dir): one ply back
+// (-1) or forward (1). onCopy(): copy the link and resolve to true on success.
+export function createLogView({ onJump, onStep, onCopy }) {
   const list = h("ol", { class: "log-list" });
   const scroller = h("div", { class: "log-scroll" }, list);
   const nav = {
     first: h("button", { class: "btn icon", title: "Start (Home)", "aria-label": "Start", onclick: () => onJump(0) }, icon("first")),
-    prev: h("button", { class: "btn icon", title: "Back (←)", "aria-label": "Back", onclick: () => onJump(cursor - 1) }, icon("prev")),
-    next: h("button", { class: "btn icon", title: "Forward (→)", "aria-label": "Forward", onclick: () => onJump(cursor + 1) }, icon("next")),
+    prev: h("button", { class: "btn icon", title: "Back (←)", "aria-label": "Back", onclick: () => onStep(-1) }, icon("prev")),
+    next: h("button", { class: "btn icon", title: "Forward (→)", "aria-label": "Forward", onclick: () => onStep(1) }, icon("next")),
     last: h("button", { class: "btn icon", title: "Latest (End)", "aria-label": "Latest", onclick: () => onJump(length) }, icon("last")),
   };
   const copy = h("button", { class: "btn copy-link", onclick: copyLink }, "Copy link");

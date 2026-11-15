@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cellName, describeMove, logEntries, groupTurns } from "../common/log.js";
+import { cellName, describeMove, logEntries, groupTurns, stepCursor } from "../common/log.js";
 import { newGame, replay } from "../common/engine.js";
 import tictactoe from "./fixtures/tictactoe.js";
 import bagTictactoe from "./fixtures/bag-tictactoe.js";
@@ -74,4 +74,15 @@ test("groupTurns leaves out plies with empty text, keeping the others' indices",
     { player: 2, text: "" }, { player: 1, text: "c" },
   ]);
   assert.deepEqual(turns.map((t) => [t.number, t.player, t.plies.map((p) => p.index)]), [[1, 1, [0, 2]], [2, 1, [4]]]);
+});
+
+test("stepCursor passes over plies left out of the log", () => {
+  const entries = ["a", "", "b", "", "", "c"].map((text) => ({ player: 1, text }));
+  assert.equal(stepCursor(entries, 1, 1), 3);    // after "a", over the omitted ply, to after "b"
+  assert.equal(stepCursor(entries, 3, 1), 6);
+  assert.equal(stepCursor(entries, 6, -1), 3);
+  assert.equal(stepCursor(entries, 3, -1), 1);
+  assert.equal(stepCursor(entries, 1, -1), 0);
+  assert.equal(stepCursor(entries, 0, -1), 0);
+  assert.equal(stepCursor(entries, 6, 1), 6);
 });

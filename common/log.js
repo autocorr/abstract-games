@@ -59,6 +59,15 @@ export function logEntries(game, options, moves, { board = null, scheme = null }
   return moves.map((move) => playAndDescribe(game, state, move, scheme).entry);
 }
 
+// The cursor one ply back (dir -1) or forward (dir 1) from `cursor` (the
+// number of plies played), passing over plies left out of the log: the
+// position after one is the position before it, as far as the log shows.
+export function stepCursor(entries, cursor, dir) {
+  let n = cursor + dir;
+  while (n > 0 && n < entries.length && !entries[n - 1].text) n += dir;
+  return Math.max(0, Math.min(entries.length, n));
+}
+
 // Group entries into turns: [{ number, player, plies: [{ index, text }] }],
 // where index is the ply's position in the move list. Only players' turns
 // are numbered: plies that belong to no player (e.g. setting up a bag) get

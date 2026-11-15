@@ -409,8 +409,9 @@ copies it.
 `common/log.js` describes each ply. `game.moveText(before, move, info,
 scheme)` is asked first (`before` is the position before the move, `info`
 what `applyMove` returned, `scheme` the active colour scheme or null);
-returning "" leaves the ply out of the log (for plies the next one makes
-plain, such as choosing to roll again before the roll), and null falls
+returning "" leaves a string move's ply out of the log (for plies the
+next one makes plain, such as choosing to roll again before the roll;
+stepping back and forward passes over them), and null falls
 back to the defaults: cell moves join cell names with
 "–", `"draw:X"` reads "drew red" (marble names from the scheme's or the
 game's marbles), `"roll:4"` reads "rolled 4", and other string moves use their button label. Plies are
