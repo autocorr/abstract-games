@@ -10,7 +10,8 @@
 import { randomPlayout, pickWeighted, moveKey, parseMoveKey, replay, CHANCE } from "../engine.js";
 import { shuffle } from "../rng.js";
 
-const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+// Milliseconds, for time budgets.
+export const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 function makeNode(game, state, parent, move, mover) {
   const over = game.outcome(state);
