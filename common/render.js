@@ -129,7 +129,11 @@ export function createRenderer(svg) {
   // labels centred at each point (e.g. column numbers beside the board),
   // size in multiples of board.unit (default 0.3), kept upright under the
   // display rotation, in the page's dim text colour unless fill is given;
-  // they widen the view.
+  // they widen the view. Polygons may be hatched instead of filled (hatch:
+  // the lines' colour, hatchAngle: their angle in degrees, default 45). Any
+  // decor with tiles: true is drawn over the pieces' cell tiles (e.g. a
+  // region's outline and hatching that should show on shaded cells too),
+  // under everything else.
   // rotate: display rotation in degrees (clockwise on screen).
   function setBoard(newBoard, fill, decor = [], rotate = 0) {
     board = newBoard;
@@ -248,9 +252,19 @@ export function createRenderer(svg) {
       return poly;
     });
     // Decor marked outside goes under the cells, which hide its inner half.
+    let hatches = 0;
+    const hatchFill = (color, angle) => {
+      const id = `${hatchId}-${hatches++}`;
+      const pattern = svgEl("pattern", {
+        id, patternUnits: "userSpaceOnUse", width: 0.2 * u, height: 0.2 * u, patternTransform: `rotate(${angle})`,
+      });
+      pattern.appendChild(svgEl("rect", { x: 0, y: 0, width: 0.05 * u, height: 0.2 * u, fill: color }));
+      defs.appendChild(pattern);
+      return `url(#${id})`;
+    };
     const decorGroup = (list) => {
       const g = svgEl("g", { "pointer-events": "none", "stroke-linecap": "round", fill: "none" });
-      for (const { segments, polygons, texts, size = TEXT_SIZE, fill, stroke, halo, width = 0.1, outside } of list) {
+      for (const { segments, polygons, texts, size = TEXT_SIZE, fill, hatch, hatchAngle = 45, stroke, halo, width = 0.1, outside } of list) {
         if (texts) {
           for (const { x, y, text } of texts) {
             const t = svgEl("text", {
@@ -264,9 +278,10 @@ export function createRenderer(svg) {
           continue;
         }
         if (polygons) {
+          const paint = hatch ? hatchFill(hatch, hatchAngle) : fill;
           for (const poly of polygons) {
             g.appendChild(svgEl("polygon", {
-              points: pointsAttr(poly), fill, stroke: stroke || "none", "stroke-width": width * u, "stroke-linejoin": "round",
+              points: pointsAttr(poly), fill: paint, stroke: stroke || "none", "stroke-width": width * u, "stroke-linejoin": "round",
             }));
           }
           continue;
@@ -278,6 +293,8 @@ export function createRenderer(svg) {
       }
       return g;
     };
+    const onTiles = decor.filter((d) => d.tiles);
+    decor = decor.filter((d) => !d.tiles);
     const under = decor.filter((d) => d.outside || d.polygons);
     if (under.length) root.appendChild(decorGroup(under));
     root.appendChild(cellsG);
@@ -311,7 +328,7 @@ export function createRenderer(svg) {
       images: svgEl("g", { "pointer-events": "none" }),   // image pieces and unshadowed discs
       markers: svgEl("g", { "pointer-events": "none" }),
     };
-    root.append(layers.tiles, layers.highlights, layers.coords, layers.pieces, layers.images, layers.markers);
+    root.append(layers.tiles, ...(onTiles.length ? [decorGroup(onTiles)] : []), layers.highlights, layers.coords, layers.pieces, layers.images, layers.markers);
     drawCoords();
   }
 

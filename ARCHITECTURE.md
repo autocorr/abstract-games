@@ -205,6 +205,9 @@ export default {
                                     //   their tile pieces and widening the view;
                                     //   { texts: [{ x, y, text }], size? } are upright
                                     //   labels, e.g. column numbers beside the board;
+                                    //   polygons may take hatch: colour (and hatchAngle)
+                                    //   instead of fill; tiles: true draws decor over
+                                    //   the pieces' cell tiles, e.g. a hatched region;
                                     //   optional: true only with optionalDecor shown)
   optionalDecor,                    // e.g. "Corner marks": Setup offers Show / Hide (saved,
                                     //   no new game; Hide by default) for optional decor
