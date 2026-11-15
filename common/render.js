@@ -39,7 +39,16 @@ const LICHESS_CAPTURE = "rgba(20, 85, 0, 0.3)";
 const CORNER_RADIUS = 0.05;   // a Lichess board's rounded corners, in cells
 const COORD_SIZE = 0.17;      // coordinate font size, in cells
 
+const TEXT_SIZE = 0.3;        // decor text's default font size, in cells
+
 let filterSeq = 0;
+
+// Points bounding decor texts (a square of the font size round each), which
+// widen the view.
+function textExtent({ texts, size = TEXT_SIZE }, u) {
+  const r = size * u * 0.75;
+  return texts.flatMap(({ x, y }) => [[x - r, y - r], [x + r, y + r]]);
+}
 
 // The viewBox "x y w h" of `board` drawn turned by `deg` (clockwise on
 // screen) about the origin: the bounds of the rotated cells, with the same
@@ -116,14 +125,18 @@ export function createRenderer(svg) {
   // }], opacity? }]: copies of cells drawn elsewhere, faded to opacity
   // (default 0.4), e.g. the cells across a glued edge. Each is filled as cell
   // `of` and shows its tile pieces; copies are display only (not clickable)
-  // and widen the view.
+  // and widen the view. Or [{ texts: [{ x, y, text }], size?, fill? }]:
+  // labels centred at each point (e.g. column numbers beside the board),
+  // size in multiples of board.unit (default 0.3), kept upright under the
+  // display rotation, in the page's dim text colour unless fill is given;
+  // they widen the view.
   // rotate: display rotation in degrees (clockwise on screen).
   function setBoard(newBoard, fill, decor = [], rotate = 0) {
     board = newBoard;
     rotation = rotate;
     if (fill) cellFill = fill;
     const u = board.unit;
-    extra = decor.flatMap((d) => (d.copies ? d.copies.flatMap((c) => c.poly) : []));
+    extra = decor.flatMap((d) => (d.copies ? d.copies.flatMap((c) => c.poly) : d.texts ? textExtent(d, u) : []));
     svg.setAttribute("viewBox", rotatedViewBox(board, rotate, extra));
     svg.replaceChildren();
 
@@ -237,7 +250,19 @@ export function createRenderer(svg) {
     // Decor marked outside goes under the cells, which hide its inner half.
     const decorGroup = (list) => {
       const g = svgEl("g", { "pointer-events": "none", "stroke-linecap": "round", fill: "none" });
-      for (const { segments, polygons, fill, stroke, halo, width = 0.1, outside } of list) {
+      for (const { segments, polygons, texts, size = TEXT_SIZE, fill, stroke, halo, width = 0.1, outside } of list) {
+        if (texts) {
+          for (const { x, y, text } of texts) {
+            const t = svgEl("text", {
+              "font-size": LABEL_PX, "font-weight": 600, "text-anchor": "middle", "dominant-baseline": "central",
+              stroke: "none", ...(fill ? { fill } : { style: "fill: var(--text-dim)" }),
+              transform: `translate(${round4(x)} ${round4(y)})${rotation ? ` rotate(${-rotation})` : ""} scale(${(size * u) / LABEL_PX})`,
+            });
+            t.textContent = text;
+            g.appendChild(t);
+          }
+          continue;
+        }
         if (polygons) {
           for (const poly of polygons) {
             g.appendChild(svgEl("polygon", {
