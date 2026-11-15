@@ -93,3 +93,10 @@ test("searchMove replays a request of move keys and answers with a key", () => {
   assert.equal(key, "2");
   assert.equal(searchMove(ttt, { options: {}, moves: ["0", "3", "1", "4", "2"], timeMs: 0 }), null);
 });
+
+test("a game's aiMove decides where it returns a move, and mcts searches where it returns null", () => {
+  const corner = { ...ttt, aiMove: (state) => (state.cells.every((c) => !c) ? [8] : null) };
+  assert.deepEqual(mcts(corner, ttt.initialState(ttt.createBoard({}), {}), { timeMs: 0, iterations: 1 }), [8]);
+  const { state } = replay(corner, {}, [[0], [3], [1], [4]]);
+  assert.deepEqual(mcts(corner, state, { timeMs: 60000, iterations: 3000, rng: seededRng(1) }), [2]);
+});

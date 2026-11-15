@@ -108,13 +108,17 @@ export function positionKey(s) {
   return key;
 }
 
+// The piece types of a state's board, and the promotion moves
+// ("promote:Q", ...) for its pending pawn.
+export const typesOf = (s) => s.board.chess.types;
+export const promotions = (s) => typesOf(s)[typeOf(s.cells[s.pending])].promote.map((k) => PROMOTE + k);
+
 export function chessGame(v) {
   const fifty = v.fiftyMoves ?? 100;
   const repetition = v.repetition || 0;
   const players = v.players || PLAYERS;
   // Player names: a colour scheme may rename the players (scheme.players).
   const named = (scheme) => (scheme && scheme.players) || players;
-  const typesOf = (s) => s.board.chess.types;
 
   function startTurn(s) {
     if (v.drawPly && !(v.drawPly.skip && v.drawPly.skip(s))) {
@@ -206,10 +210,6 @@ export function chessGame(v) {
 
   function chances(s) {
     return s.phase === "setup" ? v.setupPly.chances(s) : v.drawPly.chances(s);
-  }
-
-  function promotions(s) {
-    return typesOf(s)[typeOf(s.cells[s.pending])].promote.map((k) => PROMOTE + k);
   }
 
   function legal(s) {
