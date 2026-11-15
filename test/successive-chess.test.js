@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import game, { internals } from "../games/successive-chess/game.js";
 import { newGame, CHANCE } from "../common/engine.js";
 import { pieceCode, WHITE, BLACK } from "../common/chess/rules.js";
-import { describeMove } from "../common/log.js";
+import { describeMove, logEntries, groupTurns } from "../common/log.js";
 import { seededRng } from "../common/rng.js";
 import { mcts } from "../common/ai/mcts.js";
 
@@ -248,4 +248,14 @@ test("the AI never takes a King its roll can't reach, and rolls again to reach i
   t.phase = "decide";
   t.die = 4;
   assert.equal(game.aiMove(t, { timeMs: 60000, iterations: 3000, rng: seededRng(1) }), AGAIN);
+});
+
+test("the log leaves out rolling again and ending the turn", () => {
+  const moves = [];
+  const s = newGame(game, {});
+  const play = (m) => { moves.push(m); game.applyMove(s, m); };
+  play("roll:3"); play(cellMove(s, "e2-e4")); play(AGAIN); play("roll:5"); play(cellMove(s, "d2-d4")); play(STOP);
+  play("roll:2"); play(cellMove(s, "e7-e5")); play(STOP);
+  const turns = groupTurns(logEntries(game, {}, moves));
+  assert.deepEqual(turns.map((t) => t.plies.map((p) => p.text)), [["rolled 3", "e4", "rolled 5", "d4"], ["rolled 2", "e5"]]);
 });

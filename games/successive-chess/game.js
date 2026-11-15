@@ -387,7 +387,7 @@ const game = {
         const value = rolledValue(move);
         return busts(s, value) ? `rolled ${value}: bust` : `rolled ${value}`;
       }
-      case "decide": return move === AGAIN ? "roll again" : "stop";
+      case "decide": return "";   // left out: the next roll, or the next turn, shows it
       case "remove": {
         const x = s.cells[move[0]];
         return `removed ${typesOf(s)[typeOf(x)].name} ${s.board.cells[move[0]].tags.name}`;
