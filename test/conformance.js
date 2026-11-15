@@ -239,7 +239,8 @@ function checkGame(entry, game, mine) {
           assert.equal(snapshot(copy), before, "applyMove on the original changed a clone");
           for (const scheme of [null, ...Object.values(game.colorSchemes || {})]) {
             const text = describeMove(game, copy, move, lastInfo, scheme);
-            assert.ok(typeof text === "string" && text.length, `no log text for ${moveKey(move)}`);
+            // "" is a ply left out of the log, which only moveText can choose.
+            assert.ok(typeof text === "string" && (text.length || game.moveText), `no log text for ${moveKey(move)}`);
           }
           moves.push(move);
           if (game.markers) {

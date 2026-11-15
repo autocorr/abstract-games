@@ -27,6 +27,8 @@ test("describeMove defaults: cells, draws and labelled string moves", () => {
   const custom = { ...computed, moveText: (before, move, info) => (Array.isArray(move) ? "custom" : null) };
   assert.equal(describeMove(custom, state, [3], null), "custom");
   assert.equal(describeMove(custom, state, "pass", null), "Computed");   // null falls back
+  const omitted = { ...computed, moveText: () => "" };
+  assert.equal(describeMove(omitted, state, "pass", null), "");
 });
 
 test("moveText sees the position before the move and applyMove's info", () => {
@@ -64,4 +66,12 @@ test("groupTurns: plies of no player get their own unnumbered turn", () => {
     { player: 1, text: "c" }, { player: 2, text: "d" },
   ]);
   assert.deepEqual(turns.map((t) => [t.number, t.player, t.plies.length]), [[null, null, 2], [1, 1, 1], [2, 2, 1]]);
+});
+
+test("groupTurns leaves out plies with empty text, keeping the others' indices", () => {
+  const turns = groupTurns([
+    { player: 1, text: "a" }, { player: 1, text: "" }, { player: 1, text: "b" },
+    { player: 2, text: "" }, { player: 1, text: "c" },
+  ]);
+  assert.deepEqual(turns.map((t) => [t.number, t.player, t.plies.map((p) => p.index)]), [[1, 1, [0, 2]], [2, 1, [4]]]);
 });
