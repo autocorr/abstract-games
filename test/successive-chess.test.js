@@ -99,6 +99,36 @@ test("capturing the King wins at once", () => {
   assert.deepEqual(game.outcomeLines(s, game.outcome(s), null), ["Black's King was captured."]);
 });
 
+test("taking the King needs a roll at least the opponent's final roll", () => {
+  const takes = (s) => game.legalMoves(s).some((m) => m.join() === cellMove(s, "a1-a8").join());
+  const setup = (rolls, roll) => {
+    const s = position({ e1: "wK", a8: "bK", a1: "wR" });
+    s.rolls = [null, [], rolls];
+    game.applyMove(s, `roll:${roll}`);
+    return s;
+  };
+  assert.ok(takes(setup([], 1)));         // Black has not rolled yet
+  assert.ok(!takes(setup([2, 4], 3)));
+  assert.match(game.turnHint(setup([2, 4], 3)), /Black's King can't be taken on a roll below 4/);
+  assert.ok(takes(setup([2, 4], 4)));     // equal is enough
+  assert.ok(!takes(setup([5, 3], 2)));    // a bust's roll counts
+  assert.ok(takes(setup([5, 3], 3)));
+  assert.doesNotMatch(game.turnHint(setup([5, 3], 3)), /can't be taken/);
+});
+
+test("the guard is the opponent's last turn, played out", () => {
+  const s = position({ e1: "wK", a8: "bK", a1: "wR", h7: "bP" });
+  s.turn = BLACK;
+  game.applyMove(s, "roll:2");
+  game.applyMove(s, cellMove(s, "h7-h6"));
+  game.applyMove(s, AGAIN);
+  game.applyMove(s, "roll:5");
+  game.applyMove(s, cellMove(s, "h6-h5"));
+  game.applyMove(s, STOP);
+  game.applyMove(s, "roll:4");
+  assert.ok(!game.legalMoves(s).some((m) => m.join() === cellMove(s, "a1-a8").join()));
+});
+
 test("removing your own King loses", () => {
   const s = position({ e1: "wK", e8: "bK", a2: "wP" });
   game.applyMove(s, "roll:3");

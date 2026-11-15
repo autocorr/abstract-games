@@ -11,7 +11,8 @@
 //
 // The King is not royal: there is no check or checkmate. A player with no
 // legal move when they must move (stalemate) loses. Capturing the
-// opponent's King wins.
+// opponent's King wins, but only with a roll at least the opponent's
+// final roll of their last turn (a bust's roll included).
 //
 // Castling is as in chess: the King may not castle out of, through or into
 // a square the opponent attacks.
@@ -91,9 +92,15 @@ function castleSafe(s, move, { castle }) {
   return !attacked(after, castle.kingTo, enemy);
 }
 
+// The roll needed to capture the opponent's King: their final roll of
+// their last turn (0 before they have had one).
+const kingGuard = (s) => lastOf(s.rolls[other(s.turn)]) || 0;
+
 function startMoves(s) {
   s.phase = "move";
-  s.moves = legalMoves(s, s.turn, castleSafe);
+  const moves = legalMoves(s, s.turn, castleSafe);
+  s.moves = s.die >= kingGuard(s) ? moves : moves.filter((m) => !isKing(s, s.cells[m[1]]));
+  s.guarded = s.moves.length < moves.length;   // a King capture was barred
   if (!s.moves.length) {   // stalemate loses
     s.moves = null;
     s.winner = other(s.turn);
@@ -346,6 +353,7 @@ const game = {
     s.die = 0;          // the turn's current roll (0 before the first)
     s.rolls = [null, [], []];   // each player's rolls in their latest turn
     s.epNext = -1;      // en passant square for the opponent, once the turn ends
+    s.guarded = false;  // whether the roll was too low to take the King
     return s;
   },
   refresh(s) {
@@ -401,7 +409,10 @@ const game = {
     const countdown = s.clock >= FIFTY - 20 ? ` Draw after ${FIFTY - s.clock} more moves without a capture or pawn move.` : "";
     switch (s.phase) {
       case "roll": return s.die ? `${name} rolls again, needing more than ${s.die}…` : `${name} rolls…`;
-      case "move": return `${name} rolled ${s.die}: move a piece.${countdown}`;
+      case "move": {
+        const guard = s.guarded ? ` ${PLAYERS[other(s.turn)].name}'s King can't be taken on a roll below ${kingGuard(s)}.` : "";
+        return `${name} rolled ${s.die}: move a piece.${guard}${countdown}`;
+      }
       case "promote": return `${name}: choose a piece to promote to.`;
       case "decide": return `${name}: roll again (more than ${s.die} for another move, else lose a piece) or end the turn.`;
       case "remove": return `${name} rolled ${lastOf(s.rolls[s.turn])}, not more than ${s.die}: remove one of your pieces.`;
