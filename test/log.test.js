@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cellName, describeMove, logEntries, groupTurns } from "../common/log.js";
+import { cellName, describeMove, logEntries, groupTurns, stepCursor } from "../common/log.js";
 import { newGame, replay } from "../common/engine.js";
 import tictactoe from "./fixtures/tictactoe.js";
 import bagTictactoe from "./fixtures/bag-tictactoe.js";
@@ -27,6 +27,8 @@ test("describeMove defaults: cells, draws and labelled string moves", () => {
   const custom = { ...computed, moveText: (before, move, info) => (Array.isArray(move) ? "custom" : null) };
   assert.equal(describeMove(custom, state, [3], null), "custom");
   assert.equal(describeMove(custom, state, "pass", null), "Computed");   // null falls back
+  const omitted = { ...computed, moveText: () => "" };
+  assert.equal(describeMove(omitted, state, "pass", null), "");
 });
 
 test("moveText sees the position before the move and applyMove's info", () => {
@@ -64,4 +66,23 @@ test("groupTurns: plies of no player get their own unnumbered turn", () => {
     { player: 1, text: "c" }, { player: 2, text: "d" },
   ]);
   assert.deepEqual(turns.map((t) => [t.number, t.player, t.plies.length]), [[null, null, 2], [1, 1, 1], [2, 2, 1]]);
+});
+
+test("groupTurns leaves out plies with empty text, keeping the others' indices", () => {
+  const turns = groupTurns([
+    { player: 1, text: "a" }, { player: 1, text: "" }, { player: 1, text: "b" },
+    { player: 2, text: "" }, { player: 1, text: "c" },
+  ]);
+  assert.deepEqual(turns.map((t) => [t.number, t.player, t.plies.map((p) => p.index)]), [[1, 1, [0, 2]], [2, 1, [4]]]);
+});
+
+test("stepCursor passes over plies left out of the log", () => {
+  const entries = ["a", "", "b", "", "", "c"].map((text) => ({ player: 1, text }));
+  assert.equal(stepCursor(entries, 1, 1), 3);    // after "a", over the omitted ply, to after "b"
+  assert.equal(stepCursor(entries, 3, 1), 6);
+  assert.equal(stepCursor(entries, 6, -1), 3);
+  assert.equal(stepCursor(entries, 3, -1), 1);
+  assert.equal(stepCursor(entries, 1, -1), 0);
+  assert.equal(stepCursor(entries, 0, -1), 0);
+  assert.equal(stepCursor(entries, 6, 1), 6);
 });

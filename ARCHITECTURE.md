@@ -191,7 +191,7 @@ export default {
   defaultPlayers,                   // e.g. { 1: "human", 2: "ai" } (the default)
   moveLabels,                       // button labels for string moves, e.g. { pass: "Pass" }
   moveLabel(state, move),           // the same, computed (takes precedence)
-  moveText(before, move, info, scheme), // log text for a ply (see "The move log"); null for the default
+  moveText(before, move, info, scheme), // log text for a ply (see "The move log"); null for the default, "" to omit it
   turnHint(state, scheme),          // status line text while the game is on (scheme: the
                                     //   active colour scheme object, or null)
   boardDecor(board),                // -> lines over the cells, e.g. goal edges (outside: true
@@ -409,7 +409,10 @@ copies it.
 `common/log.js` describes each ply. `game.moveText(before, move, info,
 scheme)` is asked first (`before` is the position before the move, `info`
 what `applyMove` returned, `scheme` the active colour scheme or null);
-returning null falls back to the defaults: cell moves join cell names with
+returning "" leaves a string move's ply out of the log (for plies the
+next one makes plain, such as choosing to roll again before the roll;
+stepping back and forward passes over them), and null falls
+back to the defaults: cell moves join cell names with
 "–", `"draw:X"` reads "drew red" (marble names from the scheme's or the
 game's marbles), `"roll:4"` reads "rolled 4", and other string moves use their button label. Plies are
 grouped into turns by `currentPlayer`, so a draw is listed with the move

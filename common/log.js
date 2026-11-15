@@ -21,7 +21,7 @@ export function cellName(board, id) {
 export function describeMove(game, before, move, info, scheme = null) {
   if (game.moveText) {
     const text = game.moveText(before, move, info, scheme);
-    if (text) return text;
+    if (text != null) return text;   // "" leaves the ply out of the log
   }
   if (Array.isArray(move)) return move.map((id) => cellName(before.board, id)).join("–");
   if (isRollMove(move)) return `rolled ${rolledValue(move)}`;
@@ -59,20 +59,35 @@ export function logEntries(game, options, moves, { board = null, scheme = null }
   return moves.map((move) => playAndDescribe(game, state, move, scheme).entry);
 }
 
+// The cursor one ply back (dir -1) or forward (dir 1) from `cursor` (the
+// number of plies played), passing over plies left out of the log: the
+// position after one is the position before it, as far as the log shows.
+export function stepCursor(entries, cursor, dir) {
+  let n = cursor + dir;
+  while (n > 0 && n < entries.length && !entries[n - 1].text) n += dir;
+  return Math.max(0, Math.min(entries.length, n));
+}
+
 // Group entries into turns: [{ number, player, plies: [{ index, text }] }],
 // where index is the ply's position in the move list. Only players' turns
 // are numbered: plies that belong to no player (e.g. setting up a bag) get
-// number null.
+// number null. Plies with empty text are left out, though they still end
+// the turn before them if they are another player's.
 export function groupTurns(entries) {
   const turns = [];
   let turn = null;
+  let player = undefined;   // whose turn the last ply was in
   let number = 0;
-  entries.forEach(({ player, text }, index) => {
-    if (!turn || turn.player !== player) {
+  entries.forEach((entry, index) => {
+    const changed = entry.player !== player;
+    player = entry.player;
+    if (changed) turn = null;
+    if (!entry.text) return;
+    if (!turn) {
       turn = { number: player == null ? null : ++number, player, plies: [] };
       turns.push(turn);
     }
-    turn.plies.push({ index, text });
+    turn.plies.push({ index, text: entry.text });
   });
   return turns;
 }

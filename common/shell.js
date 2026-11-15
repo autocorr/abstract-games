@@ -12,7 +12,7 @@ import { buildSetup, choiceRow } from "./ui/setup.js";
 import { loadSettings, saveSettings, readHash, writeHash } from "./ui/settings.js";
 import { THEMES, loadTheme, setTheme } from "./theme.js";
 import { createLogView } from "./ui/move-list.js";
-import { playAndDescribe, logEntries, groupTurns, moveLabel } from "./log.js";
+import { playAndDescribe, logEntries, groupTurns, moveLabel, stepCursor } from "./log.js";
 import { timeline, isLive, jump, play, undoTarget } from "./timeline.js";
 import { games as registry } from "../games.js";
 import {
@@ -119,6 +119,7 @@ export function mount(game, { root = document.body } = {}) {
   ui.optionControls = setup.optionControls;
   ui.log = createLogView({
     onJump: (n) => seek(n),
+    onStep: (dir) => seek(stepCursor(entries, line.cursor, dir)),
     onCopy: () => navigator.clipboard.writeText(location.href),
   });
   ui.logSection = section("log", "Log", ui.log.node, { open: true });
@@ -608,7 +609,10 @@ export function mount(game, { root = document.body } = {}) {
     if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     const t = e.target;
     if (t instanceof Element && (t.closest("select, input, textarea") || t.isContentEditable)) return;
-    const to = { ArrowLeft: line.cursor - 1, ArrowRight: line.cursor + 1, Home: 0, End: line.moves.length }[e.key];
+    const to = {
+      ArrowLeft: stepCursor(entries, line.cursor, -1), ArrowRight: stepCursor(entries, line.cursor, 1),
+      Home: 0, End: line.moves.length,
+    }[e.key];
     if (to === undefined) return;
     e.preventDefault();
     seek(to);
