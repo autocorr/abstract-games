@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Successive Chess</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<link rel="icon" href="../../common/favicon.svg" type="image/svg+xml">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p>Chess, with these changes.</p>
+  <p><b>Turns.</b> Roll a die, then move. You may then roll again: higher than your previous roll gives another move (and another chance to roll); equal or lower is a bust: remove one of your own pieces and your turn ends. A 6 ends your turn.</p>
+  <p><b>Kings.</b> There is no check or checkmate. Capture the opposing King to win, which needs a roll at least as high as your opponent's final roll of their last turn (a bust included). Removing your own King loses.</p>
+  <p><b>Other rules.</b> Having no legal move after a roll loses. En passant is only possible against the last move of the opponent's turn. The fifty-move rule counts every move by either player (100 in all), and removing a piece resets it as a capture does. There is no draw by repetition.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
