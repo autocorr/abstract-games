@@ -135,4 +135,13 @@ export const games = [
     path: "games/hemisphere/",
     module: "games/hemisphere/game.js",
   },
+  {
+    id: "buoyancy-draw",
+    title: "Buoyancy Draw",
+    board: "6x6 chessboard turned 45 degrees",
+    blurb: "Draw marbles until a black one, and take an action for each white. Cap your opponent's stacks and bear them off past your edges to capture them.",
+    path: "games/buoyancy-draw/",
+    module: "games/buoyancy-draw/game.js",
+    thumbnailPlies: 1,
+  },
 ];

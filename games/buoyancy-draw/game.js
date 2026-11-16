@@ -1,0 +1,399 @@
+// Buoyancy Draw: Buoyancy (games/buoyancy) with marbles drawn from a bag in
+// place of dice. Pure: no DOM.
+//
+// Board: a 6x6 chessboard turned clockwise by 45 degrees, a diamond with a1
+// on the left, f1 at the bottom, f6 on the right and a6 at the top. Black's
+// two edges are the lower ones (rank 1 and the f file), White's the upper
+// ones (the a file and rank 6); the side corners a1 and f6 lie on both
+// players' edges. A player's house is the five rows of cells nearest their
+// bottom or top corner (15 cells), where their 15 checkers start, one per
+// cell; the middle row starts empty.
+//
+// Checkers stack. Each cell holds a stack, listed bottom to top; whoever has
+// the top checker controls it. A stack holding any of the opponent's checkers
+// carries captured men and moves backwards (towards its controller's edges);
+// any other stack, a single checker, moves forwards. A step is diagonal on
+// screen (orthogonal on the chessboard), so a stack has two steps open to it.
+//
+// The bag: one shared bag, by default 15 white and 5 black marbles (both
+// counts are options). A turn starts by drawing marbles one at a time (chance
+// plies, "draw:W" / "draw:B"; see common/bag.js) until a black one comes out.
+// Drawn marbles stay out, so the bag runs down over the turns; once it is
+// empty every marble goes back in and drawing goes on.
+//
+// Each white marble drawn is one action; the player takes up to that many,
+// then ends the turn ("end", or at once when no action is left or none is
+// possible). An action is one of:
+//   - a step: [from, to], a stack the player controls one step onto a cell
+//     that is vacant or the opponent's (capping it), not their own;
+//   - bearing off: [from], a stack carrying captured men steps off the board
+//     past one of its controller's edges (on screen, click it twice). The
+//     opponent's checkers in it are captured (they go to the controller's
+//     score), and the controller's own go to their reserve;
+//   - a surrender: [from], a single checker steps off past the opponent's
+//     edge, allowed only when it has no forward step open on the board; the
+//     opponent captures it;
+//   - a placement: [id], a man from the player's reserve onto a cell of their
+//     house that is vacant or holds an opposing stack (capping it). There is
+//     always room: a player's own stacks in their house hold at least one of
+//     their men each, and they have 15 men for 15 cells.
+// A [from] move starts on the player's own stack and a placement on a cell
+// they do not control, so the two never collide.
+//
+// A player loses when all 15 of their checkers are captured, or as soon as
+// they control no stack and have no man in reserve: every man they have left
+// lies under the opponent's caps. When neither player has any action
+// possible, the game is a draw (in practice never).
+
+import { makeBoard } from "../../common/board/graph.js";
+import { CHANCE, cachedBoards } from "../../common/engine.js";
+import { makeBag, cloneBag, drawOutcomes, drawMarble, drawnColour, returnDrawn, bagSize, bagPanel } from "../../common/bag.js";
+import { stackDrawer, stackStyles } from "../../common/stacks.js";
+
+const BLACK = 1, WHITE = 2;
+const PLAYERS = {
+  [BLACK]: { name: "Black", fill: "#202329", mark: "#ffffff" },
+  [WHITE]: { name: "White", fill: "#f2f2f0", mark: "#0e0f13" },
+};
+const MARBLES = {
+  W: { name: "white", fill: "#f2f2f0" },
+  B: { name: "black", fill: "#202329" },
+};
+const N = 6;            // the chessboard's side
+const CHECKERS = 15;    // each player's
+const HOUSE_ROWS = 5;
+const OFF = -1;         // a step past an edge
+
+const colorSchemes = {
+  brown: { name: "Brown", cellFill: (c) => (c.tags.dark ? "#b58863" : "#f0d9b5") },
+  blue: { name: "Blue", cellFill: (c) => (c.tags.dark ? "#8ca2ad" : "#dee3e6") },
+};
+
+// Stacks are drawn as Broadcast draws them (common/stacks.js), a little
+// smaller to fit a diamond, with heights from five checkers up.
+const piles = stackDrawer({ scale: 0.85, labelFrom: 5 });
+
+// ---- the board -------------------------------------------------------------
+
+// Steps as (file, rank) changes and on screen: up-right (rank + 1), up-left
+// (file - 1), down-right (file + 1), down-left (rank - 1).
+const STEPS = [[0, 1], [-1, 0], [1, 0], [0, -1]];
+// Forward and backward steps by player: Black moves up, White down.
+const FORWARD = { [BLACK]: [0, 1], [WHITE]: [2, 3] };
+const BACKWARD = { [BLACK]: [2, 3], [WHITE]: [0, 1] };
+
+// Half a square's diagonal: column and height units on screen.
+const K = Math.SQRT1_2;
+
+const inside = (f, r) => f >= 0 && f < N && r >= 0 && r < N;
+
+// Square (file f, rank r), id r * N + f: column f + r, height r - f.
+function buildBoard() {
+  const specs = [];
+  for (let r = 0; r < N; r++) {
+    for (let f = 0; f < N; f++) {
+      const y = r - f;
+      const X = (f + r) * K, Y = -y * K;
+      const house = y <= -(N - HOUSE_ROWS) ? BLACK : y >= N - HOUSE_ROWS ? WHITE : 0;
+      specs.push({
+        x: X, y: Y,
+        poly: [[X, Y - K], [X + K, Y], [X, Y + K], [X - K, Y]],
+        coord: { file: f, rank: r },
+        tags: { name: `${String.fromCharCode(97 + f)}${r + 1}`, dark: (f + r) % 2 === 0, house },
+      });
+    }
+  }
+  const board = makeBoard(specs);
+  board.size = board.cells.length;
+  board.steps = board.cells.map(({ coord: { file, rank } }) =>
+    STEPS.map(([df, dr]) => (inside(file + df, rank + dr) ? (rank + dr) * N + file + df : OFF)));
+  board.house = { [BLACK]: [], [WHITE]: [] };
+  for (const c of board.cells) if (c.tags.house) board.house[c.tags.house].push(c.id);
+  return board;
+}
+
+// ---- the rules -------------------------------------------------------------
+
+const other = (p) => 3 - p;
+
+// Whether the stack holds checkers of the player other than `owner`.
+const carries = (stack, owner) => stack.some((p) => p !== owner);
+
+// Moves of the stack on `id`: [id, to] onto open squares, and [id] off the
+// board as the rules allow (bearing off always; surrendering only when
+// blocked).
+function stackMoves(s, id) {
+  const { board, tops } = s;
+  const p = tops[id];
+  const homeward = carries(s.stacks[id], p);
+  const out = [];
+  let edge = false;
+  for (const d of (homeward ? BACKWARD : FORWARD)[p]) {
+    const to = board.steps[id][d];
+    if (to === OFF) edge = true;
+    else if (tops[to] !== p) out.push([id, to]);
+  }
+  if (edge && (homeward || !out.length)) out.push([id]);
+  return out;
+}
+
+// Cells of the player's house a man from reserve may be placed on: vacant,
+// or holding an opposing stack.
+const entries = (s, player) => s.board.house[player].filter((id) => s.tops[id] !== player);
+
+// Every action open to the player: stack moves, then placements.
+function actions(s, player) {
+  const out = [];
+  for (let id = 0; id < s.board.size; id++) if (s.tops[id] === player) out.push(...stackMoves(s, id));
+  if (s.reserve[player]) for (const id of entries(s, player)) out.push([id]);
+  return out;
+}
+
+const canAct = (s, player) => actions(s, player).length > 0;
+
+const controls = (s, player) => s.tops.includes(player);
+
+function finish(s, winner, reason) {
+  s.over = true;
+  s.winner = winner;
+  s.reason = reason;
+}
+
+// Move a stack one step, or off the board. Returns what left the board:
+// { scored, saved } (a stack borne off) or { lost } (a single surrendered),
+// or {}.
+function step(s, [from, to]) {
+  const p = s.turn;
+  const moving = s.stacks[from];
+  s.stacks[from] = [];
+  s.tops[from] = 0;
+  if (to !== undefined) {
+    s.stacks[to] = s.stacks[to].length ? s.stacks[to].concat(moving) : moving;
+    s.tops[to] = p;
+    return {};
+  }
+  if (!carries(moving, p)) {
+    s.score[other(p)] += moving.length;
+    return { lost: moving.length };
+  }
+  const saved = moving.filter((q) => q === p).length;
+  s.score[p] += moving.length - saved;
+  s.reserve[p] += saved;
+  return { scored: moving.length - saved, saved };
+}
+
+// A man from reserve onto `id`, capping any stack there.
+function place(s, id) {
+  s.reserve[s.turn]--;
+  s.stacks[id] = s.stacks[id].concat([s.turn]);
+  s.tops[id] = s.turn;
+}
+
+// The game ends once a player has lost all 15 men, or controls no stack
+// with none in reserve.
+function checkEnd(s) {
+  const p = s.turn, q = other(p);
+  if (s.score[p] >= CHECKERS) finish(s, p, "captured");
+  else if (s.score[q] >= CHECKERS) finish(s, q, "captured");
+  else if (!controls(s, q) && !s.reserve[q]) finish(s, p, "buried");
+  else if (!controls(s, p) && !s.reserve[p]) finish(s, q, "buried");
+}
+
+// Next player's turn, starting with a draw. When neither player has any
+// action possible, the game is drawn.
+function endTurn(s) {
+  s.turns++;
+  s.actions = 0;
+  s.drew = 0;
+  s.phase = "draw";
+  const next = other(s.turn);
+  if (!canAct(s, next) && !canAct(s, s.turn)) {
+    s.turn = next;
+    finish(s, 0, "blocked");
+    return;
+  }
+  s.turn = next;
+}
+
+// After a draw or an action: keep drawing, act, or end the turn.
+function advance(s) {
+  if (s.over || s.phase === "draw") return;
+  if (!s.actions || !canAct(s, s.turn)) endTurn(s);
+}
+
+function apply(s, move) {
+  const p = s.turn;
+  if (s.phase === "draw") {
+    const colour = drawMarble(s.bag, move);
+    const refilled = !bagSize(s.bag);
+    if (refilled) returnDrawn(s.bag);
+    if (colour === "W") {
+      s.actions++;
+      s.drew++;
+    } else {
+      s.phase = "act";
+      advance(s);
+    }
+    return { refilled };
+  }
+  if (move === "end") {
+    endTurn(s);
+    return { player: p };
+  }
+  s.last = move.slice();
+  let info = { player: p };
+  s.actions--;
+  if (move.length === 1 && s.tops[move[0]] !== p) {
+    place(s, move[0]);
+    info.placed = true;
+  } else info = { ...info, ...step(s, move) };
+  checkEnd(s);
+  advance(s);
+  return info;
+}
+
+// ---- text ------------------------------------------------------------------
+
+const name = (p) => PLAYERS[p].name;
+const plural = (n, one, many = one + "s") => `${n} ${n === 1 ? one : many}`;
+
+function hint(s) {
+  const who = name(s.turn);
+  if (s.phase === "draw") {
+    return `${who} draws marbles until a black one: ${plural(s.drew, "white")} so far…`;
+  }
+  const can = [];
+  const moves = actions(s, s.turn);
+  if (moves.some((m) => s.tops[m[0]] === s.turn)) can.push("move a stack");
+  if (s.reserve[s.turn] && moves.some((m) => s.tops[m[0]] !== s.turn)) can.push(`place a man from your reserve (${s.reserve[s.turn]})`);
+  const off = moves.some((m) => m.length === 1 && s.tops[m[0]] === s.turn) ? " Click a stack twice to step it off the board." : "";
+  return `${who}: ${plural(s.actions, "action")} left: ${can.join(", or ")}.${off}`;
+}
+
+export default {
+  id: "buoyancy-draw",
+  title: "Buoyancy Draw",
+  url: import.meta.url,
+  players: PLAYERS,
+  options: {
+    whites: { label: "White marbles", choices: [5, 10, 15, 20, 30], default: 15 },
+    blacks: { label: "Black marbles", choices: [1, 3, 5, 8, 10], default: 5 },
+  },
+  colorSchemes,
+  marbles: MARBLES,
+  pieceStyles: stackStyles,
+  pieceLabels: "Stack heights",
+  moveLabels: { end: "End turn" },
+
+  createBoard: cachedBoards(() => "board", buildBoard),
+  initialState(board, opts) {
+    const stacks = Array.from({ length: board.size }, () => []);
+    const tops = new Uint8Array(board.size);
+    for (const p of [BLACK, WHITE]) {
+      for (const id of board.house[p]) {
+        stacks[id] = [p];
+        tops[id] = p;
+      }
+    }
+    return {
+      board,
+      stacks,                 // bottom to top
+      tops,                   // owner of each top checker, 0 for vacant
+      bag: makeBag({ W: opts.whites, B: opts.blacks }),
+      turn: BLACK,
+      phase: "draw",          // "draw" (chance, one ply per marble), "act"
+      drew: 0,                // white marbles drawn this turn
+      actions: 0,             // actions left this turn
+      reserve: [0, 0, 0],     // men borne home and waiting to be placed, by player
+      score: [0, 0, 0],       // the opponent's checkers captured, by player
+      last: null,             // the last action's cells
+      turns: 0,
+      over: false,
+      winner: 0,
+      reason: null,           // "captured", "buried" or "blocked", once over
+    };
+  },
+  clone(s) {
+    return {
+      ...s,
+      stacks: s.stacks.map((st) => st.slice()),
+      tops: s.tops.slice(),
+      bag: cloneBag(s.bag),
+      reserve: s.reserve.slice(),
+      score: s.score.slice(),
+      last: s.last && s.last.slice(),
+    };
+  },
+  toMove(s) {
+    return s.phase === "draw" ? CHANCE : s.turn;
+  },
+  currentPlayer(s) {
+    return s.turn;
+  },
+  chances(s) {
+    return drawOutcomes(s.bag);
+  },
+  legalMoves(s) {
+    if (s.over) return [];
+    if (s.phase === "draw") return drawOutcomes(s.bag).map((o) => o.move);
+    return [...actions(s, s.turn), "end"];
+  },
+  applyMove: apply,
+  outcome(s) {
+    return s.over ? { winner: s.winner } : null;
+  },
+
+  chanceView(s) {
+    return [{ ...bagPanel(s.bag, { title: "Bag", active: !s.over && s.phase === "draw" }), owner: s.turn }];
+  },
+  piecesOf(s, style) {
+    return piles.piecesOf(s.stacks, style);
+  },
+  // Outlines on the cells of the last action, and dots on the stacks that
+  // can move and the cells open to a man from reserve.
+  markers(s) {
+    const out = [];
+    if (s.last) for (const id of s.last) out.push({ id, kind: "square" });
+    if (s.over || s.phase !== "act") return out;
+    for (const id of new Set(actions(s, s.turn).map(([from]) => from))) {
+      const h = s.stacks[id].length;
+      out.push({ id, kind: "target", y: h > 1 && h < 5 ? piles.cappedPile(h) / 2 + 0.11 : 0 });
+    }
+    return out;
+  },
+  moveText(s, move, info) {
+    const cell = (id) => s.board.cells[id].tags.name;
+    if (typeof move === "string") {
+      if (move === "end") return "ended the turn";
+      const colour = drawnColour(move);
+      const refill = info && info.refilled ? " (bag refilled)" : "";
+      return colour === "W" ? `drew white${refill}` : `drew black: ${plural(s.drew, "action")}${refill}`;
+    }
+    if (move.length === 2) return `${cell(move[0])}–${cell(move[1])}`;
+    if (s.tops[move[0]] !== s.turn) return `placed ${cell(move[0])}`;
+    const what = !info ? "" : info.lost ? ", surrendered"
+      : info.scored != null ? `: ${info.scored} captured, ${plural(info.saved, "man", "men")} to reserve` : "";
+    return `${cell(move[0])} off${what}`;
+  },
+  scoreSummary(s, player) {
+    const n = s.score[player], r = s.reserve[player];
+    return {
+      main: String(n),
+      sub: r ? `captured · ${r} in reserve` : "captured",
+      title: `${name(player)} has captured ${n} of ${name(other(player))}'s ${CHECKERS} checkers` +
+        (r ? `, and has ${plural(r, "man", "men")} in reserve` : ""),
+    };
+  },
+  outcomeLines(s, outcome) {
+    const w = outcome.winner;
+    const scores = [BLACK, WHITE].map((p) => `${name(p)} captured ${s.score[p]}.`);
+    if (s.reason === "captured") return [`${name(w)} captured all ${CHECKERS} of ${name(other(w))}'s checkers.`];
+    if (s.reason === "buried") return [`${name(other(w))} controls no stack and has no man in reserve: every man they have left is under ${name(w)}'s caps.`, ...scores];
+    return ["Neither player has any action possible.", ...scores];
+  },
+  turnHint(s) {
+    return s.over ? "" : hint(s);
+  },
+};
+
+export const internals = { actions, stackMoves, entries, canAct };

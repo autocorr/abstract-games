@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Buoyancy Draw</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<link rel="icon" href="../../common/favicon.svg" type="image/svg+xml">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p>A variant of <a href="../buoyancy/">Buoyancy</a> with marbles drawn from a bag in place of dice.</p>
+  <p><b>Goal.</b> Capture all 15 of your opponent's checkers.</p>
+  <p><b>Board.</b> A 6&times;6 chessboard turned 45 degrees into a diamond. Black's edges are the two lower sides, White's the two upper sides; the left and right corners lie on both. Each player's house is the 15 cells nearest their corner (the five rows below or above the middle row), and each starts with a checker on every cell of it. The middle row starts empty. Black moves first.</p>
+  <p><b>Stacks.</b> Whoever's checker is on top controls a stack; a single checker is a stack too. A stack holding any of your opponent's checkers moves backwards, towards your edges. Any other stack moves forwards.</p>
+  <p><b>The bag.</b> One bag is shared by both players. It starts with 15 white and 5 black marbles (both counts can be changed under Setup). Drawn marbles stay out of the bag; when it is empty, all of them go back in.</p>
+  <p><b>Turn.</b> Draw marbles one at a time until you draw a black one. Each white marble you drew gives you one action. Take up to that many actions, then end your turn. An action is one of:</p>
+  <ul>
+    <li><b>Move</b> a stack you control one diagonal step, forwards or backwards as above, onto an empty cell or onto your opponent's stack, capping it, but not onto a stack you control.</li>
+    <li><b>Bear off</b> a stack carrying your opponent's checkers by stepping it off the board past one of your edges, as if there were a square there. Your opponent's checkers in it are captured, and your own go to your reserve.</li>
+    <li><b>Place</b> a man from your reserve on a cell of your house, an empty one or capping an opposing stack.</li>
+  </ul>
+  <p>To step a stack off the board, click it twice (once, if it has no other move).</p>
+  <p><b>Surrender.</b> A single checker may stand on your opponent's edge. It may step off the board past that edge (an action) only when it has no forward step open on the board, and then your opponent captures it.</p>
+  <p><b>End.</b> You lose when all of your checkers have been captured, or as soon as you control no stack and have no man in reserve: every man you have left is under your opponent's caps, and you could never move again.</p>
+  <p><b>Display.</b> Stacks are drawn as Broadcast draws them: a pile of bars, the bottom checker lowest, on a cell shaded for the player on top, with the height shown from five checkers up. Dots mark the stacks that can move and the cells open to a man from your reserve, and outlines the cells of the last action. The bag shows the marbles left in it and those drawn since it was last filled.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
