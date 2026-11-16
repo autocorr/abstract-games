@@ -25,7 +25,7 @@ common/
   bag.js                    bags of coloured marbles: draws as chance plies, refills, bagPanel()
   dice.js                   dice: rolls as chance plies, dicePanel()
   stacks.js                 stacks of checkers drawn as piles of bars, in three styles
-                            (Broadcast)
+                            (Broadcast, Buoyancy)
   swap.js                   withSwap(game): the swap (pie) rule for any two-player game;
                             swapStones() for games that only recolour stones
   largest-groups.js         group sizes and the "largest groups cascading" win condition, with
