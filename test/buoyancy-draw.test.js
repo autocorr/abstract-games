@@ -178,3 +178,16 @@ test("capturing all 15 wins", () => {
   game.applyMove(s, [sq("b1")]);
   assert.deepEqual(game.outcome(s), { winner: 1 });
 });
+
+test("AI rollouts: material lead, and scored rollouts that end in a winner", async () => {
+  const { seededRng } = await import("../common/rng.js");
+  // White has captured 2; Black holds 2 White men under a cap (half each).
+  const s = position({ c3: [1, 1, 2], a6: [2], f1: [1] });
+  s.score[1] = 2;
+  assert.equal(internals.materialLead(s), 1);
+  const rng = seededRng(3);
+  for (let i = 0; i < 20; i++) {
+    const t = game.clone(fresh());
+    assert.ok([1, 2].includes(game.playout(t, rng)));
+  }
+});

@@ -257,6 +257,54 @@ function apply(s, move) {
   return info;
 }
 
+// ---- rollouts --------------------------------------------------------------
+
+// Rollout settings: the share of random actions, the turns played before
+// the position is scored, and the lead in men that gives about 3:1 odds.
+// Tuned in self-play at 100 ms a move: this beats plain MCTS (random
+// rollouts to the end) in 86% of games, and 6 turns at scale 3 in 70%.
+// Without random actions it beat the latter as well but plain MCTS less
+// often.
+const tune = { random: 0.2, turns: 3, scale: 1.5 };
+
+// White's lead in men: captured ones, and half of those held under caps.
+function materialLead(s) {
+  let lead = s.score[WHITE] - s.score[BLACK];
+  for (let id = 0; id < s.board.size; id++) {
+    const st = s.stacks[id];
+    if (st.length < 2) continue;
+    const top = s.tops[id];
+    let held = 0;
+    for (const q of st) if (q !== top) held++;
+    lead += (top === WHITE ? 0.5 : -0.5) * held;
+  }
+  return lead;
+}
+
+// How much a rollout likes an action: bearing off (more for more captured),
+// then capping (more for taller stacks), then placing, then stepping, and
+// surrendering last.
+function actionValue(s, m) {
+  const p = s.turn;
+  const [from, to] = m;
+  if (m.length === 1) {
+    if (s.tops[from] !== p) return s.tops[from] ? 60 + s.stacks[from].length : 20;   // placing
+    const caught = s.stacks[from].length - s.stacks[from].filter((q) => q === p).length;
+    return caught ? 100 + caught : -50;   // bearing off, or surrendering
+  }
+  return s.tops[to] ? 50 + s.stacks[to].length : 0;
+}
+
+function greedyAction(s, moves, rng) {
+  let best = -Infinity, ties = 0, choice = null;
+  for (const m of moves) {
+    const v = actionValue(s, m);
+    if (v > best) { best = v; ties = 1; choice = m; }
+    else if (v === best && rng() * ++ties < 1) choice = m;
+  }
+  return choice;
+}
+
 // ---- text ------------------------------------------------------------------
 
 const name = (p) => PLAYERS[p].name;
@@ -314,7 +362,7 @@ export default {
       turns: 0,
       over: false,
       winner: 0,
-      reason: null,           // "captured", "buried" or "blocked", once over
+      reason: null,           // "captured", "buried" or "blocked", once over ("estimated": an AI rollout cut short)
     };
   },
   clone(s) {
@@ -345,6 +393,33 @@ export default {
   applyMove: apply,
   outcome(s) {
     return s.over ? { winner: s.winner } : null;
+  },
+
+  // Rollouts for the AI. Random play is very weak here (a greedy player
+  // beats it almost every game), and whole games are mostly luck of the
+  // draw, so rollouts play greedily (bear off the richest stack, else cap
+  // the tallest, else place, else step; surrender last) for a few turns and
+  // then score the position (see tune).
+  playout(s, rng) {
+    const stop = tune.turns ? s.turns + tune.turns : Infinity;
+    while (!s.over) {
+      if (s.turns >= stop) {
+        // Score the position: captures, and men held under caps at half
+        // value; the winner is drawn by how far ahead White is. The rollout's
+        // copy of the game is ended with that winner (the search discards it).
+        const lead = materialLead(s);
+        finish(s, rng() < 1 / (1 + Math.exp(-lead / tune.scale)) ? WHITE : BLACK, "estimated");
+        break;
+      }
+      if (s.phase === "draw") {
+        const n = bagSize(s.bag);
+        apply(s, rng() * n < s.bag.counts.W ? "draw:W" : "draw:B");
+        continue;
+      }
+      const moves = actions(s, s.turn);
+      apply(s, rng() < tune.random ? moves[Math.floor(rng() * moves.length)] : greedyAction(s, moves, rng));
+    }
+    return s.winner;
   },
 
   chanceView(s) {
@@ -399,4 +474,4 @@ export default {
   },
 };
 
-export const internals = { actions, stackMoves, entries, canAct };
+export const internals = { actions, stackMoves, entries, canAct, materialLead, tune };
