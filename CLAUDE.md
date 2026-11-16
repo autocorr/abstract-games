@@ -9,6 +9,11 @@ Static site of abstract strategy games: plain HTML + native ES modules, no build
 - Python is dev-only tooling (e.g. Playwright) in the hidden `.tools/` uv project, which Pages does not publish:
   `uv run --project .tools python .tools/scripts/screenshot.py [path] [out.png]`
 - Never add Python to the site or to CI (installs are slow).
+- To playtest a game away from the server (e.g. in Claude's HTML viewer),
+  bundle its page into one self-contained HTML file, then check it loads and
+  plays in a sandboxed iframe:
+  `node .tools/scripts/bundle.mjs <game id> [out.html]`,
+  `uv run --project .tools python .tools/scripts/check_bundle.py <out.html> [out.png]`
 - Content blockers block scripts with tracker-like names (EasyPrivacy blocks
   `/log-view.js`), which blanks a page. Check new file names with
   `uv run --project .tools python .tools/scripts/check_blocklists.py`.
