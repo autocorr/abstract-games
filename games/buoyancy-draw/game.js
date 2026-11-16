@@ -6,9 +6,10 @@
 // plays from the bottom and moves first: White's two edges are the lower
 // ones (rank 1 and the f file), Black's the upper ones (the a file and rank
 // 6); the side corners a1 and f6 lie on both
-// players' edges. A player's house is the five rows of cells nearest their
-// bottom or top corner (15 cells), where their 15 checkers start, one per
-// cell; the middle row starts empty.
+// players' edges. Each player's 15 checkers start one per cell on the five
+// rows of cells nearest their bottom or top corner; their house, where men
+// from reserve are placed, is the nearest four of those rows (10 cells). The
+// middle row starts empty.
 //
 // Checkers stack. Each cell holds a stack, listed bottom to top; whoever has
 // the top checker controls it. A stack holding any of the opponent's checkers
@@ -22,9 +23,9 @@
 // Drawn marbles stay out, so the bag runs down over the turns; once it is
 // empty every marble goes back in and drawing goes on.
 //
-// Each white marble drawn is one action; the player takes up to that many,
-// then ends the turn ("end", or at once when no action is left or none is
-// possible). An action is one of:
+// Each white marble drawn is one action, and the player must take them all:
+// the turn ends once none is left, or early only when no action is
+// possible. An action is one of:
 //   - a step: [from, to], a stack the player controls one step onto a cell
 //     that is vacant or the opponent's (capping it), not their own;
 //   - bearing off: [from], a stack carrying captured men steps off the board
@@ -34,12 +35,10 @@
 //   - a surrender: [from], a single checker steps off past the opponent's
 //     edge, allowed only when it has no forward step open on the board; the
 //     opponent captures it;
-//   - a placement: [id], a man from the player's reserve onto a cell of their
-//     house that is vacant or holds an opposing stack (capping it). There is
-//     always room: a player's own stacks in their house hold at least one of
-//     their men each, and they have 15 men for 15 cells.
-// A [from] move starts on the player's own stack and a placement on a cell
-// they do not control, so the two never collide.
+//   - a placement: [id], a man from the player's reserve onto a vacant cell
+//     of their house. With none vacant, the men wait.
+// A [from] move starts on the player's own stack and a placement on a
+// vacant cell, so the two never collide.
 //
 // A player loses when all 15 of their checkers are captured, or as soon as
 // they control no stack and have no man in reserve: every man they have left
@@ -63,7 +62,8 @@ const MARBLES = {
 };
 const N = 6;            // the chessboard's side
 const CHECKERS = 15;    // each player's
-const HOUSE_ROWS = 5;
+const START_ROWS = 5;   // rows of single checkers at the start
+const HOUSE_ROWS = 4;   // rows of the house, where men from reserve are placed
 const OFF = -1;         // a step past an edge
 
 const colorSchemes = {
@@ -97,11 +97,12 @@ function buildBoard() {
     for (let f = 0; f < N; f++) {
       const y = r - f;
       const X = (f + r) * K, Y = -y * K;
-      const house = y <= -(N - HOUSE_ROWS) ? WHITE : y >= N - HOUSE_ROWS ? BLACK : 0;
+      const side = (rows) => (y <= -(N - rows) ? WHITE : y >= N - rows ? BLACK : 0);
+      const house = side(HOUSE_ROWS), start = side(START_ROWS);
       specs.push({
         x: X, y: Y,
         poly: [[X, Y - K], [X + K, Y], [X, Y + K], [X - K, Y]],
-        coord: { file: f, rank: r },
+        coord: { file: f, rank: r, start },
         tags: { name: `${String.fromCharCode(97 + f)}${r + 1}`, dark: (f + r) % 2 === 0, house },
       });
     }
@@ -111,7 +112,11 @@ function buildBoard() {
   board.steps = board.cells.map(({ coord: { file, rank } }) =>
     STEPS.map(([df, dr]) => (inside(file + df, rank + dr) ? (rank + dr) * N + file + df : OFF)));
   board.house = { [WHITE]: [], [BLACK]: [] };
-  for (const c of board.cells) if (c.tags.house) board.house[c.tags.house].push(c.id);
+  board.start = { [WHITE]: [], [BLACK]: [] };
+  for (const c of board.cells) {
+    if (c.tags.house) board.house[c.tags.house].push(c.id);
+    if (c.coord.start) board.start[c.coord.start].push(c.id);
+  }
   return board;
 }
 
@@ -140,9 +145,9 @@ function stackMoves(s, id) {
   return out;
 }
 
-// Cells of the player's house a man from reserve may be placed on: vacant,
-// or holding an opposing stack.
-const entries = (s, player) => s.board.house[player].filter((id) => s.tops[id] !== player);
+// Cells of the player's house a man from reserve may be placed on: vacant
+// ones.
+const entries = (s, player) => s.board.house[player].filter((id) => !s.tops[id]);
 
 // Every action open to the player: stack moves, then placements.
 function actions(s, player) {
@@ -185,7 +190,7 @@ function step(s, [from, to]) {
   return { scored: moving.length - saved, saved };
 }
 
-// A man from reserve onto `id`, capping any stack there.
+// A man from reserve onto the vacant cell `id`.
 function place(s, id) {
   s.reserve[s.turn]--;
   s.stacks[id] = s.stacks[id].concat([s.turn]);
@@ -239,14 +244,10 @@ function apply(s, move) {
     }
     return { refilled };
   }
-  if (move === "end") {
-    endTurn(s);
-    return { player: p };
-  }
   s.last = move.slice();
   let info = { player: p };
   s.actions--;
-  if (move.length === 1 && s.tops[move[0]] !== p) {
+  if (move.length === 1 && !s.tops[move[0]]) {
     place(s, move[0]);
     info.placed = true;
   } else info = { ...info, ...step(s, move) };
@@ -286,14 +287,13 @@ export default {
   marbles: MARBLES,
   pieceStyles: stackStyles,
   pieceLabels: "Stack heights",
-  moveLabels: { end: "End turn" },
 
   createBoard: cachedBoards(() => "board", buildBoard),
   initialState(board, opts) {
     const stacks = Array.from({ length: board.size }, () => []);
     const tops = new Uint8Array(board.size);
     for (const p of [WHITE, BLACK]) {
-      for (const id of board.house[p]) {
+      for (const id of board.start[p]) {
         stacks[id] = [p];
         tops[id] = p;
       }
@@ -339,7 +339,7 @@ export default {
   legalMoves(s) {
     if (s.over) return [];
     if (s.phase === "draw") return drawOutcomes(s.bag).map((o) => o.move);
-    return [...actions(s, s.turn), "end"];
+    return actions(s, s.turn);
   },
   applyMove: apply,
   outcome(s) {
@@ -367,7 +367,6 @@ export default {
   moveText(s, move, info) {
     const cell = (id) => s.board.cells[id].tags.name;
     if (typeof move === "string") {
-      if (move === "end") return "ended the turn";
       const colour = drawnColour(move);
       const refill = info && info.refilled ? " (bag refilled)" : "";
       return colour === "W" ? `drew white${refill}` : `drew black: ${plural(s.drew, "action")}${refill}`;

@@ -40,6 +40,20 @@ test("White plays from the bottom and moves first", () => {
   assert.ok(s.board.house[1].includes(sq("f1")), "the bottom corner");
 });
 
+test("15 men start on five rows each; the house is the nearest four (10 cells)", () => {
+  const s = fresh();
+  for (const p of [1, 2]) {
+    assert.equal(s.stacks.filter((st) => st[0] === p).length, 15);
+    assert.equal(s.board.house[p].length, 10);
+  }
+  // The fifth row starts filled but lies outside the house.
+  for (const name of ["d3", "b1", "f5"]) {
+    assert.deepEqual(s.stacks[sq(name)], [1], name);
+    assert.ok(!s.board.house[1].includes(sq(name)), name);
+  }
+  assert.ok(s.board.house[1].includes(sq("e2")) && s.board.house[2].includes(sq("a6")));
+});
+
 test("the bag starts with the chosen marbles, and a turn draws until a black one", () => {
   const s = fresh();
   assert.deepEqual(s.bag.counts, { W: 15, B: 5 });
@@ -53,8 +67,9 @@ test("the bag starts with the chosen marbles, and a turn draws until a black one
   assert.equal(game.toMove(s), 1);
   assert.equal(s.actions, 2);
   assert.deepEqual(s.bag.counts, { W: 13, B: 4 });
-  // From the start only the front row can step, into the middle row.
-  assert.ok(game.legalMoves(s).includes("end"));
+  // From the start only the front row can step, into the middle row; there
+  // is no passing.
+  assert.ok(!game.legalMoves(s).includes("end"));
   game.applyMove(s, [sq("d3"), sq("d4")]);
   game.applyMove(s, [sq("d4"), sq("d5")]);   // capping Black's d5
   assert.deepEqual(s.stacks[sq("d5")], [2, 1]);
@@ -64,16 +79,32 @@ test("the bag starts with the chosen marbles, and a turn draws until a black one
   assert.deepEqual(s.bag.drawn, ["W", "W", "B"]);
 });
 
-test("a black marble first means no action; a turn may end early", () => {
+test("a black marble first means no action; every action must be taken while one is possible", () => {
   const s = fresh();
   draw(s, "B");
   assert.equal(s.turn, 2);
   draw(s, "WWWB");
   assert.equal(s.actions, 3);
   game.applyMove(s, [sq("c4"), sq("c3")]);
-  game.applyMove(s, "end");
+  game.applyMove(s, [sq("c3"), sq("c2")]);   // capping White's c2
+  assert.equal(s.turn, 2);
+  assert.equal(s.actions, 1);
+  game.applyMove(s, [sq("d4"), sq("d3")]);
   assert.equal(s.turn, 1);
   assert.equal(s.turns, 2);
+
+  // With actions left but none possible, the turn passes: White's men wait
+  // in reserve while Black holds every cell of White's house.
+  const t = position({});
+  for (const id of t.board.house[1]) {
+    t.stacks[id] = [2];
+    t.tops[id] = 2;
+  }
+  t.reserve[1] = 2;
+  draw(t, "WWB");
+  assert.equal(game.outcome(t), null);
+  assert.equal(t.turn, 2);
+  assert.equal(game.toMove(t), CHANCE);
 });
 
 test("an empty bag is refilled with every marble", () => {
@@ -86,7 +117,7 @@ test("an empty bag is refilled with every marble", () => {
 });
 
 test("bearing off sends your men to reserve; placing one is an action", () => {
-  const s = position({ b1: [1, 2, 1], f5: [1], a6: [2] });
+  const s = position({ b1: [1, 2, 1], f2: [1], e1: [2], a6: [2] });
   draw(s, "WWB");
   assert.deepEqual(keys(actions(s, 1).filter((m) => m[0] === sq("b1"))), keys([[sq("b1")], [sq("b1"), sq("c1")]]));
   const before = game.clone(s);
@@ -95,13 +126,15 @@ test("bearing off sends your men to reserve; placing one is an action", () => {
   assert.equal(game.moveText(before, [sq("b1")], info), "b1 off: 1 captured, 2 men to reserve");
   assert.equal(s.score[1], 1);
   assert.equal(s.reserve[1], 2);
-  // Placements: the house cells White does not control (f5 is White's).
+  // Placements: the vacant cells of the house, not White's own f2 nor
+  // Black's e1.
   const places = actions(s, 1).filter((m) => m.length === 1 && s.tops[m[0]] !== 1);
-  assert.equal(places.length, 14);
+  assert.equal(places.length, 8);
+  assert.ok(!places.some(([id]) => id === sq("e1") || id === sq("f2")));
   game.applyMove(s, [sq("f1")]);
   assert.equal(s.reserve[1], 1);
   assert.deepEqual(s.stacks[sq("f1")], [1]);
-  assert.equal(game.moveText(s, [sq("e1")], {}), "placed e1");
+  assert.equal(game.moveText(s, [sq("d1")], {}), "placed d1");
   // That was the last action: Black's turn.
   assert.equal(s.turn, 2);
   assert.match(game.scoreSummary(s, 1).sub, /1 in reserve/);
