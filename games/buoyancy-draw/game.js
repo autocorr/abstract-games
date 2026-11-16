@@ -2,9 +2,10 @@
 // place of dice. Pure: no DOM.
 //
 // Board: a 6x6 chessboard turned clockwise by 45 degrees, a diamond with a1
-// on the left, f1 at the bottom, f6 on the right and a6 at the top. Black's
-// two edges are the lower ones (rank 1 and the f file), White's the upper
-// ones (the a file and rank 6); the side corners a1 and f6 lie on both
+// on the left, f1 at the bottom, f6 on the right and a6 at the top. White
+// plays from the bottom and moves first: White's two edges are the lower
+// ones (rank 1 and the f file), Black's the upper ones (the a file and rank
+// 6); the side corners a1 and f6 lie on both
 // players' edges. A player's house is the five rows of cells nearest their
 // bottom or top corner (15 cells), where their 15 checkers start, one per
 // cell; the middle row starts empty.
@@ -48,12 +49,13 @@
 import { makeBoard } from "../../common/board/graph.js";
 import { CHANCE, cachedBoards } from "../../common/engine.js";
 import { makeBag, cloneBag, drawOutcomes, drawMarble, drawnColour, returnDrawn, bagSize, bagPanel } from "../../common/bag.js";
-import { stackDrawer, stackStyles } from "../../common/stacks.js";
+import { stackDrawer, stackStyles, STACK_SHADES } from "../../common/stacks.js";
 
-const BLACK = 1, WHITE = 2;
+// White plays from the bottom and moves first.
+const WHITE = 1, BLACK = 2;
 const PLAYERS = {
-  [BLACK]: { name: "Black", fill: "#202329", mark: "#ffffff" },
   [WHITE]: { name: "White", fill: "#f2f2f0", mark: "#0e0f13" },
+  [BLACK]: { name: "Black", fill: "#202329", mark: "#ffffff" },
 };
 const MARBLES = {
   W: { name: "white", fill: "#f2f2f0" },
@@ -70,17 +72,18 @@ const colorSchemes = {
 };
 
 // Stacks are drawn as Broadcast draws them (common/stacks.js), a little
-// smaller to fit a diamond, with heights from five checkers up.
-const piles = stackDrawer({ scale: 0.85, labelFrom: 5 });
+// smaller to fit a diamond, with heights from five checkers up; the cell
+// shades follow the colours, White being player 1 here.
+const piles = stackDrawer({ scale: 0.85, labelFrom: 5, shades: { [WHITE]: STACK_SHADES[2], [BLACK]: STACK_SHADES[1] } });
 
 // ---- the board -------------------------------------------------------------
 
 // Steps as (file, rank) changes and on screen: up-right (rank + 1), up-left
 // (file - 1), down-right (file + 1), down-left (rank - 1).
 const STEPS = [[0, 1], [-1, 0], [1, 0], [0, -1]];
-// Forward and backward steps by player: Black moves up, White down.
-const FORWARD = { [BLACK]: [0, 1], [WHITE]: [2, 3] };
-const BACKWARD = { [BLACK]: [2, 3], [WHITE]: [0, 1] };
+// Forward and backward steps by player: White moves up, Black down.
+const FORWARD = { [WHITE]: [0, 1], [BLACK]: [2, 3] };
+const BACKWARD = { [WHITE]: [2, 3], [BLACK]: [0, 1] };
 
 // Half a square's diagonal: column and height units on screen.
 const K = Math.SQRT1_2;
@@ -94,7 +97,7 @@ function buildBoard() {
     for (let f = 0; f < N; f++) {
       const y = r - f;
       const X = (f + r) * K, Y = -y * K;
-      const house = y <= -(N - HOUSE_ROWS) ? BLACK : y >= N - HOUSE_ROWS ? WHITE : 0;
+      const house = y <= -(N - HOUSE_ROWS) ? WHITE : y >= N - HOUSE_ROWS ? BLACK : 0;
       specs.push({
         x: X, y: Y,
         poly: [[X, Y - K], [X + K, Y], [X, Y + K], [X - K, Y]],
@@ -107,7 +110,7 @@ function buildBoard() {
   board.size = board.cells.length;
   board.steps = board.cells.map(({ coord: { file, rank } }) =>
     STEPS.map(([df, dr]) => (inside(file + df, rank + dr) ? (rank + dr) * N + file + df : OFF)));
-  board.house = { [BLACK]: [], [WHITE]: [] };
+  board.house = { [WHITE]: [], [BLACK]: [] };
   for (const c of board.cells) if (c.tags.house) board.house[c.tags.house].push(c.id);
   return board;
 }
@@ -289,7 +292,7 @@ export default {
   initialState(board, opts) {
     const stacks = Array.from({ length: board.size }, () => []);
     const tops = new Uint8Array(board.size);
-    for (const p of [BLACK, WHITE]) {
+    for (const p of [WHITE, BLACK]) {
       for (const id of board.house[p]) {
         stacks[id] = [p];
         tops[id] = p;
@@ -300,7 +303,7 @@ export default {
       stacks,                 // bottom to top
       tops,                   // owner of each top checker, 0 for vacant
       bag: makeBag({ W: opts.whites, B: opts.blacks }),
-      turn: BLACK,
+      turn: WHITE,
       phase: "draw",          // "draw" (chance, one ply per marble), "act"
       drew: 0,                // white marbles drawn this turn
       actions: 0,             // actions left this turn
@@ -386,7 +389,7 @@ export default {
   },
   outcomeLines(s, outcome) {
     const w = outcome.winner;
-    const scores = [BLACK, WHITE].map((p) => `${name(p)} captured ${s.score[p]}.`);
+    const scores = [WHITE, BLACK].map((p) => `${name(p)} captured ${s.score[p]}.`);
     if (s.reason === "captured") return [`${name(w)} captured all ${CHECKERS} of ${name(other(w))}'s checkers.`];
     if (s.reason === "buried") return [`${name(other(w))} controls no stack and has no man in reserve: every man they have left is under ${name(w)}'s caps.`, ...scores];
     return ["Neither player has any action possible.", ...scores];

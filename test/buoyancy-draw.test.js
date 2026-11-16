@@ -17,7 +17,8 @@ function draw(s, marbles) {
   return info;
 }
 
-// An empty board with the given stacks (bottom to top), Black to draw.
+// An empty board with the given stacks (bottom to top), White (1, the
+// bottom player) to draw.
 function position(stacks) {
   const s = fresh();
   for (let id = 0; id < s.board.size; id++) {
@@ -30,6 +31,14 @@ function position(stacks) {
   }
   return s;
 }
+
+test("White plays from the bottom and moves first", () => {
+  const s = fresh();
+  assert.equal(game.players[1].name, "White");
+  assert.equal(game.currentPlayer(s), 1);
+  assert.deepEqual(s.stacks[s.board.house[1][0]], [1]);
+  assert.ok(s.board.house[1].includes(sq("f1")), "the bottom corner");
+});
 
 test("the bag starts with the chosen marbles, and a turn draws until a black one", () => {
   const s = fresh();
@@ -47,9 +56,9 @@ test("the bag starts with the chosen marbles, and a turn draws until a black one
   // From the start only the front row can step, into the middle row.
   assert.ok(game.legalMoves(s).includes("end"));
   game.applyMove(s, [sq("d3"), sq("d4")]);
-  game.applyMove(s, [sq("d4"), sq("d5")]);   // capping White's d5
+  game.applyMove(s, [sq("d4"), sq("d5")]);   // capping Black's d5
   assert.deepEqual(s.stacks[sq("d5")], [2, 1]);
-  // Two actions used: White draws, from the same bag.
+  // Two actions used: Black draws, from the same bag.
   assert.equal(s.turn, 2);
   assert.equal(game.toMove(s), CHANCE);
   assert.deepEqual(s.bag.drawn, ["W", "W", "B"]);
@@ -86,14 +95,14 @@ test("bearing off sends your men to reserve; placing one is an action", () => {
   assert.equal(game.moveText(before, [sq("b1")], info), "b1 off: 1 captured, 2 men to reserve");
   assert.equal(s.score[1], 1);
   assert.equal(s.reserve[1], 2);
-  // Placements: the house cells Black does not control (f5 is Black's).
+  // Placements: the house cells White does not control (f5 is White's).
   const places = actions(s, 1).filter((m) => m.length === 1 && s.tops[m[0]] !== 1);
   assert.equal(places.length, 14);
   game.applyMove(s, [sq("f1")]);
   assert.equal(s.reserve[1], 1);
   assert.deepEqual(s.stacks[sq("f1")], [1]);
   assert.equal(game.moveText(s, [sq("e1")], {}), "placed e1");
-  // That was the last action: White's turn.
+  // That was the last action: Black's turn.
   assert.equal(s.turn, 2);
   assert.match(game.scoreSummary(s, 1).sub, /1 in reserve/);
 });
@@ -115,7 +124,7 @@ test("a player who controls no stack and has no reserve loses at once", () => {
   draw(s, "WB");
   game.applyMove(s, [sq("e4"), sq("e5")]);
   assert.deepEqual(game.outcome(s), { winner: 1 });
-  assert.match(game.outcomeLines(s, game.outcome(s))[0], /White controls no stack/);
+  assert.match(game.outcomeLines(s, game.outcome(s))[0], /Black controls no stack/);
 
   // A man in reserve keeps you in the game.
   const t = position({ e4: [1], e5: [2], d4: [2, 1] });
