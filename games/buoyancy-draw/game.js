@@ -1,5 +1,5 @@
-// Buoyancy Draw: Buoyancy (games/buoyancy) with marbles drawn from a bag in
-// place of dice. Pure: no DOM.
+// Buoyancy: stacks moved with actions won by drawing marbles from a bag.
+// Pure: no DOM.
 //
 // Board: a 6x6 chessboard turned clockwise by 45 degrees, a diamond with a1
 // on the left, f1 at the bottom, f6 on the right and a6 at the top. White
