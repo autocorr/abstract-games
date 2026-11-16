@@ -8,7 +8,7 @@
 // 6); the side corners a1 and f6 lie on both
 // players' edges. Each player's 15 checkers start one per cell on the five
 // rows of cells nearest their bottom or top corner; their house, where men
-// from reserve are placed, is the nearest four of those rows (10 cells). The
+// from reserve are placed, is the nearest three of those rows (6 cells). The
 // middle row starts empty.
 //
 // Checkers stack. Each cell holds a stack, listed bottom to top; whoever has
@@ -35,10 +35,11 @@
 //   - a surrender: [from], a single checker steps off past the opponent's
 //     edge, allowed only when it has no forward step open on the board; the
 //     opponent captures it;
-//   - a placement: [id], a man from the player's reserve onto a vacant cell
-//     of their house. With none vacant, the men wait.
-// A [from] move starts on the player's own stack and a placement on a
-// vacant cell, so the two never collide.
+//   - a placement: [id], a man from the player's reserve onto a cell of their
+//     house that is vacant or holds an opposing stack (capping it). With
+//     every house cell their own, the men wait.
+// A [from] move starts on the player's own stack and a placement on a cell
+// they do not control, so the two never collide.
 //
 // A player loses when all 15 of their checkers are captured, or as soon as
 // they control no stack and have no man in reserve: every man they have left
@@ -63,7 +64,7 @@ const MARBLES = {
 const N = 6;            // the chessboard's side
 const CHECKERS = 15;    // each player's
 const START_ROWS = 5;   // rows of single checkers at the start
-const HOUSE_ROWS = 4;   // rows of the house, where men from reserve are placed
+const HOUSE_ROWS = 3;   // rows of the house, where men from reserve are placed
 const OFF = -1;         // a step past an edge
 
 const colorSchemes = {
@@ -145,9 +146,9 @@ function stackMoves(s, id) {
   return out;
 }
 
-// Cells of the player's house a man from reserve may be placed on: vacant
-// ones.
-const entries = (s, player) => s.board.house[player].filter((id) => !s.tops[id]);
+// Cells of the player's house a man from reserve may be placed on: vacant,
+// or holding an opposing stack.
+const entries = (s, player) => s.board.house[player].filter((id) => s.tops[id] !== player);
 
 // Every action open to the player: stack moves, then placements.
 function actions(s, player) {
@@ -190,7 +191,7 @@ function step(s, [from, to]) {
   return { scored: moving.length - saved, saved };
 }
 
-// A man from reserve onto the vacant cell `id`.
+// A man from reserve onto `id`, capping any stack there.
 function place(s, id) {
   s.reserve[s.turn]--;
   s.stacks[id] = s.stacks[id].concat([s.turn]);
@@ -247,7 +248,7 @@ function apply(s, move) {
   s.last = move.slice();
   let info = { player: p };
   s.actions--;
-  if (move.length === 1 && !s.tops[move[0]]) {
+  if (move.length === 1 && s.tops[move[0]] !== p) {
     place(s, move[0]);
     info.placed = true;
   } else info = { ...info, ...step(s, move) };

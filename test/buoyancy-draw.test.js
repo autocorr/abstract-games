@@ -40,14 +40,14 @@ test("White plays from the bottom and moves first", () => {
   assert.ok(s.board.house[1].includes(sq("f1")), "the bottom corner");
 });
 
-test("15 men start on five rows each; the house is the nearest four (10 cells)", () => {
+test("15 men start on five rows each; the house is the nearest three (6 cells)", () => {
   const s = fresh();
   for (const p of [1, 2]) {
     assert.equal(s.stacks.filter((st) => st[0] === p).length, 15);
-    assert.equal(s.board.house[p].length, 10);
+    assert.equal(s.board.house[p].length, 6);
   }
-  // The fifth row starts filled but lies outside the house.
-  for (const name of ["d3", "b1", "f5"]) {
+  // The fourth and fifth rows start filled but lie outside the house.
+  for (const name of ["d3", "b1", "f5", "c1", "e3"]) {
     assert.deepEqual(s.stacks[sq(name)], [1], name);
     assert.ok(!s.board.house[1].includes(sq(name)), name);
   }
@@ -93,18 +93,20 @@ test("a black marble first means no action; every action must be taken while one
   assert.equal(s.turn, 1);
   assert.equal(s.turns, 2);
 
-  // With actions left but none possible, the turn passes: White's men wait
-  // in reserve while Black holds every cell of White's house.
-  const t = position({});
+  // A player with men in reserve can always act: with Black on every cell
+  // of White's house, White's men re-enter by capping.
+  const t = position({ a6: [2] });
   for (const id of t.board.house[1]) {
     t.stacks[id] = [2];
     t.tops[id] = 2;
   }
   t.reserve[1] = 2;
   draw(t, "WWB");
-  assert.equal(game.outcome(t), null);
+  assert.equal(game.legalMoves(t).length, 6);
+  game.applyMove(t, [sq("f1")]);
+  game.applyMove(t, [sq("e2")]);
+  assert.deepEqual(t.stacks[sq("e2")], [2, 1]);
   assert.equal(t.turn, 2);
-  assert.equal(game.toMove(t), CHANCE);
 });
 
 test("an empty bag is refilled with every marble", () => {
@@ -126,11 +128,11 @@ test("bearing off sends your men to reserve; placing one is an action", () => {
   assert.equal(game.moveText(before, [sq("b1")], info), "b1 off: 1 captured, 2 men to reserve");
   assert.equal(s.score[1], 1);
   assert.equal(s.reserve[1], 2);
-  // Placements: the vacant cells of the house, not White's own f2 nor
-  // Black's e1.
+  // Placements: the house cells White does not control, Black's e1 among
+  // them (capping it), but not White's own f2.
   const places = actions(s, 1).filter((m) => m.length === 1 && s.tops[m[0]] !== 1);
-  assert.equal(places.length, 8);
-  assert.ok(!places.some(([id]) => id === sq("e1") || id === sq("f2")));
+  assert.equal(places.length, 5);
+  assert.ok(places.some(([id]) => id === sq("e1")) && !places.some(([id]) => id === sq("f2")));
   game.applyMove(s, [sq("f1")]);
   assert.equal(s.reserve[1], 1);
   assert.deepEqual(s.stacks[sq("f1")], [1]);
