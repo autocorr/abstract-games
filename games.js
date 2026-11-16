@@ -137,7 +137,7 @@ export const games = [
   },
   {
     id: "buoyancy-draw",
-    title: "Buoyancy Draw",
+    title: "Buoyancy",
     board: "6x6 chessboard turned 45 degrees",
     blurb: "Draw marbles until a black one, and take an action for each white. Cap your opponent's stacks and bear them off past your edges to capture them.",
     path: "games/buoyancy-draw/",

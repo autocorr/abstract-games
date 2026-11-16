@@ -325,7 +325,7 @@ function hint(s) {
 
 export default {
   id: "buoyancy-draw",
-  title: "Buoyancy Draw",
+  title: "Buoyancy",
   url: import.meta.url,
   players: PLAYERS,
   options: {
