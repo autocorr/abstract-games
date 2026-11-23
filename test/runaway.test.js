@@ -99,3 +99,18 @@ test("a player with no move passes; the game ends by territory when nobody can m
   assert.equal(game.toMove(s), 2);
   assert.ok(territory(s, 2) > territory(s, 1));
 });
+
+test("captures only a neighbouring chicken, even when sliding", () => {
+  const { s, at } = position({ white: [[0, 0]], black: [[3, 0], [0, 1]] });
+  const t = targets(s, at([0, 0]));
+  assert.ok(t.has(at([0, 1])), "a neighbour is captured");
+  assert.ok(!t.has(at([3, 0])), "no capture at range");
+  assert.ok(t.has(at([2, 0])), "but the slide runs up to it");
+});
+
+test("every opening position offers White no capture", () => {
+  for (const size of [4, 5, 6, 7]) for (const start of [1, 3]) for (const movement of ["slide", "step"]) {
+    const s = newGame(game, { size, start, movement, hatch: 3, swap: "off" });
+    assert.ok(game.legalMoves(s).every((m) => !s.who[m[1]]), `${size} ${start} ${movement}`);
+  }
+});

@@ -5,10 +5,13 @@
 // opposite corners, or three each on alternating corners. White moves first.
 //
 // A turn moves one chicken [from, to]:
-//   - Step: to a neighbouring cell. Slide: any distance in one of the six
-//     directions, over empty cells.
-//   - It may land on an empty cell nobody owns, claiming it, or on an
-//     opposing chicken, capturing it and claiming its cell. Eggs (of either
+//   - It may land on an empty cell nobody owns, claiming it: with Step
+//     movement a neighbouring cell, with Slide any distance in one of the
+//     six directions over empty cells.
+//   - Or it may capture an opposing chicken on a neighbouring cell, claiming
+//     that cell. (Captures are not made at range: on a hex-hex board every
+//     pair of adjacent or opposite corners shares a line, so a sliding
+//     capture would take a chicken on the first move.) Eggs (of either
 //     player) cannot be captured and block slides; an owned empty cell (left
 //     by a capture) can be passed over but not landed on.
 //   - A plain move lays an egg of the mover's on the cell left behind, which
@@ -58,12 +61,6 @@ function buildBoard(side) {
 
 // ---- moves ---------------------------------------------------------------
 
-// Can `p` land on `id`: an empty unowned cell, or an opposing chicken.
-function landable(s, p, id) {
-  const w = s.who[id];
-  if (!w) return !s.owner[id];
-  return w !== p && !s.egg[id];
-}
 
 // The moves [from, to] of `p`'s chickens.
 function generateMoves(s, p) {
@@ -74,9 +71,14 @@ function generateMoves(s, p) {
     if (who[from] !== p || egg[from]) continue;
     for (let d = 0; d < 6; d++) {
       let id = board.step(from, d);
-      while (id >= 0) {
-        if (landable(s, p, id)) out.push([from, id]);
-        if (who[id] || !slide) break;
+      if (id < 0) continue;
+      if (who[id]) {
+        if (who[id] !== p && !egg[id]) out.push([from, id]);   // a capture
+        continue;
+      }
+      while (id >= 0 && !who[id]) {
+        if (!s.owner[id]) out.push([from, id]);
+        if (!slide) break;
         id = board.step(id, d);
       }
     }

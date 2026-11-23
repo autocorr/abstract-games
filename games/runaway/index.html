@@ -15,10 +15,10 @@
 <template id="rules">
   <p><i>A work in progress: the rules are still being balanced.</i></p>
   <p><b>Setup.</b> The board is a hexagon of hexagonal cells, 4 to 7 cells per side. Each player starts with chickens (triangles) on corners of the board: one each on opposite corners, or three each on alternating corners. The cells they stand on are their own. White moves first.</p>
-  <p><b>Turn.</b> Move one of your chickens. With <i>Slide</i> movement it moves any distance in a straight line over empty cells; with <i>Step</i> movement, to a neighboring cell. It must land on either</p>
+  <p><b>Turn.</b> Move one of your chickens, either</p>
   <ul>
-    <li>an empty cell nobody owns, which becomes yours, or</li>
-    <li>an opponent's chicken, which is captured; its cell becomes yours.</li>
+    <li>to an empty cell nobody owns, which becomes yours: with <i>Slide</i> movement any distance in a straight line over empty cells, with <i>Step</i> movement a neighboring cell; or</li>
+    <li>onto an opponent's chicken on a neighboring cell, capturing it; its cell becomes yours.</li>
   </ul>
   <p>Eggs of either color cannot be captured and block movement. An empty cell someone owns (left behind by a capture) can be crossed but not landed on.</p>
   <p><b>Eggs.</b> A chicken that moves without capturing lays an egg (a disc) on the cell it left. A capture lays no egg. An egg shows how many of its owner's turns remain until it hatches, starting at 3 (Hatch after in Setup). It counts down at the start of each of its owner's turns and hatches at 0 into a chicken that can move that same turn.</p>
