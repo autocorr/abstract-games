@@ -144,4 +144,12 @@ export const games = [
     module: "games/buoyancy-draw/game.js",
     thumbnailPlies: 1,
   },
+  {
+    id: "runaway",
+    title: "Runaway",
+    board: "Hexagon of hexagons",
+    blurb: "Each chicken that moves lays an egg behind it, which hatches into a new chicken three turns later. Chickens capture chickens but not eggs. Own more cells when no one can move.",
+    path: "games/runaway/",
+    module: "games/runaway/game.js",
+  },
 ];
