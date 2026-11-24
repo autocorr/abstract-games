@@ -7,8 +7,8 @@ const { settle, territory } = internals;
 
 // An empty side-4 board (no starting chickens), White to move, with chickens
 // and eggs placed at axial coords: eggs as [q, r, countdown].
-function position({ white = [], black = [], whiteEggs = [], blackEggs = [], owned = [], movement = "slide", turn = 1 }) {
-  const s = newGame(game, { size: 4, start: 1, movement, hatch: 3, swap: "off" });
+function position({ white = [], black = [], whiteEggs = [], blackEggs = [], owned = [], turn = 1 }) {
+  const s = newGame(game, { size: 4, hatch: 3, swap: "off" });
   s.who.fill(0); s.egg.fill(0); s.owner.fill(0);
   const at = ([q, r]) => s.board.at(q, r);
   const put = (list, p) => { for (const c of list) { const id = at(c); s.who[id] = s.owner[id] = p; if (c[2]) s.egg[id] = c[2]; } };
@@ -22,17 +22,15 @@ function position({ white = [], black = [], whiteEggs = [], blackEggs = [], owne
 const targets = (s, from) => new Set(game.legalMoves(s).filter((m) => m[0] === from).map((m) => m[1]));
 
 test("start: three chickens each on alternating corners, White to move", () => {
-  const s = newGame(game, { size: 5, start: 3, movement: "slide", hatch: 3, swap: "off" });
+  const s = newGame(game, { size: 5, hatch: 3, swap: "off" });
   const corners = s.board.corners;
   assert.deepEqual(corners.map((id) => s.who[id]), [1, 2, 1, 2, 1, 2]);
   assert.equal(territory(s, 1), 3);
   assert.equal(game.toMove(s), 1);
 });
 
-test("a step goes to a neighbour; a slide runs over empty cells", () => {
-  let { s, at } = position({ white: [[0, 0]], movement: "step" });
-  assert.equal(targets(s, at([0, 0])).size, 6);
-  ({ s, at } = position({ white: [[0, 0]] }));
+test("a slide runs over empty cells", () => {
+  const { s, at } = position({ white: [[0, 0]] });
   assert.equal(targets(s, at([0, 0])).size, 18, "three cells in each of six directions");
 });
 
@@ -65,7 +63,7 @@ test("a plain move lays an egg; a capture lays none", () => {
 });
 
 test("an egg hatches at the start of its owner's third turn and moves at once", () => {
-  const { s, at } = position({ white: [[0, 0]], black: [[3, -3]], movement: "step" });
+  const { s, at } = position({ white: [[0, 0]], black: [[3, -3]] });
   const egg = at([0, 0]);
   game.applyMove(s, [egg, at([0, 1])]);
   const blackHop = () => game.applyMove(s, game.legalMoves(s).find(Array.isArray));
@@ -109,9 +107,9 @@ test("captures only a neighbouring chicken, even when sliding", () => {
 });
 
 test("every opening position offers White no capture", () => {
-  for (const size of [4, 5, 6, 7]) for (const start of [1, 3]) for (const movement of ["slide", "step"]) {
-    const s = newGame(game, { size, start, movement, hatch: 3, swap: "off" });
-    assert.ok(game.legalMoves(s).every((m) => !s.who[m[1]]), `${size} ${start} ${movement}`);
+  for (const size of [4, 5, 6, 7]) {
+    const s = newGame(game, { size, hatch: 3, swap: "off" });
+    assert.ok(game.legalMoves(s).every((m) => !s.who[m[1]]), `side ${size}`);
   }
 });
 

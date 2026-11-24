@@ -1,17 +1,16 @@
 // Runaway (work in progress): chickens move and leave eggs behind, which
 // hatch into chickens that move in turn. Pure: no DOM.
 //
-// Hex-hex board. Each player starts with chickens on corners: one each on
-// opposite corners, or three each on alternating corners. White moves first.
+// Hex-hex board. Each player starts with three chickens on alternating
+// corners. White moves first.
 //
 // A turn moves one chicken [from, to]:
-//   - It may land on an empty cell nobody owns, claiming it: with Step
-//     movement a neighbouring cell, with Slide any distance in one of the
-//     six directions over empty cells.
+//   - It may slide any distance in one of the six directions over empty
+//     cells to an empty cell nobody owns, claiming it.
 //   - Or it may capture an opposing chicken on a neighbouring cell, claiming
-//     that cell. (Captures are not made at range: on a hex-hex board every
-//     pair of adjacent or opposite corners shares a line, so a sliding
-//     capture would take a chicken on the first move.) Eggs (of either
+//     that cell. (Captures are not made at range: on a hex-hex board
+//     adjacent corners share a line, so a sliding capture would take a
+//     chicken on the first move.) Eggs (of either
 //     player) cannot be captured and block slides; an owned empty cell (left
 //     by a capture) can be passed over but not landed on.
 //   - A plain move lays an egg of the mover's on the cell left behind, which
@@ -32,7 +31,6 @@ import { hexHexBoard } from "../../common/board/hex.js";
 import { cachedBoards } from "../../common/engine.js";
 import { withSwap, SWAP } from "../../common/swap.js";
 import { mcts } from "../../common/ai/mcts.js";
-import { WHITE_TRIANGLE, BLACK_TRIANGLE } from "../../common/pieces/triangles.js";
 
 const WHITE = 1, BLACK = 2;
 const PLAYERS = {
@@ -41,7 +39,17 @@ const PLAYERS = {
 };
 const PASS = "pass";
 const SIZES = [4, 5, 6, 7];
-const IMAGES = { [WHITE]: WHITE_TRIANGLE, [BLACK]: BLACK_TRIANGLE };
+// Chickens are triangles pointing up for both sides, outlined as in
+// common/pieces/triangles.js. A triangle's centroid sits low in its box, so
+// it is raised to look centred in the cell: its box centre and centroid
+// straddle the cell centre.
+function triangle(fill) {
+  const top = 9.5 - 2.2, bottom = top + 26;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="45" height="45" viewBox="0 0 45 45">` +
+    `<polygon points="22.5,${top} 37.5,${bottom} 7.5,${bottom}" fill="${fill}" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+const IMAGES = { [WHITE]: triangle("#fff"), [BLACK]: triangle("#000") };
 // Owned cells are shaded as tiles in their owner's tone over the sand board.
 const TERRITORY = { [WHITE]: "#fff4de", [BLACK]: "#b08a5c" };
 const EGG_SIZE = 0.62;
@@ -70,7 +78,6 @@ function buildBoard(side) {
 function generateMoves(s, p) {
   const { who, egg } = s, next = s.board.next;
   const out = [];
-  const slide = s.slide;
   for (let from = 0; from < who.length; from++) {
     if (who[from] !== p || egg[from]) continue;
     for (let d = 0; d < 6; d++) {
@@ -82,7 +89,6 @@ function generateMoves(s, p) {
       }
       while (id >= 0 && !who[id]) {
         if (!s.owner[id]) out.push([from, id]);
-        if (!slide) break;
         id = next[id * 6 + d];
       }
     }
@@ -238,16 +244,6 @@ const game = withSwap({
   players: PLAYERS,
   options: {
     size: { label: "Board side", choices: SIZES, default: 5 },
-    start: {
-      label: "Chickens each",
-      choices: [{ value: 1, label: "1" }, { value: 3, label: "3" }],
-      default: 3,
-    },
-    movement: {
-      label: "Movement",
-      choices: [{ value: "slide", label: "Slide" }, { value: "step", label: "Step" }],
-      default: "slide",
-    },
     hatch: { label: "Hatch after", choices: [2, 3, 4], default: 3 },
     swap: { label: "Swap rule", choices: ON_OFF, default: "on" },
   },
@@ -255,7 +251,7 @@ const game = withSwap({
   colorSchemes: { sand: { name: "Sand", cellFill: () => "#ffd890" } },
 
   createBoard: cachedBoards((o) => o.size, ({ size }) => buildBoard(size)),
-  initialState(board, { start, movement, hatch, swap }) {
+  initialState(board, { hatch, swap }) {
     const n = board.size;
     const s = {
       board,
@@ -265,17 +261,14 @@ const game = withSwap({
       turn: WHITE,
       moves: null,
       last: null,
-      slide: movement === "slide",
       hatch,
       swapRule: swap === "on",
       over: false,
       winner: null,
       reason: null,
     };
-    const picks = start === 1 ? [0, 3] : [0, 1, 2, 3, 4, 5];
-    picks.forEach((k, i) => {
-      const id = board.corners[k];
-      s.who[id] = s.owner[id] = i % 2 ? BLACK : WHITE;
+    board.corners.forEach((id, k) => {
+      s.who[id] = s.owner[id] = k % 2 ? BLACK : WHITE;
     });
     startTurn(s, WHITE);
     return s;
