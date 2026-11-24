@@ -30,7 +30,8 @@
 
 import { hexHexBoard } from "../../common/board/hex.js";
 import { cachedBoards } from "../../common/engine.js";
-import { withSwap } from "../../common/swap.js";
+import { withSwap, SWAP } from "../../common/swap.js";
+import { mcts } from "../../common/ai/mcts.js";
 import { WHITE_TRIANGLE, BLACK_TRIANGLE } from "../../common/pieces/triangles.js";
 
 const WHITE = 1, BLACK = 2;
@@ -56,6 +57,9 @@ function corners(board) {
 function buildBoard(side) {
   const board = hexHexBoard(side);
   board.corners = corners(board);
+  // board.step as a table, for speed: next[id * 6 + d].
+  board.next = new Int16Array(board.size * 6);
+  for (let id = 0; id < board.size; id++) for (let d = 0; d < 6; d++) board.next[id * 6 + d] = board.step(id, d);
   return board;
 }
 
@@ -64,13 +68,13 @@ function buildBoard(side) {
 
 // The moves [from, to] of `p`'s chickens.
 function generateMoves(s, p) {
-  const { board, who, egg } = s;
+  const { who, egg } = s, next = s.board.next;
   const out = [];
   const slide = s.slide;
   for (let from = 0; from < who.length; from++) {
     if (who[from] !== p || egg[from]) continue;
     for (let d = 0; d < 6; d++) {
-      let id = board.step(from, d);
+      let id = next[from * 6 + d];
       if (id < 0) continue;
       if (who[id]) {
         if (who[id] !== p && !egg[id]) out.push([from, id]);   // a capture
@@ -79,7 +83,7 @@ function generateMoves(s, p) {
       while (id >= 0 && !who[id]) {
         if (!s.owner[id]) out.push([from, id]);
         if (!slide) break;
-        id = board.step(id, d);
+        id = next[id * 6 + d];
       }
     }
   }
@@ -156,11 +160,78 @@ function apply(s, move) {
   return info;
 }
 
+// ---- rollouts --------------------------------------------------------------
+
+// Random rollouts rarely take or dodge captures, so the search misses them;
+// these rollouts play greedily instead (see greedyMove), with a share of
+// random moves, to the end of the game. Tuned in self-play at 100 ms a move,
+// where they beat random rollouts 34-6. Scoring the position after 10 or 20
+// plies instead did no better, nor did 0 or 25% random moves.
+const TUNE = { random: 0.1, tries: 4 };
+
+// Is `id` next to a chicken of `q` (one that could capture there)?
+function threatened(s, id, q) {
+  for (const nb of s.board.neighbours[id]) if (s.who[nb] === q && !s.egg[nb]) return true;
+  return false;
+}
+
+// Is landing on `to` safe from `q`'s chickens? A capture empties `to`
+// first, so it is checked as it will be.
+function safeLanding(s, to, q) {
+  const was = s.who[to];
+  s.who[to] = 0;
+  const safe = !threatened(s, to, q);
+  s.who[to] = was;
+  return safe;
+}
+
+// A rollout's move: a capture if there is one (a safe one if possible),
+// else the first of a few random moves that lands safely.
+function greedyMove(s, moves, rng, tries) {
+  const q = other(s.turn);
+  let capture = null;
+  for (const m of moves) {
+    if (s.who[m[1]] !== q) continue;
+    if (safeLanding(s, m[1], q)) return m;
+    capture = m;
+  }
+  if (capture) return capture;
+  let m;
+  for (let i = 0; i < tries; i++) {
+    m = moves[Math.floor(rng() * moves.length)];
+    if (!threatened(s, m[1], q)) return m;
+  }
+  return m;
+}
+
+// The moves worth searching: captures, and plain moves that land where no
+// opposing chicken can capture next turn (all moves, if that leaves none).
+function searchMoves(s) {
+  if (s.over) return [];
+  const moves = s.moves;
+  if (moves[0] === PASS) return moves;
+  const q = other(s.turn);
+  const kept = moves.filter((m) => s.who[m[1]] === q || !threatened(s, m[1], q));
+  return kept.length ? kept : moves;
+}
+
+function makePlayout(tune) {
+  return (s, rng) => {
+    while (!s.over) {
+      const moves = s.moves;
+      const m = moves[0] === PASS ? PASS
+        : rng() < tune.random ? moves[Math.floor(rng() * moves.length)] : greedyMove(s, moves, rng, tune.tries);
+      apply(s, m);
+    }
+    return s.winner;
+  };
+}
+
 // ---- game ----------------------------------------------------------------
 
 const ON_OFF = [{ value: "on", label: "On" }, { value: "off", label: "Off" }];
 
-export default withSwap({
+const game = withSwap({
   id: "runaway",
   title: "Runaway",
   url: import.meta.url,
@@ -228,6 +299,7 @@ export default withSwap({
     s.turn = other(s.turn);
     settle(s);
   },
+  playout: makePlayout(TUNE),
   outcome(s) {
     return s.over ? { winner: s.winner } : null;
   },
@@ -279,4 +351,19 @@ export default withSwap({
   offer: (s) => s.swapRule && s.turn === BLACK,
 });
 
-export const internals = { generateMoves, settle, territory };
+// The AI searches a narrower tree: unsafe plain moves are left out wherever
+// a capture or a safe move exists (see searchMoves). In self-play at 100 ms
+// a move this beat the full tree 47-1; it also takes more captures.
+const searchGame = {
+  ...game,
+  aiMove: undefined,
+  legalMoves(s) {
+    const all = game.legalMoves(s);
+    return all.includes(SWAP) ? all : searchMoves(s);
+  },
+};
+game.aiMove = (s, opts) => mcts(searchGame, s, opts);
+
+export default game;
+
+export const internals = { generateMoves, settle, territory, makePlayout, TUNE, searchMoves };

@@ -114,3 +114,13 @@ test("every opening position offers White no capture", () => {
     assert.ok(game.legalMoves(s).every((m) => !s.who[m[1]]), `${size} ${start} ${movement}`);
   }
 });
+
+test("the AI takes a free capture", async () => {
+  const { seededRng } = await import("../common/rng.js");
+  // Black's chicken at (1,0) sits beside White's at (0,0), with no Black
+  // chicken near enough to recapture.
+  const { s, at } = position({ white: [[0, 0], [-3, 3]], black: [[1, 0], [3, -3]] });
+  s.swapClosed = true;
+  const move = game.aiMove(s, { iterations: 3000, rng: seededRng(1) });
+  assert.deepEqual(move, [at([0, 0]), at([1, 0])]);
+});
