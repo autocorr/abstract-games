@@ -568,6 +568,8 @@ svg.board, .game-card svg { filter: var(--board-filter); }
   text-transform: uppercase;
   color: var(--text-dim);
 }
+/* The one rule most worth not missing, as the book's blue bold. */
+.section-rules .key { color: var(--accent); font-weight: 600; }
 .rules-blurb { color: var(--text-dim); font-style: italic; }
 
 /* ---- landing page ---------------------------------------------------- */
