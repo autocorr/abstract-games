@@ -1,4 +1,4 @@
-// Roost (work in progress): chickens move and leave eggs behind, which
+// Roost: chickens move and leave eggs behind, which
 // hatch into chickens that move in turn. Pure: no DOM.
 //
 // Hex-hex board. Each player starts with three chickens on alternating
