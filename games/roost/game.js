@@ -1,4 +1,4 @@
-// Runaway (work in progress): chickens move and leave eggs behind, which
+// Roost (work in progress): chickens move and leave eggs behind, which
 // hatch into chickens that move in turn. Pure: no DOM.
 //
 // Hex-hex board. Each player starts with three chickens on alternating
@@ -238,8 +238,8 @@ function makePlayout(tune) {
 const ON_OFF = [{ value: "on", label: "On" }, { value: "off", label: "Off" }];
 
 const game = withSwap({
-  id: "runaway",
-  title: "Runaway",
+  id: "roost",
+  title: "Roost",
   url: import.meta.url,
   players: PLAYERS,
   options: {

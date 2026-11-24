@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import game, { internals } from "../games/runaway/game.js";
+import game, { internals } from "../games/roost/game.js";
 import { newGame } from "../common/engine.js";
 
 const { settle, territory } = internals;
