@@ -13,13 +13,51 @@
 <body>
 
 <template id="rules">
-  <p><b>Goal.</b> Checkmate the opposing King, or capture your opponent's last dark piece. The board, setup and moves are those of chess.</p>
-  <p><b>Two sides.</b> Every piece except the pawns has two sides, dark and light. Both sides move and capture exactly as the chess piece does. All pieces start dark, and a piece turns over every time it lands, whether it moves or captures: dark becomes light, and light becomes dark. Castling turns over both the King and the Rook.</p>
-  <p><b>Stay grounded.</b> You must always have at least one dark piece on the board. A move that would turn over your last dark piece is not allowed. If your opponent captures your last dark piece, you lose at once. Pawns have only one side, are drawn light, and do not count. The King counts while it is dark, but it does not have to be dark as long as another piece is.</p>
-  <p><b>Promotion.</b> A pawn reaching the last rank promotes to a dark Queen, Rook, Bishop or Knight of your choice.</p>
-  <p><b>Check and mate.</b> The King is royal on either side: check and checkmate are as in chess. If you have no legal move and are not in check, you are stalemated and lose. That includes having only moves that would turn over your last dark piece.</p>
-  <p><b>Draws.</b> 50 moves each without a capture or a pawn move is a draw, as is the same position occurring three times (the same player to move, with the same castling and en passant rights).</p>
-  <p><b>Colors.</b> Each player has a color, in a dark shade for the dark sides and a light shade for the light sides and the pawns. Pick a palette under Colors in Setup; the players are named after their colors.</p>
+  <p>
+    In <i>Grounded Chess</i>, every piece except the Pawns has a dark and a light side and turns over each time it moves.
+    You must always keep at least one dark piece on the board.
+    All the rules of <i>Chess</i> apply, except as described below.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Set up the pieces as in <i>Chess</i>, with every piece except the Pawns dark side up.
+    Decide who will move first.
+    Each player has a color, in a dark shade for the dark sides and a light shade for the light sides and the Pawns.
+    Pick a palette under Colors in Setup; the players are named after their colors.
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, make a <i>Chess</i> move, and then turn over the piece that moved.
+  </p>
+  <p>
+    <b>Two sides:</b> Both sides of a piece move and capture exactly as the <i>Chess</i> piece does.
+    A piece turns over every time it lands, whether it moves or captures: dark becomes light, and light becomes dark.
+    Castling turns over both the King and the Rook.
+    Pawns have only one side, are drawn light, and never turn over.
+  </p>
+  <p>
+    <b>Stay grounded:</b> You must always have <b>at least one dark piece</b> on the board.
+    A move that would turn over your last dark piece is not allowed.
+    Pawns do not count.
+    The King counts while it is dark, but it does not have to be dark as long as another piece is.
+  </p>
+  <p>
+    <b>Promotion:</b> A Pawn reaching the last rank promotes to a dark Queen, Rook, Bishop or Knight of your choice.
+  </p>
+  <p>
+    <b>Check:</b> The King is royal on either side: check and checkmate are as in <i>Chess</i>.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    You win by (<b>1</b>) checkmating the opposing King, or (<b>2</b>) capturing your opponent's last dark piece.
+    If you have no legal move and are not in check, you are stalemated and lose.
+    The game is a draw after 50 moves each without a capture or a Pawn move, or when the same position occurs three times (the same player to move, with the same castling and en passant rights).
+  </p>
+  <h3>Tips</h3>
+  <p>
+    Watch your last dark piece: if your only moves would turn it over, you are stalemated and lose.
+  </p>
 </template>
 
 <script type="module">

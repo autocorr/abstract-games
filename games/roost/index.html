@@ -13,16 +13,53 @@
 <body>
 
 <template id="rules">
-  <p><b>Setup.</b> The board is a hexagon of hexagonal cells, 4 to 7 cells per side. Each player starts with three chickens (triangles) on alternating corners of the board. The cells they stand on are their own. White moves first.</p>
-  <p><b>Turn.</b> Move one of your chickens, either</p>
-  <ul>
-    <li>any distance in a straight line over empty cells to an empty cell nobody owns, which becomes yours; or</li>
-    <li>onto an opponent's chicken on a neighboring cell, capturing it; its cell becomes yours.</li>
-  </ul>
-  <p>Eggs of either color cannot be captured and block movement. An empty cell someone owns (left behind by a capture) can be crossed but not landed on.</p>
-  <p><b>Eggs.</b> A chicken that moves without capturing lays an egg (a disc) on the cell it left. A capture lays no egg. An egg shows how many of its owner's turns remain until it hatches, starting at 3 (Hatch after in Setup). It counts down at the start of each of its owner's turns and hatches at 0 into a chicken that can move that same turn.</p>
-  <p><b>Passing.</b> A player with no move passes.</p>
-  <p><b>End.</b> A player with no chickens and no eggs left loses at once. Otherwise the game ends when neither player can move and no eggs remain, and the player who owns more cells wins. Equal counts are a draw.</p>
+  <p>
+    In <i>Roost</i>, every chicken that moves lays an egg behind it, which hatches into a new chicken a few turns later.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Play on a hexagon of hexagonal cells, 4 to 7 cells per side.
+    Decide who will move first.
+    The first player takes the white chickens (“White”) and the second player takes the black chickens (“Black”).
+    Each player starts with three chickens (triangles) on alternating corners of the board, and the cells they stand on are their own.
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, either <i>move</i> or <i>capture</i> with one of your chickens.
+  </p>
+  <p>
+    <b>Move:</b> Move a chicken any distance in a straight line over empty cells to an empty cell nobody owns, which becomes yours.
+    The chicken lays an egg (a disc) on the cell it left.
+  </p>
+  <p>
+    <b>Capture:</b> Move a chicken onto an opponent's chicken on a neighboring cell, capturing it.
+    Its cell becomes yours.
+    A capture lays no egg.
+  </p>
+  <p>
+    <b>Eggs:</b> Eggs of either color <b>cannot be captured</b> and block movement.
+    An egg shows how many of its owner's turns remain until it hatches, starting at 3 (Hatch after in Setup).
+    It counts down at the start of each of its owner's turns and hatches at 0 into a chicken that can move that same turn.
+  </p>
+  <p>
+    <b>Owned cells:</b> An empty cell someone owns (left behind by a capture) can be crossed but not landed on.
+  </p>
+  <p>
+    If you cannot move you must pass.
+    The game ends when neither player can move and no eggs remain.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    You win if you own more cells when the game ends.
+    You also win at once if your opponent has no chickens and no eggs left.
+    If the counts are tied then the game is a draw.
+  </p>
+  <h3>Swap Rule</h3>
+  <p>
+    After White's first move, Black may swap instead of moving: every chicken, egg and owned cell changes color, and White moves next.
+    The swap can be turned off in Setup.
+  </p>
 </template>
 
 <script type="module">

@@ -13,14 +13,52 @@
 <body>
 
 <template id="rules">
-  <p><b>Goal.</b> Get one of your checkers to the far rank: rank 8 for White, rank 1 for Black.</p>
-  <p><b>Setup.</b> Each side has 12 checkers on a chessboard. Your second rank is full, and your other 4 checkers stand on 4 of the 8 squares of your back rank, chosen at random. Black's back rank is White's turned half a turn (a1 matches h8, b1 matches g8), so both sides have the same square colors. The bag holds 3 white, 3 black and 1 gray marble. White moves first.</p>
-  <p><b>Turn.</b> Draw a marble and set it aside, in order. On white, move a checker that stands on a light square; on black, one on a dark square. Gray takes the color of the last marble drawn, even from before a refill; if gray is the first draw of the game, move any checker. Once all 7 marbles have been drawn, they all go back in the bag. The bag is see-through, so you always know what is left.</p>
-  <p><b>Move.</b> A checker moves one square diagonally forward, onto an empty square, so it always stays on its color.</p>
-  <p><b>Capture.</b> If your checker lands directly beside an opposing checker, to its left or right on the same rank, that checker is captured. Landing between two opposing checkers, one on each side, captures nothing. Squares side by side are opposite colors, so checkers only capture, and are only captured by, checkers on the other color.</p>
-  <p><b>Passing.</b> If none of your checkers on the drawn color can move, you must pass, and your opponent takes the next turn.</p>
-  <p><b>End.</b> You win as soon as one of your checkers reaches the far rank. If none of your checkers can move at all, on either color, you are stalemated and lose.</p>
-  <p><b>Credits.</b> From <i>Bag of Tricks</i> by Brian E. Svoboda (CC BY-SA 4.0), inspired by James Ernest's <i>Hens and Chicks</i> and Dan Troyka's <i>Breakthrough</i>. Board colors from Lichess.</p>
+  <p>
+    <i>Wavefunction Collapse</i> is from <i>Bag of Tricks</i> by Brian E. Svoboda (CC BY-SA 4.0), inspired by James Ernest's <i>Hens and Chicks</i> and Dan Troyka's <i>Breakthrough</i>.
+    A marble draw decides whether you move from a light or a dark square.
+  </p>
+  <h3>Materials</h3>
+  <p>
+    A see-through bag holds three white marbles, three black marbles and one gray marble.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Each side has 12 checkers on a chessboard.
+    Your second rank is full, and your other four checkers stand on four of the eight squares of your back rank, chosen at random.
+    Black's back rank is White's turned half a turn (<code>a1</code> matches <code>h8</code>, <code>b1</code> matches <code>g8</code>).
+    Decide who will move first.
+    The first player takes the white checkers (“White”) and the second player takes the black checkers (“Black”).
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, <i>draw</i> a marble, and then <i>move</i> one checker on the drawn color.
+  </p>
+  <p>
+    <b>Draw:</b> Draw a marble and set it aside, in order.
+    On white, move a checker that stands on a light square; on black, one on a dark square.
+    Gray takes the color of the last marble drawn, even from before a refill; if gray is the first draw of the game, move any checker.
+    Once all seven marbles have been drawn, they all go back in the bag.
+  </p>
+  <p>
+    <b>Move:</b> A checker moves one square diagonally forward, onto an empty square.
+  </p>
+  <p>
+    <b>Capture:</b> If your checker lands directly beside an opposing checker, to its left or right on the same rank, that checker is captured.
+    Landing between two opposing checkers, one on each side, <b>captures nothing</b>.
+  </p>
+  <p>
+    <b>Passing:</b> If none of your checkers on the drawn color can move, you must pass.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    You win as soon as one of your checkers reaches the far rank: rank 8 for White, rank 1 for Black.
+    If none of your checkers can move at all, on either color, you are stalemated and lose.
+  </p>
+  <h3>Tips</h3>
+  <p>
+    Squares side by side are opposite colors, so checkers only capture, and are only captured by, checkers on the other color.
+  </p>
 </template>
 
 <script type="module">

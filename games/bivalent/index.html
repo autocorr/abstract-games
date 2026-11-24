@@ -13,18 +13,54 @@
 <body>
 
 <template id="rules">
-  <p><b>Setup.</b> Stones are played on the points of a 7×7 grid, as in Go. The board starts empty, the bag holds 5 gray and 5 red marbles, and White moves first.</p>
-  <p><b>Turn.</b> Draw a marble. On gray, place a stone of your color on any empty point; the marble goes back in the bag. On red, place a neutral red stone; the marble is set aside.</p>
-  <p><b>Lines.</b> After the placement, lines score. A line is a run of your stones and red stones, horizontal, vertical or diagonal; on your turn every red stone counts as your color.</p>
-  <ul>
-    <li>Exactly four in a row: you score 1 point.</li>
-    <li>Exactly three: your <i>opponent</i> scores 1 point.</li>
-    <li>Five or more: nothing.</li>
-  </ul>
-  <p>Each line scores on its own: a stone that makes a three and a four gives each player a point. The lines checked are those through the stone just placed and through every red stone on the board.</p>
-  <p><b>Red stones.</b> A red stone in a scoring line becomes a stone of your color, and its marble goes back in the bag. A red stone that does not score stays red and counts for your opponent on their turn. So a red stone that completes your opponent's three scores against them on their next turn, wherever they play, unless they first extend the line to four.</p>
-  <p><b>End.</b> The game ends when every point is filled. The komi, set in Setup, is added to one player's points, and the higher total wins. With a whole-number komi, equal totals are a draw. The second player has a small edge, so by default White gets 1.5 points.</p>
-  <p><b>Credits.</b> From <i>Bag of Tricks</i> by Brian E. Svoboda (CC BY-SA 4.0), inspired by Cameron Browne's <i>Yavalath</i> and Néstor Romeral Andrés's <i>Squava</i>.</p>
+  <p>
+    <i>Bivalent</i> is from <i>Bag of Tricks</i> by Brian E. Svoboda (CC BY-SA 4.0), inspired by Cameron Browne's <i>Yavalath</i> and Néstor Romeral Andrés's <i>Squava</i>.
+    As in those games, four in a row is good and three is bad, but here neutral red stones count for whoever is moving!
+  </p>
+  <h3>Materials</h3>
+  <p>
+    A bag holds five gray and five red marbles.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Play on the points of a 7×7 grid, as in <i>Go</i>.
+    The board begins empty.
+    Decide who will move first.
+    The first player takes the white stones (“White”) and the second player takes the black stones (“Black”).
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, draw a marble, <i>place</i> a stone, and then score any <i>lines</i>.
+  </p>
+  <p>
+    <b>Place:</b> On gray, place a stone of your color on any empty point, and the marble goes back in the bag.
+    On red, place a neutral red stone on any empty point, and set the marble aside.
+  </p>
+  <p>
+    <b>Lines:</b> A line is a horizontal, vertical or diagonal run of your stones and red stones; on your turn, every red stone counts as your color.
+    After placing, each line scores on its own: (<b>1</b>) exactly four in a row scores one point for you, (<b>2</b>) exactly three scores one point for <b>your opponent</b>, and (<b>3</b>) five or more scores nothing.
+    A stone that makes a three and a four gives each player a point.
+    The lines checked are those through the stone just placed and through every red stone on the board.
+  </p>
+  <p>
+    <b>Red stones:</b> A red stone in a scoring line becomes a stone of your color, and its marble goes back in the bag.
+    A red stone that does not score stays red and counts for your opponent on their turn.
+  </p>
+  <p>
+    Play stops when every point is filled.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    You win if you have the higher total.
+    The komi, set in Setup, is added to one player's points.
+    By default White gets 1.5 points.
+    With a whole-number komi, if the totals are tied then the game is a draw.
+  </p>
+  <h3>Tips</h3>
+  <p>
+    A red stone that completes your opponent's three scores against them on their next turn, wherever they play, unless they first extend the line to four.
+  </p>
 </template>
 
 <script type="module">

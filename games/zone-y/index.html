@@ -13,12 +13,39 @@
 <body>
 
 <template id="rules">
-  <p><b>Goal.</b> Join all three sides of the board with one unbroken group of your stones. The corner cells belong to both sides they touch.</p>
-  <p><b>Board.</b> The board is a triangle of hexagons. A smaller triangle at its center, drawn in the darker shade, is the inner zone; the lighter cells around it are the outer zone. The board starts empty, and Black moves first.</p>
-  <p><b>Turn.</b> Either place one stone of your color on an empty cell of the inner zone, or place two stones on empty cells of the outer zone. You cannot mix the zones in one turn. If the outer zone has only one empty cell left, you may place that one stone alone.</p>
-  <p><b>Swap.</b> After Black's first turn, White may swap instead of playing: Black's opening stones become White's, and Black moves next.</p>
-  <p><b>End.</b> The first player to join all three sides wins, even with the first of two stones. As in Y, the game cannot end in a draw: a full board always holds exactly one such group.</p>
-  <p><b>Options.</b> The side of the board and the side of the inner triangle can be changed in Setup. The inner triangle stays centered, so its side differs from the board's by a multiple of three.</p>
+  <p>
+    <i>Zone Y</i> is a version of <i>Y</i> whose board has two zones: on your turn you place one stone in the inner zone or two in the outer zone.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Play on a triangle of hexagons.
+    A smaller triangle at its center, drawn in the darker shade, is the <i>inner zone</i>; the lighter cells around it are the <i>outer zone</i>.
+    The board begins empty.
+    Decide who will move first.
+    The first player takes the black stones (“Black”) and the second player takes the white stones (“White”).
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, either place one stone of your color on an empty cell of the inner zone, or place two stones on empty cells of the outer zone.
+    You <b>cannot mix the zones</b> in one turn.
+    If the outer zone has only one empty cell left, you may place that one stone alone.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    You win if one unbroken group of your stones joins all three sides of the board, even with the first of two stones.
+    The corner cells belong to both sides they touch.
+    As in <i>Y</i>, the game cannot end in a draw: a full board always holds exactly one such group.
+  </p>
+  <h3>Swap Rule</h3>
+  <p>
+    After Black's first turn, White may swap instead of playing: Black's opening stones become White's, and Black moves next.
+  </p>
+  <h3>Options</h3>
+  <p>
+    The side of the board and the side of the inner triangle can be changed in Setup.
+    The two sides differ by a multiple of three.
+  </p>
 </template>
 
 <script type="module">

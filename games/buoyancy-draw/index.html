@@ -13,19 +13,58 @@
 <body>
 
 <template id="rules">
-  <p><b>Goal.</b> Capture all 15 of your opponent's checkers.</p>
-  <p><b>Board.</b> A 6&times;6 chessboard turned 45 degrees into a diamond. White's edges are the two lower sides, Black's the two upper sides; the left and right corners lie on both. Each player starts with a checker on each of the 15 cells nearest their corner (the five rows below or above the middle row). Their <i>house</i> is the nearest three of those rows, 6 cells. The middle row starts empty. White moves first.</p>
-  <p><b>Stacks.</b> Whoever's checker is on top controls a stack; a single checker is a stack too. A stack holding any of your opponent's checkers moves backwards, towards your edges. Any other stack moves forwards.</p>
-  <p><b>The bag.</b> One bag is shared by both players. It starts with 15 white and 5 black marbles (both counts can be changed under Setup). Drawn marbles stay out of the bag; when it is empty, all of them go back in.</p>
-  <p><b>Turn.</b> Draw marbles one at a time until you draw a black one. Each white marble you drew gives you one action. You must take all of those actions; your turn ends early only if no action is possible. An action is one of:</p>
-  <ul>
-    <li><b>Move</b> a stack you control one diagonal step, forwards or backwards as above, onto an empty cell or onto your opponent's stack, capping it, but not onto a stack you control.</li>
-    <li><b>Bear off</b> a stack carrying your opponent's checkers by stepping it off the board past one of your edges, as if there were a square there. Your opponent's checkers in it are captured, and your own go to your reserve.</li>
-    <li><b>Place</b> a man from your reserve on a cell of your house, an empty one or capping an opposing stack. If every cell of your house is your own, your men wait.</li>
-  </ul>
-  <p>To step a stack off the board, click it twice (once, if it has no other move).</p>
-  <p><b>Surrender.</b> A single checker may stand on your opponent's edge. It may step off the board past that edge (an action) only when it has no forward step open on the board, and then your opponent captures it.</p>
-  <p><b>End.</b> You lose when all of your checkers have been captured, or as soon as you control no stack and have no man in reserve: every man you have left is under your opponent's caps, and you could never move again.</p>
+  <p>
+    In <i>Buoyancy</i>, a run of lucky draws can give you several actions in one turn.
+    Stacks carrying enemy checkers float back toward your own edges, where you bear them off to capture them.
+  </p>
+  <h3>Materials</h3>
+  <p>
+    One bag is shared by both players.
+    It starts with 15 white and 5 black marbles (both counts can be changed in Setup).
+    Drawn marbles stay out of the bag; when it is empty, all of them go back in.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Play on a 6×6 chessboard turned 45 degrees into a diamond.
+    Decide who will move first.
+    The first player takes the white checkers (“White”) and the second player takes the black checkers (“Black”).
+    White's edges are the two lower sides, and Black's the two upper sides; the left and right corners lie on both.
+    Each player starts with a checker on each of the 15 cells nearest their corner (the five rows below or above the middle row), and the middle row starts empty.
+    Your <i>house</i> is the nearest three of those rows, six cells.
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, draw marbles one at a time until you draw a black one.
+    Each white marble you drew gives you one action: <i>move</i>, <i>bear off</i> or <i>place</i>.
+    <b>You must take all of those actions</b>; your turn ends early only if no action is possible.
+  </p>
+  <p>
+    <b>Stacks:</b> Whoever's checker is on top controls a stack; a single checker is a stack too.
+    A stack holding any of your opponent's checkers moves backward, toward your edges.
+    Any other stack moves forward.
+  </p>
+  <p>
+    <b>Move:</b> Move a stack you control one diagonal step, forward or backward as above, onto an empty cell or onto your opponent's stack, capping it, but not onto a stack you control.
+  </p>
+  <p>
+    <b>Bear off:</b> Step a stack carrying your opponent's checkers off the board past one of your edges, as if there were a square there.
+    Your opponent's checkers in it are captured, and your own go to your reserve.
+    To step a stack off the board, click it twice (once, if it has no other move).
+  </p>
+  <p>
+    <b>Place:</b> Place a checker from your reserve on a cell of your house, either empty or capping an opposing stack.
+    If you control every cell of your house, your reserve waits.
+  </p>
+  <p>
+    <b>Surrender:</b> A single checker may stand on your opponent's edge.
+    It may step off the board past that edge, as an action, only when it has no forward step open on the board, and then your opponent captures it.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    You win if you capture all of your opponent's checkers.
+    You also win as soon as your opponent controls no stack and has no checker in reserve.
+  </p>
 </template>
 
 <script type="module">
