@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Roost</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<link rel="icon" href="../../common/favicon.svg" type="image/svg+xml">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p><b>Setup.</b> The board is a hexagon of hexagonal cells, 4 to 7 cells per side. Each player starts with three chickens (triangles) on alternating corners of the board. The cells they stand on are their own. White moves first.</p>
+  <p><b>Turn.</b> Move one of your chickens, either</p>
+  <ul>
+    <li>any distance in a straight line over empty cells to an empty cell nobody owns, which becomes yours; or</li>
+    <li>onto an opponent's chicken on a neighboring cell, capturing it; its cell becomes yours.</li>
+  </ul>
+  <p>Eggs of either color cannot be captured and block movement. An empty cell someone owns (left behind by a capture) can be crossed but not landed on.</p>
+  <p><b>Eggs.</b> A chicken that moves without capturing lays an egg (a disc) on the cell it left. A capture lays no egg. An egg shows how many of its owner's turns remain until it hatches, starting at 3 (Hatch after in Setup). It counts down at the start of each of its owner's turns and hatches at 0 into a chicken that can move that same turn.</p>
+  <p><b>Passing.</b> A player with no move passes.</p>
+  <p><b>End.</b> A player with no chickens and no eggs left loses at once. Otherwise the game ends when neither player can move and no eggs remain, and the player who owns more cells wins. Equal counts are a draw.</p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
