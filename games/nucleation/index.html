@@ -13,14 +13,57 @@
 <body>
 
 <template id="rules">
-  <p><b>Setup.</b> The board is a hexagon of hexagonal cells, 4 to 8 cells per side (37 to 169 cells, always an odd number). The board starts empty, and Black moves first.</p>
-  <p><b>Turn.</b> Roll a die, then place one stone of your color on an empty cell. The placement's <i>result</i> is the size of the group the new stone ends up in: 1 plus the size of every one of your groups it touches. Merging groups is allowed. Each stone shows the size of its group (Group sizes in Setup hides the numbers), and dots mark the cells you may play.</p>
-  <p><b>Rolls 1 to 5.</b> The result must equal the roll. A 1 is a new stone touching none of yours; a 4 could grow a group of 3, or join a group of 2 and a single stone.</p>
-  <p><b>Roll 6.</b> The result may be 6 or more. Only a 6 can make or grow a group larger than 6.</p>
-  <p><b>Stepping down.</b> If no empty cell gives the result rolled, make the largest smaller result that some cell gives. For example, rolling 5 with groups of only 1 and 2, you must make a 3.</p>
-  <p><b>Stepping up.</b> If every empty cell would give a result larger than the roll, make the smallest result available.</p>
-  <p><b>End.</b> The game ends when the board is full. Each player lists their group sizes from largest to smallest. Compare the two lists one position at a time: first the largest groups, then the second largest, and so on. At the first position where the sizes differ, the player with the larger group wins. The board has an odd number of cells, so there are no draws.</p>
-  <p><b>Swap.</b> With the swap rule on, after Black places the first stone, White may swap instead of rolling: Black's stone becomes a white stone, and Black rolls next.</p>
+  <p>
+    In <i>Nucleation</i>, a die roll sets how large a group your placement must make, and the largest group wins.
+  </p>
+  <h3>Materials</h3>
+  <p>
+    One die.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Play on a hexagon of hexagonal cells, 4 to 8 cells per side (37 to 169 cells, always an odd number).
+    The board begins empty.
+    Decide who will move first.
+    The first player takes the black stones (“Black”) and the second player takes the white stones (“White”).
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, roll the die, and then place one stone of your color on an empty cell.
+    Your placement's <i>result</i> is the size of the group the new stone ends up in: one plus the size of every one of your groups it touches.
+    Merging groups is allowed.
+    Each stone shows the size of its group (Group sizes in Setup hides the numbers), and dots mark the cells you may play.
+  </p>
+  <p>
+    <b>Rolls 1 to 5:</b> <b class="key">The result must equal the roll.</b>
+    A 1 is a new stone touching none of yours; a 4 could grow a group of 3, or join a group of 2 and a single stone.
+  </p>
+  <p>
+    <b>Roll 6:</b> The result may be 6 or more.
+    Only a 6 can make or grow a group larger than 6.
+  </p>
+  <p>
+    <b>Stepping down:</b> If no empty cell gives the result rolled, make the largest smaller result that some cell gives.
+    For example, rolling 5 with groups of only 1 and 2, you must make a 3.
+  </p>
+  <p>
+    <b>Stepping up:</b> If every empty cell would give a result larger than the roll, make the smallest result available.
+  </p>
+  <p>
+    Play stops when the board is full.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    Each player lists their group sizes from largest to smallest.
+    Compare the two lists one position at a time: first the largest groups, then the second largest, and so on.
+    At the first position where the sizes differ, you win if your group is larger.
+    The board has an odd number of cells, so there are no draws.
+  </p>
+  <h3>Swap Rule</h3>
+  <p>
+    With the swap rule on, after Black places the first stone, White may swap instead of rolling: Black's stone becomes a white stone, and Black rolls next.
+  </p>
 </template>
 
 <script type="module">

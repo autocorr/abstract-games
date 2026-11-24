@@ -13,11 +13,39 @@
 <body>
 
 <template id="rules">
-  <p><b>Goal.</b> Make a loop of your stones that passes through the rim of the board an odd number of times. Such a loop cannot be shrunk to a point; a loop that stays inside the rim does not count.</p>
-  <p><b>Board.</b> The board is the projective plane, drawn as a disk: half of a Goldberg polyhedron (a ball of hexagons and twelve pentagons), each cell standing for itself and the cell opposite it. The rim of the disk is glued to itself. A cell on the rim also touches the cells across from it on the far side of the rim, so a path that leaves through the rim comes back in from the opposite side, mirrored. <b>Mirrored edge</b> in Setup shows faded copies of those far-side cells beyond the rim. The six shaded cells are the pentagons; they play like any other cell.</p>
-  <p><b>Turn.</b> Red moves first. Players take turns placing a stone of their color on an empty cell.</p>
-  <p><b>Swap.</b> After Red's first stone, Blue may swap instead of playing: Red's stone becomes Blue's, and Red moves next.</p>
-  <p><b>End.</b> The first player to make such a loop wins, and the loop is outlined. Any two of these loops cross, so only one player can make one, and the game cannot end in a draw: a full board always holds exactly one.</p>
+  <p>
+    <i>Hemisphere</i> is a connection game on the projective plane: a disk whose rim is glued to itself, so a path that leaves through the rim comes back in from the opposite side, mirrored.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    The board is half of a Goldberg polyhedron (a ball of hexagons and twelve pentagons), each cell standing for itself and the cell opposite it.
+    A cell on the rim also touches the cells across from it on the far side of the rim.
+    The six shaded cells are the pentagons; they play like any other cell.
+    The board begins empty.
+    Decide who will move first.
+    The first player takes the red stones (“Red”) and the second player takes the blue stones (“Blue”).
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, place a stone of your color on an empty cell.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    You win if you make a loop of your stones that passes through the rim <b class="key">an odd number of times</b>.
+    Such a loop cannot be shrunk to a point; a loop that stays inside the rim does not count.
+    The winning loop is outlined.
+    Any two of these loops cross, so only one player can make one, and the game cannot end in a draw: a full board always holds exactly one.
+  </p>
+  <h3>Swap Rule</h3>
+  <p>
+    After Red's first stone, Blue may swap instead of playing: Red's stone becomes Blue's, and Red moves next.
+  </p>
+  <h3>Options</h3>
+  <p>
+    The board can have 16, 46 or 126 cells.
+    <b>Mirrored edge</b> in Setup shows faded copies of the far-side cells beyond the rim.
+  </p>
 </template>
 
 <script type="module">

@@ -13,10 +13,41 @@
 <body>
 
 <template id="rules">
-  <p>Chess, with these changes.</p>
-  <p><b>Turns.</b> Roll a die, then move. You may then roll again: higher than your previous roll gives another move (and another chance to roll); equal or lower is a bust: remove one of your own pieces and your turn ends. A 6 ends your turn.</p>
-  <p><b>Kings.</b> There is no check or checkmate. Capture the opposing King to win, which needs a roll at least as high as your opponent's final roll of their last turn (a bust included). Removing your own King loses.</p>
-  <p><b>Other rules.</b> Having no legal move after a roll loses. En passant is only possible against the last move of the opponent's turn. The fifty-move rule counts every move by either player (100 in all), and removing a piece resets it as a capture does. There is no draw by repetition.</p>
+  <p>
+    In <i>Successive Chess</i>, you keep rolling for extra moves as long as each roll beats the last, but a failed roll costs you a piece.
+    All the rules of <i>Chess</i> apply, except as described below.
+  </p>
+  <h3>Materials</h3>
+  <p>
+    One die.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Set up the pieces as in <i>Chess</i>.
+    Decide who will move first.
+    The first player takes the white pieces (“White”) and the second player takes the black pieces (“Black”).
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, roll the die, and then move.
+    You may then roll again: higher than your previous roll gives another move (and another chance to roll).
+    <b class="key">Equal or lower is a bust</b>: remove one of your own pieces, and your turn ends.
+    A 6 ends your turn.
+  </p>
+  <p>
+    <b>Kings:</b> There is no check or checkmate.
+  </p>
+  <p>
+    <b>Other rules:</b> En passant is only possible against the last move of the opponent's turn.
+    The fifty-move rule counts every move by either player (100 in all), and removing a piece resets it as a capture does.
+    There is no draw by repetition.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    You win by capturing the opposing King, which needs a roll at least as high as your opponent's final roll of their last turn (a bust included).
+    You lose if you remove your own King, or if you have no legal move after a roll.
+  </p>
 </template>
 
 <script type="module">
