@@ -61,3 +61,5 @@ under the SIL Open Font License; see
 
 Grounded Chess's color palettes are based on Okabe and Ito's color-blind-safe
 palette.
+
+Wavefunction Collapse's board colors are from Lichess.
