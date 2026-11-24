@@ -1,5 +1,5 @@
-// Roost: chickens move and leave eggs behind, which
-// hatch into chickens that move in turn. Pure: no DOM.
+// Roost: chickens move and leave eggs behind, which hatch into chickens that
+// move in turn. Pure: no DOM.
 //
 // Hex-hex board. Each player starts with three chickens on alternating
 // corners. White moves first.
@@ -8,11 +8,10 @@
 //   - It may slide any distance in one of the six directions over empty
 //     cells to an empty cell nobody owns, claiming it.
 //   - Or it may capture an opposing chicken on a neighbouring cell, claiming
-//     that cell. (Captures are not made at range: on a hex-hex board
-//     adjacent corners share a line, so a sliding capture would take a
-//     chicken on the first move.) Eggs (of either
-//     player) cannot be captured and block slides; an owned empty cell (left
-//     by a capture) can be passed over but not landed on.
+//     that cell. (Not at range: on a hex-hex board adjacent corners share a
+//     line, so a sliding capture would take a chicken on the first move.)
+//   - Eggs (of either player) cannot be captured and block slides; an owned
+//     empty cell (left by a capture) can be passed over but not landed on.
 //   - A plain move lays an egg of the mover's on the cell left behind, which
 //     stays theirs. A capture lays no egg.
 //   - An egg is laid showing the hatch time (3 by default). At the start of
@@ -73,7 +72,6 @@ function buildBoard(side) {
 
 // ---- moves ---------------------------------------------------------------
 
-
 // The moves [from, to] of `p`'s chickens.
 function generateMoves(s, p) {
   const { who, egg } = s, next = s.board.next;
@@ -117,12 +115,14 @@ function settle(s) {
     s.moves = [PASS];
     return;
   }
-  s.moves = [];
   finish(s);
 }
 
+// End the game: `annihilated` (a player) lost every piece, else territory
+// decides.
 function finish(s, annihilated = 0) {
   s.over = true;
+  s.moves = [];
   if (annihilated) {
     s.winner = other(annihilated);
     s.reason = "annihilated";
@@ -141,15 +141,13 @@ function territory(s, p) {
 
 function apply(s, move) {
   const p = s.turn;
-  let info = { capture: false };
+  const info = { capture: false };
   if (move === PASS) {
     s.last = null;
   } else {
     const [from, to] = move;
     info.capture = s.who[to] === other(p);
-    s.who[to] = p;
-    s.egg[to] = 0;
-    s.owner[to] = p;
+    s.who[to] = s.owner[to] = p;   // `to` held no egg
     if (info.capture) {
       s.who[from] = 0;
     } else {
@@ -157,7 +155,6 @@ function apply(s, move) {
     }
     s.last = [from, to];
     if (info.capture && !hasPieces(s, other(p))) {
-      s.moves = [];
       finish(s, other(p));
       return info;
     }
@@ -173,7 +170,8 @@ function apply(s, move) {
 // random moves, to the end of the game. Tuned in self-play at 100 ms a move,
 // where they beat random rollouts 34-6. Scoring the position after 10 or 20
 // plies instead did no better, nor did 0 or 25% random moves.
-const TUNE = { random: 0.1, tries: 4 };
+const RANDOM_SHARE = 0.1;
+const SAFE_TRIES = 4;   // random moves greedyMove tries for a safe landing
 
 // Is `id` next to a chicken of `q` (one that could capture there)?
 function threatened(s, id, q) {
@@ -193,7 +191,7 @@ function safeLanding(s, to, q) {
 
 // A rollout's move: a capture if there is one (a safe one if possible),
 // else the first of a few random moves that lands safely.
-function greedyMove(s, moves, rng, tries) {
+function greedyMove(s, moves, rng) {
   const q = other(s.turn);
   let capture = null;
   for (const m of moves) {
@@ -203,7 +201,7 @@ function greedyMove(s, moves, rng, tries) {
   }
   if (capture) return capture;
   let m;
-  for (let i = 0; i < tries; i++) {
+  for (let i = 0; i < SAFE_TRIES; i++) {
     m = moves[Math.floor(rng() * moves.length)];
     if (!threatened(s, m[1], q)) return m;
   }
@@ -221,16 +219,13 @@ function searchMoves(s) {
   return kept.length ? kept : moves;
 }
 
-function makePlayout(tune) {
-  return (s, rng) => {
-    while (!s.over) {
-      const moves = s.moves;
-      const m = moves[0] === PASS ? PASS
-        : rng() < tune.random ? moves[Math.floor(rng() * moves.length)] : greedyMove(s, moves, rng, tune.tries);
-      apply(s, m);
-    }
-    return s.winner;
-  };
+function playout(s, rng) {
+  while (!s.over) {
+    const moves = s.moves;
+    apply(s, moves[0] === PASS ? PASS
+      : rng() < RANDOM_SHARE ? moves[Math.floor(rng() * moves.length)] : greedyMove(s, moves, rng));
+  }
+  return s.winner;
 }
 
 // ---- game ----------------------------------------------------------------
@@ -280,8 +275,7 @@ const game = withSwap({
     return s.turn;
   },
   legalMoves(s) {
-    if (s.over) return [];
-    return s.moves;
+    return s.moves;   // [] once over
   },
   applyMove: apply,
   swapColours(s) {
@@ -292,7 +286,7 @@ const game = withSwap({
     s.turn = other(s.turn);
     settle(s);
   },
-  playout: makePlayout(TUNE),
+  playout,
   outcome(s) {
     return s.over ? { winner: s.winner } : null;
   },
@@ -359,4 +353,4 @@ game.aiMove = (s, opts) => mcts(searchGame, s, opts);
 
 export default game;
 
-export const internals = { generateMoves, settle, territory, makePlayout, TUNE, searchMoves };
+export const internals = { settle, territory };

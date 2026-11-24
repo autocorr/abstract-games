@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import game, { internals } from "../games/roost/game.js";
 import { newGame } from "../common/engine.js";
+import { seededRng } from "../common/rng.js";
 
 const { settle, territory } = internals;
 
@@ -85,7 +86,7 @@ test("capturing the last chicken with no eggs left annihilates", () => {
   assert.equal(s.reason, "annihilated");
 });
 
-test("a player with no move passes; the game ends by territory when nobody can move", () => {
+test("a player with no move passes", () => {
   // White's chicken boxed in by Black eggs; Black has a chicken with one cell to go.
   const { s, at } = position({
     white: [[-3, 0]],
@@ -95,7 +96,17 @@ test("a player with no move passes; the game ends by territory when nobody can m
   assert.deepEqual(game.legalMoves(s), ["pass"]);
   game.applyMove(s, "pass");
   assert.equal(game.toMove(s), 2);
-  assert.ok(territory(s, 2) > territory(s, 1));
+});
+
+test("the game ends by territory when neither player can move and no eggs remain", () => {
+  // Every cell owned, so no chicken has a landing; White owns all but one.
+  const { s, at } = position({ white: [[0, 0]], black: [[3, -3]] });
+  s.owner.fill(1);
+  s.owner[at([3, -3])] = 2;
+  settle(s);
+  assert.deepEqual(game.outcome(s), { winner: 1 });
+  assert.equal(s.reason, "territory");
+  assert.deepEqual(game.legalMoves(s), []);
 });
 
 test("captures only a neighbouring chicken, even when sliding", () => {
@@ -113,8 +124,7 @@ test("every opening position offers White no capture", () => {
   }
 });
 
-test("the AI takes a free capture", async () => {
-  const { seededRng } = await import("../common/rng.js");
+test("the AI takes a free capture", () => {
   // Black's chicken at (1,0) sits beside White's at (0,0), with no Black
   // chicken near enough to recapture.
   const { s, at } = position({ white: [[0, 0], [-3, 3]], black: [[1, 0], [3, -3]] });
