@@ -55,5 +55,9 @@ The chess piece images are by Colin M.L. Burnett ("Cburnett") from Wikimedia
 Commons, used under the BSD license (some games recolor them); see
 [common/pieces/cburnett/README.md](common/pieces/cburnett/README.md).
 
+The Inter font is by Rasmus Andersson and the Inter Project Authors, used
+under the SIL Open Font License; see
+[common/fonts/LICENSE.txt](common/fonts/LICENSE.txt).
+
 Grounded Chess's color palettes are based on Okabe and Ito's color-blind-safe
 palette.
