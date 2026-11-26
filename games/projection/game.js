@@ -33,8 +33,9 @@
 
 import { makeBoard, extendView, pointKey, components, gridName } from "../../common/board/graph.js";
 import { cachedBoards } from "../../common/engine.js";
-import { withSwap, swapStones } from "../../common/swap.js";
+import { withSwap, swapStones, SWAP } from "../../common/swap.js";
 import { seededRng } from "../../common/rng.js";
+import { mcts } from "../../common/ai/mcts.js";
 
 const BLACK = 1, WHITE = 2;
 const PLAYERS = {
@@ -349,7 +350,9 @@ function apply(s, move) {
 // Random projections, never filling a point whose neighbours are all the
 // mover's stones (an eye), and without the superko check; a rollout passes
 // when it has no other move and stops after two passes or a cap on its
-// length, and is then scored.
+// length, and is then scored. (Also keeping rollouts out of the mover's whole
+// area, as the search does, lost 4-8 to these in self-play at 300 ms a move:
+// areas looked safe before they were.)
 function playout(s, rng) {
   const { board, cells } = s;
   if (s.phase !== "play") {
@@ -378,11 +381,57 @@ function playout(s, rng) {
   return s.winner;
 }
 
+// ---- search ----------------------------------------------------------------
+
+// Liberties of the group at `id`.
+function libertyCount(board, cells, id) {
+  const p = cells[id], seen = new Set([id]), libs = new Set(), stack = [id];
+  while (stack.length) {
+    for (const n of board.neighbours[stack.pop()]) {
+      if (cells[n] === 0) libs.add(n);
+      else if (cells[n] === p && !seen.has(n)) { seen.add(n); stack.push(n); }
+    }
+  }
+  return libs.size;
+}
+
+// The moves worth searching. Win/loss values cannot tell harmless moves
+// from passing once a game is decided, so without this the AI fills its own
+// area instead of passing, down to killing its own groups. Left out:
+// suicides, and projections into a vacant region bordering only the mover's
+// stones (their own area) when no enemy stone can project into that region
+// or when the stone would be left with one liberty. A projection into a
+// region the opponent can reach is kept: it may block an invasion.
+function searchMoves(s) {
+  const moves = legal(s);
+  if (s.phase !== "play") return moves;
+  const { board, cells } = s, p = s.turn;
+  const owner = new Uint8Array(cells.length);
+  scores(s, owner);
+  const reach = new Uint8Array(cells.length);
+  for (const t of targets(s, other(p))) reach[t] = 1;
+  const contested = new Uint8Array(cells.length);   // own-area points in a region the opponent can reach
+  for (const region of components(board, (id) => owner[id] === p)) {
+    if (region.some((id) => reach[id])) for (const id of region) contested[id] = 1;
+  }
+  const saved = cells.slice();
+  const kept = moves.filter((m) => {
+    if (!Array.isArray(m)) return true;
+    const t = m[0];
+    if (owner[t] === p && !contested[t]) return false;
+    place(s, t, p, false);
+    const ok = cells[t] === p && (owner[t] !== p || libertyCount(board, cells, t) > 1);
+    cells.set(saved);
+    return ok;
+  });
+  return kept;
+}
+
 // ---- game ----------------------------------------------------------------
 
 const label = (side) => ({ value: side, label: `${side}–${side + 1}` });
 
-export default withSwap({
+const game = withSwap({
   id: "projection",
   title: "Projection",
   url: import.meta.url,
@@ -489,4 +538,26 @@ export default withSwap({
   },
 });
 
-export const internals = { targets, scores, place, hashCells, keyOf };
+// The AI passes at once when the opponent has passed and it is ahead (that
+// ends the game in its favor), and otherwise searches the moves above. In
+// self-play at 300 ms a move this beat searching every move 8-4, and never
+// killed its own stones, where the full search threw away groups of 17 to 36.
+const searchGame = {
+  ...game,
+  aiMove: undefined,
+  legalMoves(s) {
+    const all = game.legalMoves(s);
+    return all.includes(SWAP) ? all : searchMoves(s);
+  },
+};
+game.aiMove = (s, opts) => {
+  if (s.phase === "play" && s.passes) {
+    const sc = scores(s);
+    if (sc[s.turn] > sc[other(s.turn)]) return PASS;
+  }
+  return mcts(searchGame, s, opts);
+};
+
+export default game;
+
+export const internals = { targets, scores, place, hashCells, keyOf, searchMoves };

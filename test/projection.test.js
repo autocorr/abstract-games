@@ -191,3 +191,23 @@ test("random games end, and the playout finishes the game", () => {
     assert.ok(winner === BLACK || winner === WHITE);
   }
 });
+
+test("AI: passes after an opponent's pass when ahead", () => {
+  const s = position({ side: 3, black: [5], white: [60, 61], turn: BLACK });
+  game.applyMove(s, "pass");   // Black passes; White leads 2 stones to 1 plus area
+  assert.ok(internals.scores(s)[WHITE] > internals.scores(s)[BLACK]);
+  assert.equal(game.aiMove(s, { timeMs: 0, iterations: 1, rng: seededRng(1) }), "pass");
+});
+
+test("AI search leaves out suicides and filling its own area out of the opponent's reach", () => {
+  // White alone on the board but for a black stone with no rays into
+  // White's area: every white projection fills White's own area.
+  const { searchMoves } = internals;
+  const s = position({ side: 2, white: [0, 1] });
+  assert.deepEqual(searchMoves(s), ["pass"]);
+  // With the opponent able to project into the area, filling it may block.
+  const b = s.board;
+  const far = b.cells.findIndex((c, id) => id > 20 && !s.cells[id]);
+  const t = position({ side: 2, white: [0, 1], black: [far] });
+  assert.ok(searchMoves(t).some(Array.isArray));
+});
