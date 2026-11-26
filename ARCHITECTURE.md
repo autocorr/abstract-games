@@ -10,6 +10,7 @@ log, tests) comes from `common/`.
 ```
 index.html                  landing page: one card per game from the registry
 games.js                    registry of games: { id, title, blurb, path, module }
+sw.js                       service worker: stores every site file for offline play (see "Offline")
 common/
   base.css                  tokens (light/dark colours, radii, spacing), controls, game page
                             layout, landing page
@@ -17,6 +18,7 @@ common/
   fonts/                    Inter variable font (SIL OFL), subset by .tools/scripts/subset_inter.py
   theme.js                  the site-wide Theme setting (auto / light / dark)
   theme-init.js             classic script in each page head: applies the saved theme before paint
+  offline.js                cacheSite(): the landing page's Cache link; registers sw.js, stores a copy
   engine.js                 helpers over the Game contract: move keys, option choices, replay,
                             playouts, cachedBoards(), CHANCE
   log.js                    move-log text: describeMove(), moveLabel(), turns of plies
@@ -550,6 +552,22 @@ uv run --project .tools python .tools/scripts/check_blocklists.py
 It downloads uBlock Origin's default lists and reports any site file they
 block.
 
+## Offline
+
+Offline play is opt-in and manual. Nothing is stored until the Cache link in
+the landing page footer is clicked. `cacheSite()` in `common/offline.js` then
+asks for persistent storage (Firefox may prompt), registers `sw.js`, and sends
+it "cache" over a `MessageChannel`. The worker fetches every file in `FILES`
+and replaces the stored copy; if any fetch fails, the old copy stays. Clicking
+again saves a fresh copy; nothing updates it otherwise. Requests always go to
+the network and fall back to the stored copy only when the network fails. The
+footer shows the date of the last save while a copy exists.
+
+`FILES` is generated: after adding, renaming or removing any `.html`, `.js`,
+`.css`, `.svg` or `.woff2` file under `common/` or `games/`, run
+`node .tools/scripts/offline_files.mjs`. `test/offline.test.js` fails until
+the list matches. Click Cache again after an update to store the new files.
+
 ## Adding a game
 
 1. Create `games/<id>/game.js` implementing the contract, building its board
@@ -560,4 +578,6 @@ block.
 3. Register it in `games.js`.
 4. Optionally add `moveText` if the default log text (cell names) does not
    read well for the game's moves.
-5. Add `test/<id>.test.js` with rule tests and run `npm test`.
+5. Add `test/<id>.test.js` with rule tests.
+6. Run `node .tools/scripts/offline_files.mjs` to add its files to the
+   offline cache, then `npm test`.

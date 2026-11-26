@@ -14,6 +14,9 @@ Static site of abstract strategy games: plain HTML + native ES modules, no build
   plays in a sandboxed iframe:
   `node .tools/scripts/bundle.mjs <game id> [out.html]`,
   `uv run --project .tools python .tools/scripts/check_bundle.py <out.html> [out.png]`
+- After adding, renaming or removing a site file, regenerate the service
+  worker's offline file list: `node .tools/scripts/offline_files.mjs`
+  (`npm test` fails until it matches).
 - Content blockers block scripts with tracker-like names (EasyPrivacy blocks
   `/log-view.js`), which blanks a page. Check new file names with
   `uv run --project .tools python .tools/scripts/check_blocklists.py`.
