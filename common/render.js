@@ -486,7 +486,8 @@ export function createRenderer(svg) {
   //           with the piece's colour, under the highlights
   // players:  game.players ({ [player]: { fill, mark } })
   // markers:  [{ id, kind, color?, y?, size? }]. Over the pieces: "ring"
-  //           (colour follows the piece; size: its diameter in cells,
+  //           (colour follows the piece, or a given colour, which also
+  //           draws it on an empty cell; size: its diameter in cells,
   //           default 0.52, the stroke scaled to match), "dot", and "target"
   //           (the highlight dot of a selectable cell, y cells below the
   //           centre, e.g. clear of a label). Under the pieces: "shade"
@@ -542,11 +543,11 @@ export function createRenderer(svg) {
       if (!c) continue;
       if (m.kind === "dot") {
         layers.markers.appendChild(svgEl("circle", { cx: c.x, cy: c.y, r: 0.14 * u, fill: MARKER_DOT }));
-      } else if (m.kind === "ring" && owner.has(m.id)) {
-        const spec = owner.get(m.id), size = m.size || RING_SIZE;
+      } else if (m.kind === "ring" && (owner.has(m.id) || m.color)) {
+        const spec = owner.get(m.id) || {}, size = m.size || RING_SIZE;
         layers.markers.appendChild(svgEl("circle", {
           cx: c.x, cy: c.y, r: (size / 2) * u, fill: "none",
-          stroke: spec.mark || "#fff", "stroke-width": ((0.06 * size) / RING_SIZE) * u,
+          stroke: m.color || spec.mark || "#fff", "stroke-width": ((0.06 * size) / RING_SIZE) * u,
         }));
       }
     }

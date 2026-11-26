@@ -236,7 +236,8 @@ export default {
                                     //   width; tile: true shades the whole cell in the piece's
                                     //   colour (e.g. a neutral piece with a fill)
   markers(state, move, info),       // -> [{ id, kind, color?, y?, size? }] for the last move. Over
-                                    //   pieces: "ring" (size: diameter in cells, default 0.52)
+                                    //   pieces: "ring" (size: diameter in cells, default 0.52;
+                                    //   color: its stroke, which also draws it on an empty cell)
                                     //   | "dot" | "target" (y: cells below the centre, level
                                     //   on screen); under pieces: "shade" (hatched
                                     //   cell), "square" (cell outline), "tint" (translucent
@@ -498,7 +499,9 @@ and `hands(s)` shows Black's hand above the board and White's below.
 `addToHand(s, player, key)` gives a player a piece. Hooks let a variant add state,
 chance plies before the game (`setupPly`) or before each move (`drawPly`,
 one ply or several until its `done(s)`),
-rule out moves (`allow`), act after a turn (`afterMove`, which may also
+rule out moves (`allow`), replace move generation, check, playing a move
+and notation outright (`moves`, `inCheck`, `play`, `notation`, for movement
+the compiled rays can't describe), act after a turn (`afterMove`, which may also
 end the game) and decide what having no move means (`noMoves`). A variant
 sets `repetition: 3` for the threefold rule (positions since the last
 capture or pawn move are kept in `s.history`); the returned object can be spread and its
