@@ -160,4 +160,12 @@ export const games = [
     path: "games/projection/",
     module: "games/projection/game.js",
   },
+  {
+    id: "portal-iv",
+    title: "Portal IV",
+    board: "Chessboard",
+    blurb: "Chess, but each move leaves your portal on the square you left. A piece that steps onto one portal comes out of the other and keeps going, and checks work through them.",
+    path: "games/portal-iv/",
+    module: "games/portal-iv/game.js",
+  },
 ];

@@ -81,6 +81,8 @@ const FILES = [
   "games/lottery-chess/index.html",
   "games/nucleation/game.js",
   "games/nucleation/index.html",
+  "games/portal-iv/game.js",
+  "games/portal-iv/index.html",
   "games/projection/game.js",
   "games/projection/index.html",
   "games/roost/game.js",
