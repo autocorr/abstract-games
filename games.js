@@ -152,4 +152,12 @@ export const games = [
     path: "games/roost/",
     module: "games/roost/game.js",
   },
+  {
+    id: "projection",
+    title: "Projection",
+    board: "Corners of a hexagon of hexagons",
+    blurb: "Go on the corners of hexagons, where you place each stone along a straight line from one of your own, with no stone in between. You score your stones plus the points they surround.",
+    path: "games/projection/",
+    module: "games/projection/game.js",
+  },
 ];

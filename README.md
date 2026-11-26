@@ -23,6 +23,7 @@ GitHub Pages at <https://autocorr.github.io/abstract-games/>.
 - [Hemisphere](games/hemisphere/)
 - [Buoyancy](games/buoyancy-draw/)
 - [Roost](games/roost/)
+- [Projection](games/projection/)
 
 ## Running locally
 
