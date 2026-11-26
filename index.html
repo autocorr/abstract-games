@@ -25,7 +25,7 @@
   </main>
   <footer>
     <a href="https://github.com/autocorr/abstract-games">Source on GitHub</a> · MIT License
-    <div id="offline"></div>
+    · <a href="#" id="cache">Cache</a> <span id="cache-status"></span>
   </footer>
 </div>
 
@@ -37,9 +37,15 @@
   import { segmented } from "./common/ui/setup.js";
   import { THEMES, loadTheme, setTheme } from "./common/theme.js";
   import { h, svgEl } from "./common/ui/dom.js";
-  import { enableOffline } from "./common/offline.js";
+  import { cacheSite, cacheStatus } from "./common/offline.js";
 
-  enableOffline((text) => { document.getElementById("offline").textContent = text; });
+  const cacheText = document.getElementById("cache-status");
+  const showCache = (text) => { cacheText.textContent = text ? `(${text})` : ""; };
+  cacheStatus().then(showCache);
+  document.getElementById("cache").addEventListener("click", (event) => {
+    event.preventDefault();
+    cacheSite(showCache);
+  });
   document.getElementById("theme").append(segmented("Theme", THEMES, loadTheme(), setTheme).node);
 
   const list = document.getElementById("games");

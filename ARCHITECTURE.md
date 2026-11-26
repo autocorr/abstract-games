@@ -10,7 +10,7 @@ log, tests) comes from `common/`.
 ```
 index.html                  landing page: one card per game from the registry
 games.js                    registry of games: { id, title, blurb, path, module }
-sw.js                       service worker: caches every site file for offline play (see "Offline")
+sw.js                       service worker: stores every site file for offline play (see "Offline")
 common/
   base.css                  tokens (light/dark colours, radii, spacing), controls, game page
                             layout, landing page
@@ -18,7 +18,7 @@ common/
   fonts/                    Inter variable font (SIL OFL), subset by .tools/scripts/subset_inter.py
   theme.js                  the site-wide Theme setting (auto / light / dark)
   theme-init.js             classic script in each page head: applies the saved theme before paint
-  offline.js                enableOffline(): registers sw.js and asks it to refresh its copy
+  offline.js                cacheSite(): the landing page's Cache link; registers sw.js, stores a copy
   engine.js                 helpers over the Game contract: move keys, option choices, replay,
                             playouts, cachedBoards(), CHANCE
   log.js                    move-log text: describeMove(), moveLabel(), turns of plies
@@ -554,20 +554,19 @@ block.
 
 ## Offline
 
-`sw.js` makes the whole site playable without a network, including pages
-never opened. Installing it caches every file in its `FILES` list. Requests go
-to the network first (4 s timeout when a cached copy exists) and update the
-cache; offline they are served from it. `enableOffline()` in
-`common/offline.js`, called by `mount()` and the landing page, registers the
-worker and, at most every six hours while online, has it revalidate every file
-(cheap 304s when unchanged), prune files the site dropped, and report back; the
-landing page footer then says "Saved for offline play". After the first full
-save it asks once for persistent storage, so the browser does not evict the copy.
+Offline play is opt-in and manual. Nothing is stored until the Cache link in
+the landing page footer is clicked. `cacheSite()` in `common/offline.js` then
+asks for persistent storage (Firefox may prompt), registers `sw.js`, and sends
+it "cache" over a `MessageChannel`. The worker fetches every file in `FILES`
+and replaces the stored copy; if any fetch fails, the old copy stays. Clicking
+again saves a fresh copy; nothing updates it otherwise. Requests always go to
+the network and fall back to the stored copy only when the network fails. The
+footer shows the date of the last save while a copy exists.
 
 `FILES` is generated: after adding, renaming or removing any `.html`, `.js`,
 `.css`, `.svg` or `.woff2` file under `common/` or `games/`, run
 `node .tools/scripts/offline_files.mjs`. `test/offline.test.js` fails until
-the list matches. Regenerating changes `sw.js`, so browsers install it again.
+the list matches. Click Cache again after an update to store the new files.
 
 ## Adding a game
 
