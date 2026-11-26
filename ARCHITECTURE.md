@@ -10,6 +10,7 @@ log, tests) comes from `common/`.
 ```
 index.html                  landing page: one card per game from the registry
 games.js                    registry of games: { id, title, blurb, path, module }
+sw.js                       service worker: caches every site file for offline play (see "Offline")
 common/
   base.css                  tokens (light/dark colours, radii, spacing), controls, game page
                             layout, landing page
@@ -17,6 +18,7 @@ common/
   fonts/                    Inter variable font (SIL OFL), subset by .tools/scripts/subset_inter.py
   theme.js                  the site-wide Theme setting (auto / light / dark)
   theme-init.js             classic script in each page head: applies the saved theme before paint
+  offline.js                enableOffline(): registers sw.js and asks it to refresh its copy
   engine.js                 helpers over the Game contract: move keys, option choices, replay,
                             playouts, cachedBoards(), CHANCE
   log.js                    move-log text: describeMove(), moveLabel(), turns of plies
@@ -550,6 +552,23 @@ uv run --project .tools python .tools/scripts/check_blocklists.py
 It downloads uBlock Origin's default lists and reports any site file they
 block.
 
+## Offline
+
+`sw.js` makes the whole site playable without a network, including pages
+never opened. Installing it caches every file in its `FILES` list. Requests go
+to the network first (4 s timeout when a cached copy exists) and update the
+cache; offline they are served from it. `enableOffline()` in
+`common/offline.js`, called by `mount()` and the landing page, registers the
+worker and, at most every six hours while online, has it revalidate every file
+(cheap 304s when unchanged), prune files the site dropped, and report back; the
+landing page footer then says "Saved for offline play". After the first full
+save it asks once for persistent storage, so the browser does not evict the copy.
+
+`FILES` is generated: after adding, renaming or removing any `.html`, `.js`,
+`.css`, `.svg` or `.woff2` file under `common/` or `games/`, run
+`node .tools/scripts/offline_files.mjs`. `test/offline.test.js` fails until
+the list matches. Regenerating changes `sw.js`, so browsers install it again.
+
 ## Adding a game
 
 1. Create `games/<id>/game.js` implementing the contract, building its board
@@ -560,4 +579,6 @@ block.
 3. Register it in `games.js`.
 4. Optionally add `moveText` if the default log text (cell names) does not
    read well for the game's moves.
-5. Add `test/<id>.test.js` with rule tests and run `npm test`.
+5. Add `test/<id>.test.js` with rule tests.
+6. Run `node .tools/scripts/offline_files.mjs` to add its files to the
+   offline cache, then `npm test`.
