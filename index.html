@@ -25,6 +25,7 @@
   </main>
   <footer>
     <a href="https://github.com/autocorr/abstract-games">Source on GitHub</a> · MIT License
+    <div id="offline"></div>
   </footer>
 </div>
 
@@ -36,7 +37,9 @@
   import { segmented } from "./common/ui/setup.js";
   import { THEMES, loadTheme, setTheme } from "./common/theme.js";
   import { h, svgEl } from "./common/ui/dom.js";
+  import { enableOffline } from "./common/offline.js";
 
+  enableOffline((text) => { document.getElementById("offline").textContent = text; });
   document.getElementById("theme").append(segmented("Theme", THEMES, loadTheme(), setTheme).node);
 
   const list = document.getElementById("games");

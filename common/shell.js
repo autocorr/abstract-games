@@ -15,6 +15,7 @@ import { createLogView } from "./ui/move-list.js";
 import { playAndDescribe, logEntries, groupTurns, moveLabel, stepCursor } from "./log.js";
 import { timeline, isLive, jump, play, undoTarget } from "./timeline.js";
 import { games as registry } from "../games.js";
+import { enableOffline } from "./offline.js";
 import {
   replay, resolveOptions, optionAllowed, optionActive, parseChoice, findLegalMove, piecesOf, sampleChance, currentPlayer, CHANCE,
 } from "./engine.js";
@@ -36,6 +37,7 @@ const startsWith = (move, prefix) => prefix.every((id, i) => move[i] === id);
 // ---- mount -------------------------------------------------------------
 
 export function mount(game, { root = document.body } = {}) {
+  enableOffline();
   const playerIds = Object.keys(game.players).map(Number);
   const settings = loadSettings(game);
   const persist = () => saveSettings(game, settings);
