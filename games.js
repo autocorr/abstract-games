@@ -156,7 +156,7 @@ export const games = [
     id: "projection",
     title: "Projection",
     board: "Corners of a hexagon of hexagons",
-    blurb: "Go on the corners of hexagons, where you place each stone in the line of sight of one of your own. Each stone sees along only three of the six directions, so sight can be one-way, and any stone blocks it.",
+    blurb: "Go on the corners of hexagons, where you place each stone in the line of sight of one of your own. Each stone sees along only three of the six directions, so sight can be one-way.",
     path: "games/projection/",
     module: "games/projection/game.js",
   },
