@@ -11,7 +11,7 @@
 // sliding from it, and a Knight leaps once more from it. A step whose way
 // on from the far portal is off the board can't be taken. Until both
 // portals are on the board (Black's first move), the lone portal can't be
-// entered at all. A line that comes back round to the moving piece's own
+// entered at all. A line that comes back around to the moving piece's own
 // square ends there.
 //
 // Attacks follow the same paths, so check and checkmate work through the
