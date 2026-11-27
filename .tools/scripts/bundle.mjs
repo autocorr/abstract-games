@@ -6,8 +6,9 @@
 //
 // The page gets a single classic inline script (no imports, data: URLs,
 // import maps or workers), as sandboxed viewers may block those; the AI
-// searches on the main thread, so the page pauses while it thinks. Image
-// files a game loads by URL (e.g. chess pieces) are not inlined. Each ES module becomes a factory in a
+// searches on the main thread, so the page pauses while it thinks. The
+// Cburnett chess pieces are inlined as data URLs; other image files a game
+// loads by URL are not. Each ES module becomes a factory in a
 // registry; imports become reads of the dependency's exports object, whose
 // getters keep bindings live.
 import fs from "node:fs";
@@ -109,6 +110,16 @@ function load(rel) {
     // No worker in a single file: search on the main thread.
     src = src.replace('new URL("./worker.js", import.meta.url)', "null")
       .replace('this.workerBroken = typeof Worker === "undefined" || !game.url;', "this.workerBroken = true;");
+  }
+  if (rel === "common/chess/game.js") {
+    // Chess piece images are files: inline them as data URLs.
+    const dir = path.join(root, "common/pieces/cburnett");
+    const urls = Object.fromEntries(fs.readdirSync(dir).filter((f) => f.endsWith(".svg")).map((f) => [
+      f.slice(0, -4), "data:image/svg+xml;charset=utf-8," + encodeURIComponent(fs.readFileSync(path.join(dir, f), "utf8")),
+    ]));
+    const from = "new URL(`../pieces/cburnett/${name}.svg`, import.meta.url).href";
+    if (!src.includes(from)) throw new Error("bundle.mjs: chess piece URLs changed; update the inlining");
+    src = src.replace(from, `${JSON.stringify(urls)}[name]`);
   }
   // Viewer frames may be about:srcdoc or sandboxed: URL and history calls must not throw.
   src = src.replace('new URL("../../", location.href).pathname', '"#"')

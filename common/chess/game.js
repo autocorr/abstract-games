@@ -20,6 +20,12 @@
 //                           chance plies before every move, until done(s)
 //                           (default: one ply); none on a turn where skip(s)
 //   allow(s, move, ctx)  rules out moves (see rules.js legalMoves)
+//   moves(s, player)     -> the mover's legal moves, replacing rules.js
+//                           legalMoves (for movement the compiled rays
+//                           can't describe); inCheck(s, player), play(s,
+//                           move) and notation(s, move, legal) likewise
+//                           replace rules.js's inCheck, playMove and
+//                           notation
 //   afterMove(s, landing) after a turn's last ply, before the next turn;
 //                           may return { winner, reason } to end the game
 //   noMoves(s)           -> { winner, reason } when the mover has no move;
@@ -48,7 +54,7 @@
 import { squareBoard } from "../board/square.js";
 import { CHANCE, pickWeighted, cachedBoards } from "../engine.js";
 import {
-  WHITE, BLACK, other, attachRules, setupCells, findRoyals, legalMoves, playMove, promotePending, inCheck,
+  WHITE, BLACK, other, attachRules, setupCells, findRoyals, legalMoves, playMove, promotePending, inCheck as rulesInCheck,
   notation, material, ownerOf, typeOf, emptyHand, dropSlot, handCount, isDrop,
 } from "./rules.js";
 
@@ -119,6 +125,10 @@ export function chessGame(v) {
   const players = v.players || PLAYERS;
   // Player names: a colour scheme may rename the players (scheme.players).
   const named = (scheme) => (scheme && scheme.players) || players;
+  const movesOf = v.moves || ((s, player) => legalMoves(s, player, v.allow || null));
+  const inCheck = v.inCheck || rulesInCheck;
+  const play = v.play || playMove;
+  const notate = v.notation || notation;
 
   function startTurn(s) {
     if (v.drawPly && !(v.drawPly.skip && v.drawPly.skip(s))) {
@@ -131,7 +141,7 @@ export function chessGame(v) {
   // The mover's moves, or the end of the game if there are none.
   function startMoves(s) {
     s.phase = "move";
-    s.moves = legalMoves(s, s.turn, v.allow ? v.allow : null);
+    s.moves = movesOf(s, s.turn);
     if (s.moves.length) return;
     const end = v.noMoves ? v.noMoves(s) : null;
     if (end) {
@@ -196,7 +206,7 @@ export function chessGame(v) {
         if (!v.drawPly.done || v.drawPly.done(s)) startMoves(s);
         return null;
       case "move": {
-        const info = playMove(s, move);
+        const info = play(s, move);
         if (info.promote) s.phase = "promote";
         else endTurn(s, info.landing);
         return info;
@@ -408,7 +418,7 @@ export function chessGame(v) {
         const letter = typesOf(s)[s.board.chess.byKey[move.slice(PROMOTE.length)]].letter;
         return "=" + letter + (s.phase === "promote" ? checkMark(s, move) : "");
       }
-      return notation(s, move, s.moves || []) + checkMark(s, move);
+      return notate(s, move, s.moves || []) + checkMark(s, move);
     },
 
     // "White to move. Check!", and the fifty-move countdown near its end.
