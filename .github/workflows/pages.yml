@@ -42,8 +42,13 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/configure-pages@v6
       # Hidden files (and .git/.github) are excluded from the artifact.
+      # Name it per attempt: a re-run keeps the run's earlier artifacts, and
+      # deploy-pages fails if two share a name.
       - uses: actions/upload-pages-artifact@v5
         with:
           path: .
+          name: github-pages-${{ github.run_attempt }}
       - id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
