@@ -91,6 +91,8 @@ const FILES = [
   "games/shaolin-king/index.html",
   "games/successive-chess/game.js",
   "games/successive-chess/index.html",
+  "games/tripartite/game.js",
+  "games/tripartite/index.html",
   "games/tunneling/game.js",
   "games/tunneling/index.html",
   "games/wavefunction-collapse/game.js",

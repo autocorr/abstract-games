@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tripartite</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<link rel="icon" href="../../common/favicon.svg" type="image/svg+xml">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p>
+    In <i>Tripartite</i>, the players fill the board with stones, and each group scores for the edges it reaches.
+    A group earns points only for stones on cells that match the color of an edge it touches.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Play on a hexagon of hexagonal cells, 4 to 8 cells per side.
+    Each pair of opposite edges is colored vermilion, blue or yellow, and the cells are checkered in lighter shades of the same three colors.
+    The board begins empty.
+    Decide who will move first.
+    The first player takes the black stones (“Black”) and the second player takes the white stones (“White”).
+  </p>
+  <h3>The Play</h3>
+  <p>
+    Alternate taking turns.
+    On your turn, place a stone of your color on a vacant cell.
+    Play stops when the board is full.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    A <i>group</i> is a set of your stones connected through neighboring cells.
+    For each of the six edges, every group that touches it scores a point for each of its stones on a cell of that edge's color.
+    A group that touches several edges <b>scores separately for each edge</b>, and a corner cell lies on two edges.
+    Groups that touch no edge score nothing.
+    White adds a komi of 2½ points (Komi in Setup).
+    You win if you have the higher score.
+  </p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>
