@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aperture</title>
+<meta name="color-scheme" content="dark light">
+<link rel="preload" href="../../common/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../common/base.css">
+<link rel="icon" href="../../common/favicon.svg" type="image/svg+xml">
+<script src="../../common/theme-init.js"></script>
+</head>
+<body>
+
+<template id="rules">
+  <p>
+    In <i>Aperture</i>, every move leaves a portal behind, and pieces dive into one portal and come out of the other.
+    All the rules of <i>Chess</i> apply, except as described below.
+  </p>
+  <h3>To Start</h3>
+  <p>
+    Set up the pieces as in <i>Chess</i>.
+    Decide who will move first.
+    The first player takes the white pieces (“White”) and the second player takes the black pieces (“Black”).
+  </p>
+  <h3>The Play</h3>
+  <p>
+    <b>Portals:</b> When you move, place your portal on the square your piece left, moving it from wherever it was.
+    White has the blue portal and Black has the vermilion portal.
+    When castling, the portal goes where the King stood.
+  </p>
+  <p>
+    <b>No piece may stop on a portal.</b>
+    A piece that steps onto a portal comes out of the other portal and continues in the same direction.
+    The portals themselves don't count as squares moved.
+    For example, a King stepping onto a portal lands on the next square past the other portal, a Rook may keep sliding, and a Knight makes one more leap.
+    A piece may not enter a portal if it can't continue from the other one, or while only one portal is on the board.
+  </p>
+  <p>
+    <b>Other rules:</b> Pawns move, capture and promote through portals in the same way.
+    En passant captures land on the square a double step passed over.
+    You can't castle with a portal between the King and Rook.
+  </p>
+  <h3>Winning</h3>
+  <p>
+    Check and checkmate work through the portals.
+    A move may not leave your King in check once your portal moves.
+  </p>
+</template>
+
+<script type="module">
+  import { mount } from "../../common/shell.js";
+  import game from "./game.js";
+  window.app = mount(game);
+</script>
+</body>
+</html>

@@ -54,6 +54,8 @@ const FILES = [
   "common/ui/settings.js",
   "common/ui/setup.js",
   "games.js",
+  "games/aperture/game.js",
+  "games/aperture/index.html",
   "games/bivalent/game.js",
   "games/bivalent/index.html",
   "games/broadcast/game.js",
