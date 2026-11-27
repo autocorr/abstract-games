@@ -247,6 +247,9 @@ function checkGame(entry, game, mine) {
           if (game.markers) {
             for (const m of game.markers(state, move, lastInfo)) assert.ok(m.id >= 0 && m.id < state.board.size);
           }
+          if (game.positionMarkers) {
+            for (const m of game.positionMarkers(state)) assert.ok(m.id >= 0 && m.id < state.board.size);
+          }
         }
 
         // Replaying the move list reproduces the final position.

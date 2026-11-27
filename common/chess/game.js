@@ -32,6 +32,9 @@
 //                           default: checkmate loses, stalemate per spec
 //                           (spec.stalemate: "draw" (default) or "loss")
 //   markers(s)           extra markers, after the last move and check
+//   positionMarkers(s)   markers that are part of the position (e.g.
+//                           Aperture's portals): drawn after markers(s),
+//                           and on the landing-page thumbnail too
 //   lastMove             how the last move's squares are marked: "tint"
 //                           (default, Lichess's green) or "outline"
 //   fiftyMoves           plies without capture or pawn move that draw
@@ -407,8 +410,10 @@ export function chessGame(v) {
             (s.winner === other(p) && s.reason === "checkmate")) out.push({ id: s.royal[p], kind: "check" });
       }
       if (v.markers) out.push(...v.markers(s));
+      if (v.positionMarkers) out.push(...v.positionMarkers(s));
       return out;
     },
+    ...(v.positionMarkers ? { positionMarkers: v.positionMarkers } : {}),
 
     // Algebraic notation with "+" or "#"; "=Q" for promotions. Other string
     // moves (chance plies) fall back to the default text.

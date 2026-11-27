@@ -303,7 +303,7 @@ const base = chessGame({
   play,
   notation: moveNotation,
   // Each portal: its square tinted in its color, and a ring.
-  markers(s) {
+  positionMarkers(s) {
     const out = [];
     for (const p of [WHITE, BLACK]) {
       const sq = s.portals[p];

@@ -243,6 +243,9 @@ export default {
                                     //   cell), "square" (cell outline), "tint" (translucent
                                     //   fill, by default Lichess's last-move green), "check"
                                     //   (Lichess's red glow over the cell)
+  positionMarkers(state),           // -> markers that are part of the position, not the last
+                                    //   move (e.g. Aperture's portals): the landing-page
+                                    //   thumbnail draws these; markers() should include them
   hands(state),                     // -> [{ player, side: "top" | "bottom", slots: [{ id, image,
                                     //   name, count }] }]: pieces held off the board, shown
                                     //   above and below it; slot ids come after the cells

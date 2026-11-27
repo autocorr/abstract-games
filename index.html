@@ -66,7 +66,9 @@
     // Optional decor is off by default, so the thumbnail leaves it out.
     const decor = (game.boardDecor ? game.boardDecor(state.board) : []).filter((d) => !d.optional);
     renderer.setBoard(state.board, scheme && scheme.cellFill, decor);
-    renderer.draw({ pieces: piecesOf(game, state), players: game.players });
+    // Markers that are part of the position (not the last move's) are drawn too.
+    const markers = game.positionMarkers ? game.positionMarkers(state) : [];
+    renderer.draw({ pieces: piecesOf(game, state), players: game.players, markers });
   }
 
   for (const entry of games) {
