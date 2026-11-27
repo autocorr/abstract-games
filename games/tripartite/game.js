@@ -33,7 +33,10 @@ const COLORS = [
 export const sideColor = (d) => d % 3;
 
 const SIZES = [4, 5, 6, 7, 8];
-const KOMIS = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5];
+// Self-play trials (MCTS, 20,000 iterations a move, 30 games per size) found
+// Black ahead by a median of about 5-7 points on sides 4 and 5; on larger
+// boards the margins were too wide (MCTS plays to win, not by more) to say.
+const KOMIS = Array.from({ length: 21 }, (_, i) => i + 0.5);
 
 // How far the frame reaches past the outermost cell corners, in cells.
 const FRAME_MARGIN = 0.32;
@@ -127,7 +130,7 @@ export default {
   players: PLAYERS,
   options: {
     size: { label: "Board side", choices: SIZES, default: 6 },
-    komi: { label: "Komi", choices: KOMIS, default: 2.5 },
+    komi: { label: "Komi", choices: KOMIS, default: 5.5 },
   },
   colorSchemes: {
     tricolor: { name: "Tricolor", cellFill: (cell) => COLORS[cell.tags.tri].cell },
