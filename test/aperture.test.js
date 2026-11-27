@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import game from "../games/portal-iv/game.js";
+import game from "../games/aperture/game.js";
 import { newGame } from "../common/engine.js";
 import { pieceCode, findRoyals, WHITE, BLACK } from "../common/chess/rules.js";
 
@@ -112,4 +112,31 @@ test("no castling with a portal between the King and Rook", () => {
   assert.ok(targets(open, "e1").includes("g1"));
   const shut = position({ e1: "wK", h1: "wR", e8: "bK" }, { castling: 1, portals: { 1: "a5", 2: "f1" } });
   assert.ok(!targets(shut, "e1").includes("g1"));
+});
+
+test("the swap is off by default", () => {
+  const s = newGame(game, {});
+  play(s, "e2-e4");
+  assert.ok(!game.legalMoves(s).includes("swap"));
+});
+
+test("swapping makes White's opening Black's, and White moves next", () => {
+  const s = newGame(game, { swap: "on" });
+  play(s, "e2-e4");
+  assert.ok(game.legalMoves(s).includes("swap"));
+  game.applyMove(s, "swap");
+  assert.equal(s.turn, WHITE);
+  const at = (n) => s.cells[sq(s.board, n)];
+  assert.equal(at("e5"), pieceCode(s.board.chess.byKey.P, BLACK));
+  assert.equal(at("e7"), 0);
+  assert.equal(at("e4"), 0);
+  assert.equal(at("e2"), pieceCode(s.board.chess.byKey.P, WHITE));
+  assert.equal(name(s.board, s.portals[BLACK]), "e7");
+  assert.equal(s.portals[WHITE], -1);
+  assert.equal(name(s.board, s.royal[WHITE]), "e1");
+  assert.equal(s.castling, 15);
+  // As after 1...e5 with Black moving first: White's d-pawn is pinned
+  // (d2 would let the Queen through e7 and d2 to e1).
+  assert.deepEqual(targets(s, "d2"), []);
+  assert.ok(!game.legalMoves(s).includes("swap"));
 });

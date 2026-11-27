@@ -1,4 +1,4 @@
-// Portal IV: chess in which every move leaves a portal on the square it
+// Aperture: chess in which every move leaves a portal on the square it
 // vacates. Pure: no DOM; the chess comes from common/chess.
 //
 // There are two portals: White's move puts the blue portal on the square
@@ -22,10 +22,17 @@
 // may stand between the King and the Rook or on their destinations;
 // castling leaves the portal on the King's square. Stalemate draws, as do
 // 50 moves each without a capture or pawn move.
+//
+// Swap (pie rule, common/swap.js, optional, off by default): after White's
+// first move, Black may swap instead of moving. The position is reflected
+// across the middle of the board and its colors exchanged (pieces, portals,
+// castling rights, en passant), so White's opening move becomes Black's,
+// and White moves next.
 
-import { chessGame } from "../../common/chess/game.js";
+import { chessGame, BOARD_SCHEMES } from "../../common/chess/game.js";
+import { withSwap } from "../../common/swap.js";
 import { KING, QUEEN, ROOK, BISHOP, KNIGHT, pawn, CAN_MOVE, CAN_CAPTURE } from "../../common/chess/movement.js";
-import { WHITE, BLACK, other, ownerOf, typeOf, playMove, notation, castleOf } from "../../common/chess/rules.js";
+import { WHITE, BLACK, other, ownerOf, typeOf, playMove, notation, castleOf, findRoyals } from "../../common/chess/rules.js";
 
 export const PORTALS = {
   [WHITE]: { name: "blue", color: "#0072b2", tint: "rgba(0, 114, 178, 0.45)" },
@@ -239,16 +246,52 @@ function moveNotation(s, move, legal) {
   return text;
 }
 
-const game = chessGame({
-  id: "portal-iv",
-  title: "Portal IV",
+// Grounded Chess's neutral gray board first, then the Lichess boards.
+const GRAY = ["#e4e1da", "#a8a49c"];   // [light, dark]
+const COLOR_SCHEMES = {
+  gray: { name: "Gray", cellFill: (cell) => GRAY[cell.tags.dark ? 1 : 0] },
+  ...BOARD_SCHEMES,
+};
+
+// The swap: reflect the position across the middle rank and exchange its
+// colors, then start the new mover's turn.
+function swapColours(s) {
+  const b = s.board, r = b.chess;
+  const mirror = (sq) => (sq < 0 ? -1 : b.at(r.col[sq], r.rows - 1 - r.row[sq]));
+  const cells = new Uint8Array(s.cells.length);
+  s.cells.forEach((x, sq) => { if (x) cells[mirror(sq)] = x ^ 1; });   // the owner is the low bit
+  s.cells = cells;
+  s.royal = findRoyals(b, cells);
+  // Rights are White's bits, then Black's, in the same order.
+  const half = r.castling.length / 2, mask = (1 << half) - 1;
+  s.castling = ((s.castling & mask) << half) | ((s.castling >> half) & mask);
+  s.ep = mirror(s.ep);
+  s.epPawn = mirror(s.epPawn);
+  s.portals = [-1, mirror(s.portals[BLACK]), mirror(s.portals[WHITE])];
+  if (s.last) s.last = s.last.map(mirror);
+  s.turn = other(s.turn);
+  base.refresh(s);
+}
+
+const base = chessGame({
+  id: "aperture",
+  title: "Aperture",
   url: import.meta.url,
+  options: {
+    swap: {
+      label: "Swap rule",
+      choices: [{ value: "on", label: "On" }, { value: "off", label: "Off" }],
+      default: "off",
+    },
+  },
+  colorSchemes: COLOR_SCHEMES,
   rules: () => RULES,
   setup: () => [
     ["R", "N", "B", "Q", "K", "B", "N", "R"],
     Array(8).fill("P"),
   ],
-  init(s) {
+  init(s, { swap }) {
+    s.swapRule = swap === "on";
     s.portals = [-1, -1, -1];   // [, blue (White's), vermilion (Black's)]
     s.epPawn = -1;              // the pawn that double-stepped past s.ep
   },
@@ -270,5 +313,7 @@ const game = chessGame({
     return out;
   },
 });
+
+const game = withSwap({ ...base, swapColours }, { offer: (s) => s.swapRule && s.turn === BLACK && s.phase === "move" });
 
 export default game;
