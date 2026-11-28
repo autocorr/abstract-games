@@ -168,4 +168,12 @@ export const games = [
     path: "games/aperture/",
     module: "games/aperture/game.js",
   },
+  {
+    id: "trivalent",
+    title: "Trivalent",
+    board: "Hexagon of hexagons in three colors",
+    blurb: "Place stones until the board is full. Each of your groups scores, for every edge it touches, a point per stone on a cell of that edge's color.",
+    path: "games/trivalent/",
+    module: "games/trivalent/game.js",
+  },
 ];
