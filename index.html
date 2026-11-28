@@ -68,7 +68,10 @@
     renderer.setBoard(state.board, scheme && scheme.cellFill, decor);
     // Markers that are part of the position (not the last move's) are drawn too.
     const markers = game.positionMarkers ? game.positionMarkers(state) : [];
-    renderer.draw({ pieces: piecesOf(game, state), players: game.players, markers });
+    // Piece labels start hidden on the game page for some games; so here.
+    const pieces = piecesOf(game, state);
+    const shown = game.pieceLabelsDefault === "off" ? pieces.map(({ label, ...p }) => p) : pieces;
+    renderer.draw({ pieces: shown, players: game.players, markers });
   }
 
   for (const entry of games) {
