@@ -51,11 +51,13 @@ function checkChances(game, state, legal) {
 }
 
 // Every allowed combination of declared option values. An inactive option
-// is ignored, so only its default is tried.
+// is ignored, and an option marked testDefault (e.g. a komi, which only
+// shifts the result) is not worth multiplying the sets by, so only their
+// defaults are tried.
 function optionSets(game) {
   let sets = [{}];
   for (const [key, spec] of Object.entries(game.options || {})) {
-    const values = choiceValues(spec);
+    const values = spec.testDefault ? [spec.default] : choiceValues(spec);
     sets = sets.flatMap((s) => values.map((v) => ({ ...s, [key]: v })));
   }
   return sets.filter((s) => Object.keys(s).every((k) => optionAllowed(game, k, s[k], s) &&

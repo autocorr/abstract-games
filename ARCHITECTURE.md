@@ -198,7 +198,7 @@ export default {
   moveText(before, move, info, scheme), // log text for a ply (see "The move log"); null for the default, "" to omit it
   turnHint(state, scheme),          // status line text while the game is on (scheme: the
                                     //   active colour scheme object, or null)
-  boardDecor(board),                // -> lines over the cells, e.g. goal edges (outside: true
+  boardDecor(board, scheme),        // -> lines over the cells, e.g. goal edges (outside: true
                                     //   draws an edge line outside the cells instead;
                                     //   { polygons, fill } are shapes under the cells, e.g. a
                                     //   frame, widening the view with extendView(board, points);
@@ -210,7 +210,9 @@ export default {
                                     //   polygons may take hatch: colour (and hatchAngle)
                                     //   instead of fill; tiles: true draws decor over
                                     //   the pieces' cell tiles, e.g. a hatched region;
-                                    //   optional: true only with optionalDecor shown)
+                                    //   optional: true only with optionalDecor shown;
+                                    //   scheme: the active colour scheme or null, as for
+                                    //   decor in the scheme's colours)
   optionalDecor,                    // e.g. "Corner marks": Setup offers Show / Hide (saved,
                                     //   no new game; Hide by default) for optional decor
   pieceStyles,                      // e.g. { bars: { name: "Bars" }, discs: { name: "Discs" } }:
@@ -266,7 +268,9 @@ section disables it, and the conformance tests skip those combinations.
 An option that means nothing alongside the others (e.g. a choice of pieces
 when the pieces are drawn at random) declares `inactive(opts)`: Setup greys
 the whole row out and keeps its value, the game ignores it, and the
-conformance tests try only its default.
+conformance tests try only its default. An option with many values that
+change little (e.g. a komi, which only shifts the final score) may set
+`testDefault: true`, and the conformance tests try only its default too.
 
 `applyMove` mutates in place and `clone` copies: search code clones once per
 tree node and then mutates freely, which keeps playouts fast. A turn may span

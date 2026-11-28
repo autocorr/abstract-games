@@ -106,7 +106,7 @@ export function mount(game, { root = document.body } = {}) {
     onScheme(v) {
       settings.scheme = v;
       persist();
-      renderer.setCellFill(cellFill());
+      showBoard(renderer.rotation);   // cell fills, and decor that may follow the scheme
       describeLine();   // marble names in the log may follow the scheme
       setup.setPlayerNames(playersNow());
       render();         // and so may the bags, hints and players
@@ -384,7 +384,7 @@ export function mount(game, { root = document.body } = {}) {
   // drawn straight on the page; rectangular ones keep a framing panel,
   // except Lichess-style chessboards, which stand on the page as on Lichess.
   function showBoard(rotate) {
-    const decor = (game.boardDecor ? game.boardDecor(board) : []).filter((d) => !d.optional || settings.decor === "on");
+    const decor = (game.boardDecor ? game.boardDecor(board, currentScheme()) : []).filter((d) => !d.optional || settings.decor === "on");
     renderer.setBoard(board, cellFill(), decor, rotate);
     const lichess = board.look === "lichess";
     ui.boardWrap.classList.toggle("frameless", !fillsRectangle(board) || lichess);

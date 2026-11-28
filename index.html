@@ -64,7 +64,7 @@
     const scheme = game.colorSchemes && Object.values(game.colorSchemes)[0];
     const renderer = createRenderer(svg);
     // Optional decor is off by default, so the thumbnail leaves it out.
-    const decor = (game.boardDecor ? game.boardDecor(state.board) : []).filter((d) => !d.optional);
+    const decor = (game.boardDecor ? game.boardDecor(state.board, scheme) : []).filter((d) => !d.optional);
     renderer.setBoard(state.board, scheme && scheme.cellFill, decor);
     // Markers that are part of the position (not the last move's) are drawn too.
     const markers = game.positionMarkers ? game.positionMarkers(state) : [];
