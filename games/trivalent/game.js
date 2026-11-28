@@ -1,4 +1,4 @@
-// Tripartite: fill a hex-hex board, scoring groups by the edges they touch.
+// Trivalent: fill a hex-hex board, scoring groups by the edges they touch.
 // Pure: no DOM.
 //
 // The cells are 3-coloured (tags.tri, so no two neighbours match), and each
@@ -44,9 +44,10 @@ const SCHEMES = {
 export const sideColor = (d) => d % 3;
 
 const SIZES = [4, 5, 6, 7];
-// Self-play trials (MCTS, 20,000 iterations a move, 30 games per size) found
-// Black ahead by a median of about 5-7 points on sides 4 and 5; on larger
-// boards the margins were too wide (MCTS plays to win, not by more) to say.
+// Komi: self-play trials (UCT as in common/ai/mcts.js, 100,000 and 400,000
+// iterations a move, 300-400 games per komi) put Black's 50% point just above
+// 4 on sides 4-6 (side 5: 4.15 at 100k and 4.17 at 400k; side 7 was
+// inconclusive). The default of 4.5 is the nearest fractional value.
 const KOMIS = Array.from({ length: 21 }, (_, i) => i + 0.5);
 
 // How far the frame reaches past the outermost cell corners, in cells.
@@ -135,13 +136,13 @@ function apply(s, move) {
 }
 
 export default {
-  id: "tripartite",
-  title: "Tripartite",
+  id: "trivalent",
+  title: "Trivalent",
   url: import.meta.url,
   players: PLAYERS,
   options: {
     size: { label: "Board side", choices: SIZES, default: 5 },
-    komi: { label: "Komi", choices: KOMIS, default: 5.5, testDefault: true },
+    komi: { label: "Komi", choices: KOMIS, default: 4.5, testDefault: true },
   },
   colorSchemes: SCHEMES,
   pieceLabels: "Group points",

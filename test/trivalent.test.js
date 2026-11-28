@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import game, { internals, sideColor } from "../games/tripartite/game.js";
+import game, { internals, sideColor } from "../games/trivalent/game.js";
 import { newGame } from "../common/engine.js";
 import { seededRng } from "../common/rng.js";
 
