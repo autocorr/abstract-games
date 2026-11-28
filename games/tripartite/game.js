@@ -1,9 +1,9 @@
 // Tripartite: fill a hex-hex board, scoring groups by the edges they touch.
 // Pure: no DOM.
 //
-// The cells are 3-coloured (tags.tri, so no two neighbours match) in
-// vermilion, blue and yellow, and each pair of opposite sides takes one of
-// those colours: side d (0-5, see hex.js) has colour d % 3. Black moves
+// The cells are 3-coloured (tags.tri, so no two neighbours match), and each
+// pair of opposite sides takes one of those colours: side d (0-5, see
+// hex.js) has colour d % 3. The colour schemes are Okabe-Ito triples. Black moves
 // first; a turn places one stone on an empty cell. The game ends when the
 // board is full.
 //
@@ -24,15 +24,26 @@ const PLAYERS = {
   [WHITE]: { name: "White", fill: "#f2f2f0", mark: "#0e0f13" },
 };
 
-// Edge colours and the lighter shades of the cells, by colour index.
-const COLORS = [
-  { name: "vermilion", edge: "#e34234", cell: "#f4a79c" },
-  { name: "blue", edge: "#2f6bd1", cell: "#a8c3ef" },
-  { name: "yellow", edge: "#f0bd1f", cell: "#f8e19a" },
-];
+// Blend a #rrggbb colour towards `base` by `t` (0 = colour, 1 = base).
+function mix(hex, base, t) {
+  const c = (h, i) => parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16);
+  return "#" + [0, 1, 2].map((i) =>
+    Math.round(c(hex, i) * (1 - t) + c(base, i) * t).toString(16).padStart(2, "0")).join("");
+}
+
+// Colour schemes: the edge colours by colour index; the cells are lighter
+// tints of them.
+function scheme(name, edges) {
+  const cells = edges.map((e) => mix(e, "#f7f3ea", 0.55));
+  return { name, edges, cellFill: (cell) => cells[cell.tags.tri] };
+}
+const SCHEMES = {
+  vermilion: scheme("Vermilion, sky blue, yellow", ["#D55E00", "#56B4E9", "#F0E442"]),
+  orange: scheme("Orange, sky blue, green", ["#E69F00", "#56B4E9", "#009E73"]),
+};
 export const sideColor = (d) => d % 3;
 
-const SIZES = [4, 5, 6, 7, 8];
+const SIZES = [4, 5, 6, 7];
 // Self-play trials (MCTS, 20,000 iterations a move, 30 games per size) found
 // Black ahead by a median of about 5-7 points on sides 4 and 5; on larger
 // boards the margins were too wide (MCTS plays to win, not by more) to say.
@@ -129,12 +140,10 @@ export default {
   url: import.meta.url,
   players: PLAYERS,
   options: {
-    size: { label: "Board side", choices: SIZES, default: 6 },
-    komi: { label: "Komi", choices: KOMIS, default: 5.5 },
+    size: { label: "Board side", choices: SIZES, default: 5 },
+    komi: { label: "Komi", choices: KOMIS, default: 5.5, testDefault: true },
   },
-  colorSchemes: {
-    tricolor: { name: "Tricolor", cellFill: (cell) => COLORS[cell.tags.tri].cell },
-  },
+  colorSchemes: SCHEMES,
   pieceLabels: "Group points",
   pieceLabelsDefault: "off",
 
@@ -177,8 +186,9 @@ export default {
     }
     return out;
   },
-  boardDecor(board) {
-    return board.frame.map((poly, d) => ({ polygons: [poly], fill: COLORS[sideColor(d)].edge }));
+  boardDecor(board, scheme) {
+    const { edges } = scheme || SCHEMES.vermilion;
+    return board.frame.map((poly, d) => ({ polygons: [poly], fill: edges[sideColor(d)] }));
   },
 
   turnHint(s) {
@@ -195,4 +205,4 @@ export default {
   },
 };
 
-export const internals = { scores, COLORS };
+export const internals = { scores, SCHEMES };

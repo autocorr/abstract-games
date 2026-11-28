@@ -16,7 +16,7 @@ function position({ black = [], white = [] } = {}) {
 }
 
 test("the cells are checkered: no two neighbors share a color", () => {
-  const { board } = newGame(game, { size: 6, komi: 2.5 });
+  const { board } = newGame(game, { size: 7, komi: 5.5 });
   for (const c of board.cells) for (const n of board.neighbours[c.id]) assert.notEqual(board.color[c.id], board.color[n]);
 });
 
@@ -63,4 +63,14 @@ test("the game ends when the board is full and komi decides close games", () => 
   const t = scores(s.board, s.cells);
   assert.equal(game.outcome(s).winner, t[1] > t[2] + 2.5 ? 1 : 2);
   assert.equal(s.cells.filter((p) => p === 1).length, 19, "Black places the extra stone");
+});
+
+test("the edge bands follow the color scheme, opposite sides alike", () => {
+  const board = game.createBoard({ size: 5, komi: 5.5 });
+  for (const scheme of Object.values(game.colorSchemes)) {
+    const fills = game.boardDecor(board, scheme).map((d) => d.fill);
+    assert.equal(fills.length, 6);
+    for (let d = 0; d < 6; d++) assert.equal(fills[d], scheme.edges[sideColor(d)]);
+  }
+  assert.deepEqual(game.boardDecor(board, null), game.boardDecor(board, Object.values(game.colorSchemes)[0]));
 });
