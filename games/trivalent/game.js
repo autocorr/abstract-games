@@ -38,8 +38,8 @@ function scheme(name, edges) {
   return { name, edges, cellFill: (cell) => cells[cell.tags.tri] };
 }
 const SCHEMES = {
-  vermilion: scheme("Vermilion, sky blue, yellow", ["#D55E00", "#56B4E9", "#F0E442"]),
-  orange: scheme("Orange, sky blue, green", ["#E69F00", "#56B4E9", "#009E73"]),
+  classic: scheme("Classic", ["#D55E00", "#56B4E9", "#F0E442"]),   // vermilion, sky blue, yellow
+  ocean: scheme("Ocean", ["#E69F00", "#56B4E9", "#009E73"]),       // orange, sky blue, bluish green
 };
 export const sideColor = (d) => d % 3;
 
@@ -51,7 +51,7 @@ const SIZES = [4, 5, 6, 7];
 const KOMIS = Array.from({ length: 21 }, (_, i) => i + 0.5);
 
 // How far the frame reaches past the outermost cell corners, in cells.
-const FRAME_MARGIN = 0.32;
+const FRAME_MARGIN = 0.07;   // as in Depletion
 
 // A band round the board in six pieces, one per side: each is a triangle
 // from the side's two outer corners to the centre, drawn under the cells,
@@ -188,8 +188,8 @@ export default {
     return out;
   },
   boardDecor(board, scheme) {
-    const { edges } = scheme || SCHEMES.vermilion;
-    return board.frame.map((poly, d) => ({ polygons: [poly], fill: edges[sideColor(d)] }));
+    const { edges } = scheme || SCHEMES.classic;
+    return board.frame.map((poly, d) => ({ polygons: [poly], fill: edges[sideColor(d)], stroke: "#0e0f13", width: 0.035 }));
   },
 
   turnHint(s) {
